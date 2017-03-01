@@ -6,19 +6,13 @@ package earthshape;
 import javafx.application.Application;
 import javafx.event.EventHandler;
 import javafx.scene.Group;
-import javafx.scene.Parent;
 import javafx.scene.PerspectiveCamera;
 import javafx.scene.Scene;
-import javafx.scene.SceneAntialiasing;
-import javafx.scene.SubScene;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.paint.Color;
-import javafx.scene.paint.Material;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Box;
-import javafx.scene.shape.DrawMode;
-import javafx.scene.shape.Sphere;
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Translate;
 import javafx.stage.Stage;
@@ -31,7 +25,7 @@ public class EarthShape extends Application {
     // the camera.
     private Translate cameraTranslate = new Translate(0, 0, -15);
 
-    public Parent createContent() throws Exception {
+    public Group createSceneObjects() throws Exception {
 
         // Texture?
         Image img = new Image("earthshape/textures/compass-rose.png");
@@ -51,9 +45,19 @@ public class EarthShape extends Application {
         Box xaxis = new Box(100, 0.1, 0.1);
         xaxis.setMaterial(axisColor);
 
-        // Some sphere
-        Sphere s = new Sphere(2.7);
-        s.setMaterial(new PhongMaterial(Color.BLUE));
+        // Collect the objects together.
+        Group root = new Group();
+        root.getChildren().add(xaxis);
+        root.getChildren().add(testBox);
+        return root;
+    }
+
+    @Override
+    public void start(Stage primaryStage) throws Exception {
+        // Create a scene containing the scene object graph.
+        Scene scene = new Scene(createSceneObjects(), 1024, 768,
+                                true /*depth buffer*/);
+        scene.setFill(Color.ALICEBLUE);
 
         // Create and position camera
         PerspectiveCamera camera = new PerspectiveCamera(true);
@@ -61,30 +65,7 @@ public class EarthShape extends Application {
                 new Rotate(-20, Rotate.Y_AXIS),
                 new Rotate(-20, Rotate.X_AXIS),
                 this.cameraTranslate);
-
-        // Build the Scene Graph
-        Group root = new Group();
-        root.getChildren().add(camera);
-        root.getChildren().add(xaxis);
-        root.getChildren().add(s);
-        root.getChildren().add(testBox);
-
-        // Use a SubScene
-        SubScene subScene = new SubScene(root, 300,300, true /*depth buffer*/,
-                                         SceneAntialiasing.BALANCED);
-        subScene.setFill(Color.ALICEBLUE);
-        subScene.setCamera(camera);
-
-        // Put the sub-scene into a group.  (I do not understand this.)
-        Group group = new Group();
-        group.getChildren().add(subScene);
-        return group;
-    }
-
-    @Override
-    public void start(Stage primaryStage) throws Exception {
-        primaryStage.setResizable(false);
-        Scene scene = new Scene(createContent());
+        scene.setCamera(camera);
 
         // Specify keyboard handling for the scene.
         scene.setOnKeyPressed(new EventHandler<KeyEvent>() {
@@ -115,7 +96,7 @@ public class EarthShape extends Application {
             }
         });
 
-        primaryStage.setTitle("Simple 3D Box App");
+        primaryStage.setTitle("Earth Shape");
         primaryStage.setScene(scene);
         primaryStage.show();
     }
