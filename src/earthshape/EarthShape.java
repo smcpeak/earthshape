@@ -15,6 +15,7 @@ import javafx.scene.SceneAntialiasing;
 import javafx.scene.SubScene;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
@@ -36,6 +37,11 @@ public class EarthShape extends Application {
     // Also need the camera itself so I can install an updated
     // transform.
     private PerspectiveCamera camera;
+
+    // For tracking click+drag, the location of the most recent
+    // mouse event.  This is in pixels where (0,0) is the top-left
+    // corner of the window.
+    private double oldMouseX, oldMouseY;
 
 
 
@@ -115,6 +121,9 @@ public class EarthShape extends Application {
         ss.heightProperty().bind(stackPane.heightProperty());
         ss.widthProperty().bind(stackPane.widthProperty());
 
+        // The labels should not intercept mouse presses.
+        ss.setDisable(true);
+
         //ss.setTranslateX(100);
         //ss.setScaleX(2);
 
@@ -189,15 +198,35 @@ public class EarthShape extends Application {
                         break;
                 }
                 if (dt != null) {
-                    // Apply 'dt' to the existing camera transform.
-                    EarthShape.this.cameraTransform =
-                        EarthShape.this.cameraTransform.createConcatenation(dt);
-
-                    // Replace the existing one with the new one.
-                    EarthShape.this.camera.getTransforms().clear();
-                    EarthShape.this.camera.getTransforms().add(
-                        EarthShape.this.cameraTransform);
+                    EarthShape.this.transformCamera(dt);
                 }
+            }
+        });
+
+        scene.setOnMousePressed(new EventHandler<MouseEvent>() {
+            @Override public void handle(MouseEvent me) {
+                EarthShape.this.oldMouseX = me.getSceneX();
+                EarthShape.this.oldMouseY = me.getSceneY();
+            }
+        });
+        scene.setOnMouseDragged(new EventHandler<MouseEvent>() {
+            @Override public void handle(MouseEvent me) {
+                // Compute the delta from the previous value, and
+                // then update that previous value for the next call.
+                double x = me.getSceneX();
+                double y = me.getSceneY();
+                double dx = x - EarthShape.this.oldMouseX;
+                double dy = y - EarthShape.this.oldMouseY;
+                EarthShape.this.oldMouseX = x;
+                EarthShape.this.oldMouseY = y;
+
+                // Build a rotation transform where 'dx' is
+                // rotation about Y axis and 'dy' is rotation
+                // about X.
+                Rotate ry = new Rotate(-dx/10, new Point3D(0,1,0));
+                Rotate rx = new Rotate(dy/10, new Point3D(1,0,0));
+                Transform dt = rx.createConcatenation(ry);
+                EarthShape.this.transformCamera(dt);
             }
         });
 
@@ -214,6 +243,19 @@ public class EarthShape extends Application {
 
         Point2D p2 = scene.localToScreen(0,0,0);
         System.out.println("p2: "+p2);
+    }
+
+    /** Change the camera transformation by applying 'dt' to the end
+      * of the current transform. */
+    private void transformCamera(Transform dt)
+    {
+        EarthShape.this.cameraTransform =
+            EarthShape.this.cameraTransform.createConcatenation(dt);
+
+        // Replace the existing one with the new one.
+        EarthShape.this.camera.getTransforms().clear();
+        EarthShape.this.camera.getTransforms().add(
+            EarthShape.this.cameraTransform);
     }
 
     public static void main(String[] args)
