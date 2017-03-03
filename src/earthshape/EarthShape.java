@@ -67,16 +67,39 @@ public class EarthShape extends Application {
         root.getChildren().add(testBox);
 
         // X axis
-        PhongMaterial axisColor = new PhongMaterial(Color.RED);
+        PhongMaterial xaxisColor = new PhongMaterial(Color.RED);
         Box xaxis = new Box(100, 0.1, 0.1);
-        xaxis.setMaterial(axisColor);
+        xaxis.setMaterial(xaxisColor);
         root.getChildren().add(xaxis);
 
-        // Tick marks along the X axis.
+        // Y axis
+        PhongMaterial yaxisColor = new PhongMaterial(Color.GREEN);
+        Box yaxis = new Box(0.1, 100, 0.1);
+        yaxis.setMaterial(yaxisColor);
+        root.getChildren().add(yaxis);
+
+        // Z axis
+        PhongMaterial zaxisColor = new PhongMaterial(Color.BLUE);
+        Box zaxis = new Box(0.1, 0.1, 100);
+        zaxis.setMaterial(zaxisColor);
+        root.getChildren().add(zaxis);
+
+        // Tick marks along the axes.  The end that is missing its
+        // final tick is the positive direction.
         for (int i=-50; i < 50; i++) {
             Box tick = new Box(0.1, 0.1, i%10==0? 3 : 1);
             tick.setTranslateX(i);
-            tick.setMaterial(axisColor);
+            tick.setMaterial(xaxisColor);
+            root.getChildren().add(tick);
+
+            tick = new Box(0.1, 0.1, i%10==0? 3 : 1);
+            tick.setTranslateY(i);
+            tick.setMaterial(yaxisColor);
+            root.getChildren().add(tick);
+
+            tick = new Box(i%10==0? 3 : 1, 0.1, 0.1);
+            tick.setTranslateZ(i);
+            tick.setMaterial(zaxisColor);
             root.getChildren().add(tick);
         }
 
@@ -94,7 +117,7 @@ public class EarthShape extends Application {
         // Create and position camera
         this.camera = new PerspectiveCamera(true);
         this.camera.setFarClip(1000);     // default is 100
-        this.cameraTransform = new Translate(0, 0, -50);
+        this.cameraTransform = new Translate(20, 20, -120);
         this.camera.getTransforms().add(this.cameraTransform);
         scene.setCamera(this.camera);
 
