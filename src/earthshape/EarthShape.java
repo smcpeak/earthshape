@@ -7,9 +7,11 @@ import javafx.application.Application;
 import javafx.event.EventHandler;
 import javafx.geometry.Point2D;
 import javafx.geometry.Point3D;
+import javafx.scene.AmbientLight;
 import javafx.scene.Group;
 import javafx.scene.Parent;
 import javafx.scene.PerspectiveCamera;
+import javafx.scene.PointLight;
 import javafx.scene.Scene;
 import javafx.scene.SceneAntialiasing;
 import javafx.scene.SubScene;
@@ -20,6 +22,10 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Box;
+import javafx.scene.shape.CullFace;
+import javafx.scene.shape.MeshView;
+import javafx.scene.shape.TriangleMesh;
+import javafx.scene.shape.VertexFormat;
 import javafx.scene.text.Text;
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Transform;
@@ -51,6 +57,23 @@ public class EarthShape extends Application {
         // Group of objects to return.
         Group root = new Group();
 
+        // Use an ambient light source.
+        //root.getChildren().add(new AmbientLight());
+
+        // Try a point light source at initial camera position.
+        PointLight light = new PointLight();
+        light.setTranslateX(20);
+        light.setTranslateY(20);
+        light.setTranslateZ(-150);
+        root.getChildren().add(light);
+
+        // And another one?
+        light = new PointLight();
+        light.setTranslateX(0);
+        light.setTranslateY(-200);
+        light.setTranslateZ(0);
+        root.getChildren().add(light);
+
         // Texture?
         Image img = new Image("earthshape/textures/compass-rose.png");
 
@@ -59,12 +82,66 @@ public class EarthShape extends Application {
         mat.setDiffuseMap(img);
 
         // Box with texture applied.
-        Box testBox = new Box(5, 5, 5);
+        Box testBox = new Box(20, 20, 20);
         testBox.setMaterial(mat);
         //testBox.setMaterial(new PhongMaterial(Color.RED));
         //testBox.setDrawMode(DrawMode.LINE);
-        //testBox.setTranslateZ(3);
+        testBox.setTranslateX(25);
         root.getChildren().add(testBox);
+
+        // Rectangular face with texture applied.
+        //    0--1
+        //    | /|
+        //    |/ |
+        //    2--3
+        TriangleMesh mesh = new TriangleMesh(VertexFormat.POINT_TEXCOORD);
+        float scale = 20;
+        float lx = -scale/2;
+        float rx = scale/2;
+        float ty = -scale/2;
+        float by = scale/2;
+        mesh.getPoints().addAll(lx,ty,0, rx,ty,0, lx,by,0, rx,by,0);
+        mesh.getTexCoords().addAll(0,0, 1,0, 0,1, 1,1);
+        mesh.getFaces().addAll(2,2, 1,1, 0,0,
+                               3,3, 1,1, 2,2);
+        mesh.getFaceSmoothingGroups().addAll(1, 1);
+        MeshView square = new MeshView(mesh);
+        //square.setScaleX(scale);
+        //square.setScaleY(scale);
+        square.setTranslateX(-50);
+        square.setTranslateZ(-scale/2);
+        square.setMaterial(mat);
+        square.setCullFace(CullFace.NONE);
+        root.getChildren().add(square);
+
+        // Another square.
+        mesh = new TriangleMesh(VertexFormat.POINT_TEXCOORD);
+        scale = 1;
+        lx = -scale/2;
+        rx = scale/2;
+        ty = -scale/2;
+        by = scale/2;
+        mesh.getPoints().addAll(lx,ty,0, rx,ty,0, lx,by,0, rx,by,0);
+        mesh.getTexCoords().addAll(0,0, 1,0, 0,1, 1,1);
+        mesh.getFaces().addAll(2,2, 1,1, 0,0,
+                               3,3, 1,1, 2,2);
+        mesh.getFaceSmoothingGroups().addAll(1, 1);
+        square = new MeshView(mesh);
+        scale = 20;
+        square.setScaleX(scale);
+        square.setScaleY(scale);
+        square.setTranslateX(-25);
+        square.setTranslateZ(-scale/2);
+        square.setMaterial(mat);
+        square.setCullFace(CullFace.NONE);
+        root.getChildren().add(square);
+
+        // Another box?
+        TriangleMesh box2 = EarthShape.createMesh(20, 20, 20);
+        MeshView box2v = new MeshView(box2);
+        box2v.setMaterial(mat);
+        //box2v.setTranslateX(-25);
+        root.getChildren().add(box2v);
 
         // X axis
         PhongMaterial xaxisColor = new PhongMaterial(Color.RED);
@@ -106,6 +183,53 @@ public class EarthShape extends Application {
         return root;
     }
 
+
+    static TriangleMesh createMesh(float w, float h, float d) {
+
+        // NOTE: still create mesh for degenerated box
+        float hw = w / 2f;
+        float hh = h / 2f;
+        float hd = d / 2f;
+
+        float points[] = {
+            -hw, -hh, -hd,
+             hw, -hh, -hd,
+             hw,  hh, -hd,
+            -hw,  hh, -hd,
+            -hw, -hh,  hd,
+             hw, -hh,  hd,
+             hw,  hh,  hd,
+            -hw,  hh,  hd};
+
+        float texCoords[] = {0, 0, 1, 0, 1, 1, 0, 1};
+
+        int faceSmoothingGroups[] = {
+            1, 1, 1, 1, 2, 2, 2, 2, 4, 4, 4, 4
+        };
+
+        int faces[] = {
+            0, 0, 2, 2, 1, 1,
+            2, 2, 0, 0, 3, 3,
+            1, 0, 6, 2, 5, 1,
+            6, 2, 1, 0, 2, 3,
+            5, 0, 7, 2, 4, 1,
+            7, 2, 5, 0, 6, 3,
+            4, 0, 3, 2, 0, 1,
+            3, 2, 4, 0, 7, 3,
+            3, 0, 6, 2, 2, 1,
+            6, 2, 3, 0, 7, 3,
+            4, 0, 1, 2, 5, 1,
+            1, 2, 4, 0, 0, 3,
+        };
+
+        TriangleMesh mesh = new TriangleMesh();
+        mesh.getPoints().setAll(points);
+        mesh.getTexCoords().setAll(texCoords);
+        mesh.getFaces().setAll(faces);
+        mesh.getFaceSmoothingGroups().setAll(faceSmoothingGroups);
+
+        return mesh;
+    }
     @Override
     public void start(Stage primaryStage) throws Exception {
         // Create a sub-scene containing the scene object graph.
@@ -140,7 +264,7 @@ public class EarthShape extends Application {
         // to be the way to get a useful coordinate system for
         // placing the labels.
         SubScene ss = new SubScene(labelGroup, 1024, 728);
-        stackPane.getChildren().add(ss);
+        //stackPane.getChildren().add(ss);     // remove labels for now
         ss.heightProperty().bind(stackPane.heightProperty());
         ss.widthProperty().bind(stackPane.widthProperty());
 
