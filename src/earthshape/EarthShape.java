@@ -206,8 +206,27 @@ public class EarthShape
             System.exit(2);
         }
 
-        // Use a light blue background, full opacity.
-        gl.glClearColor(0.8f, 0.9f, 1.0f, 1f);
+        // Use a light blue background.
+        gl.glClearColor(0.8f, 0.9f, 1.0f, 0);
+        //gl.glClearColor(0,0,0,0);
+
+        // Enable lighting generally.
+        gl.glEnable(GL2.GL_LIGHTING);
+
+        // Enable light #0, which has some default properties that,
+        // for the moment, seem to work adequately.
+        gl.glEnable(GL2.GL_LIGHT0);
+
+        // Position to try to get some more differentiation among
+        // surfaces with different normals.
+        gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_POSITION,
+            new float[] {-0.5f, 1f, 0.5f, 0}, 0);
+
+        // Increase the ambient intensity of that light.
+        //gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_AMBIENT, new float[] {1,1,1,1}, 0);
+        //
+        // There was no need for that; the dim light was once again
+        // a consequence of non-unit normal vectors.
     }
 
     /** Release allocated resources associated with the GL context. */
@@ -245,16 +264,25 @@ public class EarthShape
             gl.glTranslatef(-c.x(), -c.y(), -c.z());
         }
 
-        // Depth test for hidden surface removal, and normalize so
+        // Enable depth test for hidden surface removal.
+        gl.glEnable(GL.GL_DEPTH_TEST);
+
+        // Enable automatic normal vector normalization so
         // I can freely scale my geometry without worrying about
-        // denormalizing the normal vectors.
-        gl.glEnable(GL.GL_DEPTH_TEST | GL2.GL_NORMALIZE);
+        // denormalizing the normal vectors and messing up
+        // the lighting calculations.
+        gl.glEnable(GL2.GL_NORMALIZE);
+
+        // Future matrix manipulations are for the model.
         gl.glMatrixMode(GL2.GL_MODELVIEW);
+
+        // Make axis normals point toward +Y?
+        gl.glNormal3f(0,1,0);
 
         // X axis.
         {
             gl.glBegin(GL.GL_LINES);
-            gl.glColor3f(1,0,0);       // Red
+            glMaterialColor3f(gl, 1,0,0);       // Red
 
             // Draw from origin to points at infinity.
             gl.glVertex4f(0,0,0,1);
@@ -277,7 +305,7 @@ public class EarthShape
         // Y axis.
         {
             gl.glBegin(GL.GL_LINES);
-            gl.glColor3f(0,0.5f,0);    // Dark green
+            glMaterialColor3f(gl, 0,0.5f,0);    // Dark green
 
             gl.glVertex4f(0,0,0,1);
             gl.glVertex4f(0,-1,0,0);
@@ -299,7 +327,7 @@ public class EarthShape
         // Z axis.
         {
             gl.glBegin(GL.GL_LINES);
-            gl.glColor3f(0,0,1);       // Dark blue
+            glMaterialColor3f(gl, 0,0,1);       // Dark blue
 
             gl.glVertex4f(0,0,0,1);
             gl.glVertex4f(0,0,-1,0);
@@ -326,17 +354,18 @@ public class EarthShape
         // Draw a colored triangle.
         {
             gl.glBegin(GL.GL_TRIANGLES);
+            gl.glNormal3f(0,0,1);
 
             // Red in lower-left.
-            gl.glColor3f(1, 0, 0);
+            glMaterialColor3f(gl, 1, 0, 0);
             gl.glVertex3f(0.25f, 0.25f, 0);
 
             // Green in lower-right.
-            gl.glColor3f(0, 1, 0);
+            glMaterialColor3f(gl, 0, 1, 0);
             gl.glVertex3f(0.75f, 0.25f, 0);
 
             // Blue in upper-left.
-            gl.glColor3f(0, 0, 1);
+            glMaterialColor3f(gl, 0, 0, 1);
             gl.glVertex3f(0.25f, 0.75f, 0);
 
             gl.glEnd();
@@ -350,7 +379,7 @@ public class EarthShape
             // Reset base color to white (otherwise, GL remembers the
             // blue color used for the final vertex of the colored
             // triangle, and the new triangle will be blue too!).
-            gl.glColor3f(1,1,1);
+            glMaterialColor3f(gl, 1,1,1);
 
             gl.glBegin(GL.GL_TRIANGLES);
 
@@ -371,7 +400,69 @@ public class EarthShape
 
         gl.glPopMatrix();
 
+        // Draw an initial surface rectangle.
+        this.drawCompassRect(gl,
+            1, 0, -2,
+            1, 0, -1,
+            2, 0, -2,
+            2, 0, -1);
+
+        // Draw another that curves down.
+        this.drawCompassRect(gl,
+            2, 0, -2,
+            2, 0, -1,
+            3, -0.2f, -2,
+            3, -0.2f, -1);
+
+        this.compassTexture.disable(gl);
+
         gl.glFlush();
+    }
+
+    /** Set the next vertex's color using glMaterial.  My intent is this
+      * is sort of a replacement for glColor when using lighting. */
+    private static void glMaterialColor3f(GL2 gl, float r, float g, float b)
+    {
+        gl.glMaterialfv(GL.GL_FRONT_AND_BACK, GL2.GL_AMBIENT_AND_DIFFUSE,
+            new float[] { r,g,b,1 }, 0);
+    }
+
+    private void drawCompassRect(
+        GL2 gl,
+        float nwx, float nwy, float nwz,
+        float swx, float swy, float swz,
+        float nex, float ney, float nez,
+        float sex, float sey, float sez)
+    {
+        gl.glBegin(GL.GL_TRIANGLE_STRIP);
+
+        this.compassTexture.bind(gl);
+
+        // Normal vector, based on just three vertices (since these
+        // are supposed to be flat anyway).
+        Vector3f nw = new Vector3f(nwx, nwy, nwz);
+        Vector3f sw = new Vector3f(swx, swy, swz);
+        Vector3f se = new Vector3f(sex, sey, sez);
+        Vector3f normal = (se.minus(sw)).cross(nw.minus(sw));
+        gl.glNormal3f(normal.x(), normal.y(), normal.z());
+
+        // NW corner.
+        gl.glTexCoord2f(0,1);
+        gl.glVertex3f(nwx, nwy, nwz);
+
+        // SW corner.
+        gl.glTexCoord2f(0,0);
+        gl.glVertex3f(swx, swy, swz);
+
+        // NE corner.
+        gl.glTexCoord2f(1,1);
+        gl.glVertex3f(nex, ney, nez);
+
+        // SE corner.
+        gl.glTexCoord2f(1,0);
+        gl.glVertex3f(sex, sey, sez);
+
+        gl.glEnd();
     }
 
     /** Called when the window is resized.  The superclass does
@@ -463,8 +554,7 @@ public class EarthShape
     public void keyTyped(KeyEvent ev) {}
 
     @Override
-    public void mouseClicked(MouseEvent ev) {
-    }
+    public void mouseClicked(MouseEvent ev) {}
 
     @Override
     public void mouseEntered(MouseEvent ev) {}

@@ -98,4 +98,12 @@ public class Vector3f {
         Matrix3f m = Matrix3f.rotate(radians, axis);
         return m.times(this);
     }
+
+    /** Return 'this' cross 'v'. */
+    public Vector3f cross(Vector3f v)
+    {
+        return new Vector3f(y()*v.z() - z()*v.y(),
+                            z()*v.x() - x()*v.z(),
+                            x()*v.y() - y()*v.x());
+    }
 }
