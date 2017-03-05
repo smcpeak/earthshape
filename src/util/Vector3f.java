@@ -71,4 +71,31 @@ public class Vector3f {
     {
         return Math.sqrt(lengthSquared());
     }
+
+    /** True if this vector's length is zero. */
+    public boolean isZero()
+    {
+        return x()==0 && y()==0 && z()==0;
+    }
+
+    /** Return a normalized version of this vector.  The zero
+      * vector is returned unchanged. */
+    public Vector3f normalize()
+    {
+        if (isZero()) {
+            return this;
+        }
+        float normFactor = (float)(1.0 / this.length());
+        return this.times(normFactor);
+    }
+
+    /** Return this vector after rotating by 'degrees' about 'axis'.
+      * Rotation follows right-hand rule. */
+    public Vector3f rotate(float degrees, Vector3f axis)
+    {
+        float radians = (float)(degrees / 180.0 * Math.PI);
+
+        Matrix3f m = Matrix3f.rotate(radians, axis);
+        return m.times(this);
+    }
 }
