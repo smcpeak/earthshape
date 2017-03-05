@@ -41,6 +41,16 @@ public class EarthShape
       * 'dispose'. */
     private Texture compassTexture;
 
+    /** The main GL canvas. */
+    private GLCanvas glCanvas;
+
+    // Camera X and Y; experimental.
+    private float cameraX = 1, cameraY = 1, cameraZ = 2;
+
+    // Speed of camera movement.  Non-zero while camera movement underway.
+    private static final float INITIAL_CAMERA_SPEED = 0.1f;
+    private float cameraSpeed = 0;
+
     public EarthShape()
     {
         super("Earth Shape");
@@ -78,11 +88,11 @@ public class EarthShape
 
         // Make the GL canvas and specify that 'this' object will
         // handle its draw-related events.
-        GLCanvas canvas = new GLCanvas(caps);
-        canvas.addGLEventListener(this);
+        this.glCanvas = new GLCanvas(caps);
+        this.glCanvas.addGLEventListener(this);
 
-       // Associate the canvas with 'this' window.
-       this.add(canvas, BorderLayout.CENTER);
+        // Associate the canvas with 'this' window.
+        this.add(this.glCanvas, BorderLayout.CENTER);
     }
 
     /** Print a message to the console with a timestamp. */
@@ -100,7 +110,7 @@ public class EarthShape
         // but I find that using 'GL' leads to syntax errors since
         // some of the methods I'm supposed to call are only defined
         // for 'GL2'.  I assume the tutorial is just out of date.
-        GL2 gl = (GL2)drawable.getGL();
+        GL2 gl = drawable.getGL().getGL2();
 
         // Load textures.  We have to wait until 'init' to do this because
         // it requires a GL context because the textures are loaded into
@@ -122,6 +132,24 @@ public class EarthShape
 
         // Use a light blue background, full opacity.
         gl.glClearColor(0.8f, 0.9f, 1.0f, 1f);
+    }
+
+    /** Release allocated resources associated with the GL context. */
+    @Override
+    public void dispose(GLAutoDrawable drawable) {
+        log("dispose");
+        GL2 gl = drawable.getGL().getGL2();
+        this.compassTexture.destroy(gl);
+        this.compassTexture = null;
+    }
+
+    /** Draw one frame to the screen. */
+    @Override
+    public void display(GLAutoDrawable drawable) {
+        //log("display");
+        GL2 gl = drawable.getGL().getGL2();
+
+        gl.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT);
 
         // Specify camera projection.
         gl.glMatrixMode(GL2.GL_PROJECTION);
@@ -131,44 +159,37 @@ public class EarthShape
         // left/right/top/bottom values defines the field of view.
         // If you move the clipping plane nearer the camera without
         // adjusting the edges, the FOV becomes larger!
-        gl.glFrustum(-1, 1, -1, 1, 1, 100);
+        gl.glFrustum(-1, 1, -1, 1, 1, 200);
 
-        GLU glu = GLU.createGLU(gl);
-        glu.gluLookAt(1,1,2, 1,1,0, 0,1,0);
-    }
+        gl.glTranslatef(-cameraX, -cameraY, -cameraZ);
 
-    /** Release allocated resources associated with the GL context. */
-    @Override
-    public void dispose(GLAutoDrawable drawable) {
-        log("dispose");
-        GL2 gl = (GL2)drawable.getGL();
-        this.compassTexture.destroy(gl);
-        this.compassTexture = null;
-    }
-
-    /** Draw one frame to the screen. */
-    @Override
-    public void display(GLAutoDrawable drawable) {
-        log("display");
-        GL2 gl = (GL2)drawable.getGL();
-
-        gl.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT);
+//        GLU glu = GLU.createGLU(gl);
+//        glu.gluLookAt(cameraX, cameraY, 2,      // location
+//                      cameraX, cameraY, 0,      // target
+//                      0,1,0);                   // up
 
         // Depth test for hidden surface removal, and normalize so
         // I can freely scale my geometry without worrying about
         // denormalizing the normal vectors.
         gl.glEnable(GL.GL_DEPTH_TEST | GL2.GL_NORMALIZE);
+        gl.glMatrixMode(GL2.GL_MODELVIEW);
 
-        // Draw a finite fragment of the X axis.
+        // X axis.
         {
             gl.glBegin(GL.GL_LINES);
             gl.glColor3f(1,0,0);       // Red
-            gl.glVertex3f(100,0,0);    // +X at 100
-            gl.glVertex3f(-100,0,0);   // -X at 100
+
+            // Draw from origin to points at infinity.  I cannot
+            // draw this in a single segment, and I'm not quite
+            // sure why.
+            gl.glVertex4f(0,0,0,1);
+            gl.glVertex4f(-1,0,0,0);
+            gl.glVertex4f(0,0,0,1);
+            gl.glVertex4f(+1,0,0,0);
 
             for (int i=-100; i < 100; i++) {
                 if (i == 0) { continue; }
-                float size = (i%10==0? 1.5f : 0.5f);
+                float size = (i%10==0? 0.5f : 0.1f);
                 gl.glVertex3f(i, size, 0);
                 gl.glVertex3f(i, -size, 0);
                 gl.glVertex3f(i, 0, size);
@@ -178,16 +199,19 @@ public class EarthShape
             gl.glEnd();
         }
 
-        // Draw a finite fragment of the Y axis.
+        // Y axis.
         {
             gl.glBegin(GL.GL_LINES);
             gl.glColor3f(0,0.5f,0);    // Dark green
-            gl.glVertex3f(0,100,0);    // +Y at 100
-            gl.glVertex3f(0,-100,0);   // -Y at 100
+
+            gl.glVertex4f(0,0,0,1);
+            gl.glVertex4f(0,-1,0,0);
+            gl.glVertex4f(0,0,0,1);
+            gl.glVertex4f(0,+1,0,0);
 
             for (int i=-100; i < 100; i++) {
                 if (i == 0) { continue; }
-                float size = (i%10==0? 1.5f : 0.5f);
+                float size = (i%10==0? 0.5f : 0.1f);
                 gl.glVertex3f(size, i, 0);
                 gl.glVertex3f(-size, i, 0);
                 gl.glVertex3f(0, i, size);
@@ -197,16 +221,19 @@ public class EarthShape
             gl.glEnd();
         }
 
-        // Draw a finite fragment of the Z axis.
+        // Z axis.
         {
             gl.glBegin(GL.GL_LINES);
             gl.glColor3f(0,0,1);       // Dark blue
-            gl.glVertex3f(0,0,100);    // +Z at 100
-            gl.glVertex3f(0,0,-100);   // -Z at 100
+
+            gl.glVertex4f(0,0,0,1);
+            gl.glVertex4f(0,0,-1,0);
+            gl.glVertex4f(0,0,0,1);
+            gl.glVertex4f(0,0,+1,0);
 
             for (int i=-100; i < 100; i++) {
                 if (i == 0) { continue; }
-                float size = (i%10==0? 1.5f : 0.5f);
+                float size = (i%10==0? 0.5f : 0.1f);
                 gl.glVertex3f(0, size, i);
                 gl.glVertex3f(0, -size, i);
                 gl.glVertex3f(size, 0, i);
@@ -217,7 +244,6 @@ public class EarthShape
         }
 
         // Scale everything that follows up by 2x.
-        gl.glMatrixMode(GL2.GL_MODELVIEW);
         gl.glPushMatrix();
         gl.glScalef(2,2,2);
         //gl.glScalef(0.5f,0.5f,0.5f);
@@ -288,11 +314,54 @@ public class EarthShape
 
     @Override
     public void keyPressed(KeyEvent ev) {
-        log("key pressed: "+ev);
+        //log("key pressed: "+ev);
+
+        if (this.cameraSpeed == 0) {
+            this.cameraSpeed = INITIAL_CAMERA_SPEED;
+        }
+        else {
+            // For the moment, accel is same as initial speed.
+            this.cameraSpeed += INITIAL_CAMERA_SPEED;
+        }
+
+        switch (ev.getKeyCode()) {
+            case KeyEvent.VK_A:
+                this.cameraX -= this.cameraSpeed;
+                this.glCanvas.display();
+                break;
+
+            case KeyEvent.VK_D:
+                this.cameraX += this.cameraSpeed;
+                this.glCanvas.display();
+                break;
+
+            case KeyEvent.VK_W:
+                this.cameraZ -= this.cameraSpeed;
+                this.glCanvas.display();
+                break;
+
+            case KeyEvent.VK_S:
+                this.cameraZ += this.cameraSpeed;
+                this.glCanvas.display();
+                break;
+
+            case KeyEvent.VK_SPACE:
+                this.cameraY += this.cameraSpeed;
+                this.glCanvas.display();
+                break;
+
+            case KeyEvent.VK_Z:
+                this.cameraY -= this.cameraSpeed;
+                this.glCanvas.display();
+                break;
+        }
     }
 
     @Override
-    public void keyReleased(KeyEvent ev) {}
+    public void keyReleased(KeyEvent ev) {
+        this.cameraSpeed = 0;
+    }
+
     @Override
     public void keyTyped(KeyEvent ev) {}
 }
