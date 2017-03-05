@@ -5,8 +5,11 @@ package earthshape;
 
 import java.awt.BorderLayout;
 import java.awt.Frame;
+import java.awt.Label;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.IOException;
@@ -18,10 +21,11 @@ import com.jogamp.opengl.GLAutoDrawable;
 import com.jogamp.opengl.GLCapabilities;
 import com.jogamp.opengl.GLEventListener;
 import com.jogamp.opengl.awt.GLCanvas;
-import com.jogamp.opengl.glu.GLU;
 import com.jogamp.opengl.util.texture.Texture;
 import com.jogamp.opengl.util.texture.TextureData;
 import com.jogamp.opengl.util.texture.TextureIO;
+
+import util.Vector3f;
 
 /** This application demonstrates a procedure for inferring the shape
   * of a surface (such as the Earth) based on the observed locations of
@@ -32,7 +36,9 @@ public class EarthShape
     // Listen for GL draw events.
     implements GLEventListener,
                // Also handle keyboard input.
-               KeyListener
+               KeyListener,
+               // And mouse input.
+               MouseListener
 {
     // AWT boilerplate.
     private static final long serialVersionUID = 3903955302894393226L;
@@ -44,12 +50,21 @@ public class EarthShape
     /** The main GL canvas. */
     private GLCanvas glCanvas;
 
-    // Camera X and Y; experimental.
-    private float cameraX = 1, cameraY = 1, cameraZ = 2;
+    /** Camera position in space. */
+    private Vector3f cameraPosition = new Vector3f(1,1,2);
 
-    // Speed of camera movement.  Non-zero while camera movement underway.
-    private static final float INITIAL_CAMERA_SPEED = 0.1f;
+    /** Speed of camera movement.  Non-zero while camera movement underway. */
     private float cameraSpeed = 0;
+
+    /** When the camera starts moving, it moves this fast. */
+    private static final float INITIAL_CAMERA_SPEED = 0.1f;
+
+    /** As the camera continues moving, it accelerates by this
+      * amount with each step. */
+    private static final float CAMERA_ACCELERATION = 0.02f;
+
+    // Widget to show camera position.
+    private Label cameraPositionLabel;
 
     public EarthShape()
     {
@@ -65,11 +80,16 @@ public class EarthShape
         });
 
         this.addKeyListener(this);
+        this.addMouseListener(this);
 
         this.setSize(800, 800);
         this.setLocationByPlatform(true);
 
         this.setupJOGL();
+
+        this.cameraPositionLabel = new Label();
+        this.setCameraPositionLabel();
+        this.add(this.cameraPositionLabel, BorderLayout.SOUTH);
     }
 
     /** Initialize the JOGL library, then create a GL canvas and
@@ -161,7 +181,10 @@ public class EarthShape
         // adjusting the edges, the FOV becomes larger!
         gl.glFrustum(-1, 1, -1, 1, 1, 200);
 
-        gl.glTranslatef(-cameraX, -cameraY, -cameraZ);
+        {
+            Vector3f c = this.cameraPosition;
+            gl.glTranslatef(-c.x(), -c.y(), -c.z());
+        }
 
 //        GLU glu = GLU.createGLU(gl);
 //        glu.gluLookAt(cameraX, cameraY, 2,      // location
@@ -304,7 +327,7 @@ public class EarthShape
      * fill the canvas, so we do not need to do anything more. */
     @Override
     public void reshape(GLAutoDrawable drawable, int x, int y, int width, int height) {
-        log("reshape");
+        //log("reshape");
     }
 
     public static void main(String[] args)
@@ -320,41 +343,51 @@ public class EarthShape
             this.cameraSpeed = INITIAL_CAMERA_SPEED;
         }
         else {
-            // For the moment, accel is same as initial speed.
-            this.cameraSpeed += INITIAL_CAMERA_SPEED;
+            this.cameraSpeed += CAMERA_ACCELERATION;
         }
 
         switch (ev.getKeyCode()) {
             case KeyEvent.VK_A:
-                this.cameraX -= this.cameraSpeed;
-                this.glCanvas.display();
+                this.moveCamera(new Vector3f(-1,0,0));
                 break;
 
             case KeyEvent.VK_D:
-                this.cameraX += this.cameraSpeed;
-                this.glCanvas.display();
+                this.moveCamera(new Vector3f(+1,0,0));
                 break;
 
             case KeyEvent.VK_W:
-                this.cameraZ -= this.cameraSpeed;
-                this.glCanvas.display();
+                this.moveCamera(new Vector3f(0,0,-1));
                 break;
 
             case KeyEvent.VK_S:
-                this.cameraZ += this.cameraSpeed;
-                this.glCanvas.display();
+                this.moveCamera(new Vector3f(0,0,+1));
                 break;
 
             case KeyEvent.VK_SPACE:
-                this.cameraY += this.cameraSpeed;
-                this.glCanvas.display();
+                this.moveCamera(new Vector3f(0,+1,0));
                 break;
 
             case KeyEvent.VK_Z:
-                this.cameraY -= this.cameraSpeed;
-                this.glCanvas.display();
+                this.moveCamera(new Vector3f(0,-1,0));
                 break;
         }
+    }
+
+    /** Move the camera in the indicated direction (which should be
+      * a unit vector) by the current camera speed. */
+    private void moveCamera(Vector3f direction)
+    {
+        this.cameraPosition =
+            this.cameraPosition.plus(direction.times(this.cameraSpeed));
+        this.setCameraPositionLabel();
+        this.glCanvas.display();
+    }
+
+    /** Set the camera position label based on the camera position
+      * vector. */
+    private void setCameraPositionLabel()
+    {
+        this.cameraPositionLabel.setText("camera="+this.cameraPosition);
     }
 
     @Override
@@ -364,4 +397,19 @@ public class EarthShape
 
     @Override
     public void keyTyped(KeyEvent ev) {}
+
+    @Override
+    public void mouseClicked(MouseEvent ev) {}
+
+    @Override
+    public void mouseEntered(MouseEvent ev) {}
+
+    @Override
+    public void mouseExited(MouseEvent ev) {}
+
+    @Override
+    public void mousePressed(MouseEvent e) {}
+
+    @Override
+    public void mouseReleased(MouseEvent e) {}
 }
