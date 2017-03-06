@@ -28,4 +28,22 @@ public class FloatUtil {
         }
         return v;
     }
+
+    /** Convert degrees to radians. */
+    public static float degreesToRadiansf(float degrees)
+    {
+        return (float)(degrees / 180.0 * Math.PI);
+    }
+
+    /** Sne of degrees. */
+    public static float sinDegf(float degrees)
+    {
+        return (float)Math.cos(degreesToRadiansf(degrees));
+    }
+
+    /** Cosine of degrees. */
+    public static float cosDegf(float degrees)
+    {
+        return (float)Math.cos(degreesToRadiansf(degrees));
+    }
 }

@@ -22,6 +22,7 @@ import java.awt.event.WindowEvent;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 
 import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL2;
@@ -128,6 +129,12 @@ public class EarthShape
       * key is held down. */
     private boolean[] moveKeys = new boolean[MoveDirection.values().length];
 
+    /** Units in 3D space coordinates per km in surface being mapped. */
+    private static final float SPACE_UNITS_PER_KM = 0.001f;
+
+    /** Squares of the surface we have built. */
+    private ArrayList<SurfaceSquare> surfaceSquares = new ArrayList<SurfaceSquare>();
+
     public EarthShape()
     {
         super("Earth Shape");
@@ -161,6 +168,8 @@ public class EarthShape
             this.blankCursor = Toolkit.getDefaultToolkit().createCustomCursor(
                 cursorImg, new Point(0, 0), "blank cursor");
         }
+
+        this.buildEarthSurface();
 
         this.setupJOGL();
 
@@ -522,64 +531,97 @@ public class EarthShape
         gl.glEnd();
     }
 
-    /** Draw more of the Earth's surface. */
-    private void drawEarthSurface(GL2 gl)
+    /** Build a portion of the Earth's surface.  Adds squares to
+      * 'surfaceSquares'. */
+    private void buildEarthSurface()
     {
-        // Start with an arbitrary square centered at 0,0.
-        // The square will, for the moment, be assumed to be
-        // at the equator.
-        Vector3f center = new Vector3f(0,0,0);
-        Vector3f north = new Vector3f(0,0,-1);
-        Vector3f up = new Vector3f(0,1,0);
+        // Size of squares to build, in km.
+        float sizeKm = 1000;
 
-        // Now simulate the process of gradually moving East
-        // by 100 km at a time.  One unit in the 3D world coordinates
-        // will be 100 km.
-        for (int i=0; i < 400; i++) {
-            // Draw the square.
-            this.drawSquare(gl, center, north, up);
+        // Start with an arbitrary square centered at the origin
+        // the 3D space, and at SF, CA in the real world.
+        SurfaceSquare square = new SurfaceSquare(
+            new Vector3f(0,0,0),      // center
+            new Vector3f(0,0,-1),     // north
+            new Vector3f(0,1,0),      // up
+            sizeKm,
+            38, -58);                 // 38N, 122W
+        this.surfaceSquares.add(square);
 
-            // The new 'up' is tilted East by 1/100 of 90 degrees.
-            float degrees = (float)(1.0 / 100.0 * 90.0);
-            Vector3f newUp = up.rotate(degrees, north);
+        // Calculate celestial North for the chosen starting point and
+        // its orientation.
+        Vector3f celestialNorth;
+        {
+            // Local East at that point.
+            Vector3f squareEast = square.north.cross(square.up).normalize();
 
-            // Since we are at the equator, North does not change.
-            Vector3f newNorth = north;
+            // Given the chosen starting point, this is the direction of
+            // celestial North.
+            celestialNorth = square.north.rotate(square.latitude, squareEast);
+        }
+
+        // Now take some steps 'sizeKm' East.
+        for (int i=0; i<40; i++) {
+            // Going East, distance is 111km * cos(lat) per degree
+            // of longitude.
+            float deltaLongitude =
+                (float)(sizeKm / (111.0 * FloatUtil.cosDegf(square.latitude)));
+
+            // North and Up are then rotated by that much about the
+            // celestial pole.
+            Vector3f newNorth =
+                square.north.rotate(deltaLongitude, celestialNorth);
+            Vector3f newUp =
+                square.up.rotate(deltaLongitude, celestialNorth);
 
             // Calculate the old and new East, then take their average
             // to get a direction along which to move the center without
             // adding a systematic bias that resists the curvature.
             // (If we just add 'oldEast', then the edges of adjacent
-            // squares do not meet if curvature is non-zero.)
-            Vector3f oldEast = north.cross(up).normalize();
+            // squares end up with significant vertical separation,
+            // making the join lines very non-flat.)
+            Vector3f oldEast = square.north.cross(square.up).normalize();
             Vector3f newEast = newNorth.cross(newUp).normalize();
             Vector3f avgEast = oldEast.plus(newEast).normalize();
 
             // Move the center East by 100 km.
-            Vector3f newCenter = center.plus(avgEast);
+            Vector3f newCenter = square.center.plus(avgEast);
 
-            // Update our "current" position.
-            center = newCenter;
-            north = newNorth;
-            up = newUp;
+            // Put these details into a new square object, treating
+            // it as our new "current" square.
+            square = new SurfaceSquare(
+                newCenter, newNorth, newUp,
+                sizeKm,
+                square.latitude,      // did not change
+                square.longitude + deltaLongitude);
+            this.surfaceSquares.add(square);
         }
+    }
 
+    /** Draw what is in 'surfaceSquares'. */
+    private void drawEarthSurface(GL2 gl)
+    {
+        for (SurfaceSquare s : this.surfaceSquares) {
+            this.drawSquare(gl, s);
+        }
     }
 
     /** Draw one surface square. */
-    private void drawSquare(GL2 gl, Vector3f center,
-                            Vector3f north, Vector3f up)
+    private void drawSquare(GL2 gl, SurfaceSquare s)
     {
-        Vector3f east = north.cross(up);
+        Vector3f east = s.north.cross(s.up);
+
+        // Size of the square in 3D coordinates.
+        float squareSize = s.sizeKm * SPACE_UNITS_PER_KM;
 
         // Scale north and east by half of desired square size.
-        Vector3f n = north.normalize().times(0.5f);
-        Vector3f e = east.normalize().times(0.5f);
+        Vector3f n = s.north.normalize().times(squareSize/2);
+        Vector3f e = east.normalize().times(squareSize/2);
 
-        Vector3f nw = center.plus(n).minus(e);
-        Vector3f sw = center.minus(n).minus(e);
-        Vector3f ne = center.plus(n).plus(e);
-        Vector3f se = center.minus(n).plus(e);
+        Vector3f nw = s.center.plus(n).minus(e);
+        Vector3f sw = s.center.minus(n).minus(e);
+        Vector3f ne = s.center.plus(n).plus(e);
+        Vector3f se = s.center.minus(n).plus(e);
         this.drawCompassRect(gl, nw, sw, ne, se);
 
         // Also draw a surface normal.
@@ -587,8 +629,8 @@ public class EarthShape
         gl.glBegin(GL.GL_LINES);
         glMaterialColor3f(gl, 0.5f, 0.5f, 0);    // Dark yellow
         gl.glNormal3f(0,1,0);
-        gl.glVertex3fv(center.getArray(), 0);
-        gl.glVertex3fv(center.plus(up).getArray(), 0);
+        gl.glVertex3fv(s.center.getArray(), 0);
+        gl.glVertex3fv(s.center.plus(s.up).getArray(), 0);
         gl.glEnd();
     }
 
