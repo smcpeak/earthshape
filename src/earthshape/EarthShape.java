@@ -304,7 +304,7 @@ public class EarthShape
         // left/right/top/bottom values defines the field of view.
         // If you move the clipping plane nearer the camera without
         // adjusting the edges, the FOV becomes larger!
-        gl.glFrustum(-1, 1, -1, 1, 1, 200);
+        gl.glFrustum(-0.1, 0.1, -0.1, 0.1, 0.1, 100);
 
         // Rotate and position camera.  Effectively, these
         // transformations happen in the reverse order they are
