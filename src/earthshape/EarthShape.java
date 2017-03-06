@@ -170,6 +170,7 @@ public class EarthShape
         }
 
         this.buildEarthSurface();
+        //this.randomWalkEarthSurface();
 
         this.setupJOGL();
 
@@ -533,11 +534,53 @@ public class EarthShape
                 prevLongitude = longitude;
                 longitude = FloatUtil.modulus2(longitude+9, -180, 180);
             }
-
         }
 
         log("finished building Earth; nsquares="+this.surfaceSquares.size());
     }
+
+    /** Build the surface by walking randomly from a starting location.
+      * For the moment, this can only be activated by uncommenting a
+      * call site. */
+    @SuppressWarnings("unused")
+    private void randomWalkEarthSurface()
+    {
+        log("building Earth by random walk");
+
+        // Size of squares to build, in km.
+        float sizeKm = 1000;
+
+        // Start with an arbitrary square centered at the origin
+        // the 3D space, and at SF, CA in the real world.
+        float startLatitude = 38;     // 38N
+        float startLongitude = -58;   // 122W
+        SurfaceSquare startSquare = new SurfaceSquare(
+            new Vector3f(0,0,0),      // center
+            new Vector3f(0,0,-1),     // north
+            new Vector3f(0,1,0),      // up
+            sizeKm,
+            startLatitude,
+            startLongitude);
+        this.addSurfaceSquare(startSquare);
+
+        SurfaceSquare square = startSquare;
+        for (int i=0; i < 1000; i++) {
+            // Select a random change in latitude and longitude
+            // of about 10 degrees.
+            float deltaLatitude = (float)(Math.random() * 12 - 6);
+            float deltaLongitude = (float)(Math.random() * 12 - 6);
+
+            // Walk in that direction, keeping latitude and longitude
+            // within their usual ranges.  Also stay away from the poles
+            // since the rounding errors cause problems there.
+            square = this.addAdjacentSquare(square,
+                FloatUtil.clamp(square.latitude + deltaLatitude, -80, 80),
+                FloatUtil.modulus2(square.longitude + deltaLongitude, -180, 180));
+        }
+
+        log("finished building Earth; nsquares="+this.surfaceSquares.size());
+    }
+
 
     /** Given square 'old', add an adjacent square at the given
       * latitude and longitude.  The relative orientation of the
