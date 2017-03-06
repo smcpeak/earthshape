@@ -3,6 +3,8 @@
 
 package earthshape;
 
+import java.util.ArrayList;
+
 import util.Vector3f;
 
 /** Represent a single square on a surface in space. */
@@ -31,6 +33,10 @@ public class SurfaceSquare {
       * coordinate system with which to tie the location to
       * the real world. */
     public float longitude;
+
+    /** Star observations taken from this point at some
+      * point in time. */
+    public ArrayList<StarData> starData = new ArrayList<StarData>();
 
     public SurfaceSquare(
         Vector3f center,

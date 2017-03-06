@@ -90,13 +90,25 @@ public class Vector3f {
     }
 
     /** Return this vector after rotating by 'degrees' about 'axis'.
-      * Rotation follows right-hand rule. */
+      * Rotation follows right-hand rule.  The axis vector is not
+      * assumed to be normalized yet. */
     public Vector3f rotate(float degrees, Vector3f axis)
     {
         float radians = (float)(degrees / 180.0 * Math.PI);
 
         Matrix3f m = Matrix3f.rotate(radians, axis);
         return m.times(this);
+    }
+
+    /** Rotate about 'axisAndAngle', interpreting its length as
+      * the rotation angle in degrees. */
+    public Vector3f rotateAA(Vector3f axisAndAngle)
+    {
+        float degrees = (float)axisAndAngle.length();
+        if (degrees == 0) {
+            return this;
+        }
+        return this.rotate(degrees, axisAndAngle);
     }
 
     /** Return 'this' cross 'v'. */
@@ -106,4 +118,25 @@ public class Vector3f {
                             z()*v.x() - x()*v.z(),
                             x()*v.y() - y()*v.x());
     }
+
+    /** Return a rotation vector that transforms 'this' to 'dest', ignoring
+      * their lengths.  The vector is the rotation axis and its length
+      * is the rotation angle in degrees. */
+    public Vector3f rotationToBecome(Vector3f dest)
+    {
+        // First ensure the vectors are normalized.
+        dest = dest.normalize();
+        Vector3f src = this.normalize();
+
+        // Now their cross product gives the axis and the
+        // sine of the desired length.
+        Vector3f v = src.cross(dest);
+
+        // Fix the length.
+        float degrees = FloatUtil.radiansToDegreesf(
+            (float)Math.asin(v.length()));
+        return v.normalize().times(degrees);
+    }
 }
+
+// EOF

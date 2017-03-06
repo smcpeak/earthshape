@@ -23,6 +23,8 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 
 import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL2;
@@ -35,6 +37,7 @@ import com.jogamp.opengl.util.texture.Texture;
 import com.jogamp.opengl.util.texture.TextureData;
 import com.jogamp.opengl.util.texture.TextureIO;
 
+import util.ContainerUtil;
 import util.FloatUtil;
 import util.Vector3f;
 
@@ -169,8 +172,9 @@ public class EarthShape
                 cursorImg, new Point(0, 0), "blank cursor");
         }
 
-        this.buildEarthSurface();
+        //this.buildEarthSurfaceWithLatLong();
         //this.randomWalkEarthSurface();
+        this.buildEarthSurfaceFromStarData();
 
         this.setupJOGL();
 
@@ -502,8 +506,9 @@ public class EarthShape
     }
 
     /** Build a portion of the Earth's surface.  Adds squares to
-      * 'surfaceSquares'. */
-    private void buildEarthSurface()
+      * 'surfaceSquares'.  This works by iterating over latitude
+      * and longitude pairs and assuming a spherical Earth. */
+    private void buildEarthSurfaceWithLatLong()
     {
         log("building Earth");
 
@@ -618,7 +623,6 @@ public class EarthShape
         log("finished building Earth; nsquares="+this.surfaceSquares.size());
     }
 
-
     /** Given square 'old', add an adjacent square at the given
       * latitude and longitude.  The relative orientation of the
       * new square will determined using the latitude and longitude,
@@ -700,6 +704,263 @@ public class EarthShape
         this.addSurfaceSquare(ret);
 
         return ret;
+    }
+
+    /** Build a surface using star data rather than any presumed
+      * size and shape. */
+    private void buildEarthSurfaceFromStarData()
+    {
+        log("building Earth using star data");
+
+        // Begin by grabbing the hardcoded star data.
+        StarData[] starData = StarData.getHardcodedData();
+
+        // Size of squares to build, in km.
+        float sizeKm = 1000;
+
+        // Start with an arbitrary square centered at the origin
+        // the 3D space, and at SF, CA in the real world.
+        float startLatitude = 38;     // 38N
+        float startLongitude = -122;  // 122W
+        SurfaceSquare startSquare = new SurfaceSquare(
+            new Vector3f(0,0,0),      // center
+            new Vector3f(0,0,-1),     // north
+            new Vector3f(0,1,0),      // up
+            sizeKm,
+            startLatitude,
+            startLongitude);
+        addMatchingData(startSquare, starData);
+        this.addSurfaceSquare(startSquare);
+
+        // Calculate a rotation vector that will best align
+        // the current square's star observations with the
+        // next square's.
+        float latitude = 38;
+        float longitude = -113;
+        Vector3f rot = calcRequiredRotation(startSquare, starData, latitude, longitude);
+        if (rot == null) {
+            return;    // give up
+        }
+
+        // Make the new square from the old and the computed
+        // change in orientation.
+        SurfaceSquare s =
+            addRotatedAdjacentSquare(startSquare, latitude, longitude, rot);
+
+        // Do the next spot too.
+        latitude = 38;
+        longitude = -104;
+        rot = calcRequiredRotation(s, starData, latitude, longitude);
+        if (rot == null) {
+            return;    // give up
+        }
+
+        // Make the new square from the old and the computed
+        // change in orientation.
+        s = addRotatedAdjacentSquare(s, latitude, longitude, rot);
+    }
+
+    /** Add a square adjacent to 'old', positioned at the given latitude
+      * and longitude, with orientation changed by 'rotation'. */
+    private SurfaceSquare addRotatedAdjacentSquare(
+        SurfaceSquare old,
+        float newLatitude,
+        float newLongitude,
+        Vector3f rotation)
+    {
+        // TODO: Factor commonality with 'addAdjacentSquare'.
+
+        // Calculate local East for 'old'.
+        Vector3f oldEast = old.north.cross(old.up).normalize();
+
+        // Calculate the angle along the spherical Earth subtended
+        // by the arc from 'old' to the new coordinates.
+        float arcAngleDegrees = FloatUtil.sphericalSeparationAngle(
+            old.longitude, old.latitude,
+            newLongitude, newLatitude);
+
+        // Calculate the distance along the surface that separates
+        // these points by using the fact that there are 111 km per
+        // degree of arc.
+        float distanceKm = (float)(111.0 * arcAngleDegrees);
+
+        // Get lat/long deltas.
+        float deltaLatitude = newLatitude - old.latitude;
+        float deltaLongitude = FloatUtil.modulus2(
+            newLongitude - old.longitude, -180, 180);
+
+        // If we didn't move, just return the old square.
+        if (deltaLongitude == 0 && deltaLatitude == 0) {
+            return old;
+        }
+
+        // Compute the new orientation vectors by rotating
+        // the old ones by the given amount.
+        Vector3f newNorth = old.north.rotateAA(rotation);
+        Vector3f newUp = old.up.rotateAA(rotation);
+        Vector3f newEast = newNorth.cross(newUp).normalize();
+
+        // Calculate the average compass heading, in degrees North
+        // of East, used to go from the old
+        // location to the new.  This is rather crude because it
+        // doesn't properly account for the fact that longitude
+        // lines get closer together near the poles.
+        float headingDegrees = FloatUtil.radiansToDegreesf(
+            (float)Math.atan2(deltaLatitude, deltaLongitude));
+
+        // For both old and new, calculate a unit vector for the
+        // travel direction.  Then average them to approximate the
+        // average travel direction.
+        Vector3f oldTravel = oldEast.rotate(headingDegrees, old.up);
+        Vector3f newTravel = newEast.rotate(headingDegrees, newUp);
+        Vector3f avgTravel = oldTravel.plus(newTravel).normalize();
+
+        // Calculate the new square's center as 'distance' units
+        // along 'avgTravel'.
+        Vector3f newCenter = old.center.plus(
+            avgTravel.times(distanceKm * SPACE_UNITS_PER_KM));
+
+        // Make the new square and add it to the list.
+        SurfaceSquare ret = new SurfaceSquare(
+            newCenter, newNorth, newUp,
+            old.sizeKm,
+            newLatitude,      // did not change
+            newLongitude);
+        this.addSurfaceSquare(ret);
+
+        return ret;
+    }
+
+    /** Add to 'square.starData' all entries of 'starData' that have
+      * the same latitude and longitude. */
+    private void addMatchingData(SurfaceSquare square, StarData[] starData)
+    {
+        for (StarData sd : starData) {
+            if (square.latitude == sd.latitude &&
+                square.longitude == sd.longitude)
+            {
+                square.starData.add(sd);
+            }
+        }
+    }
+
+    /** Compare star data for 'startSquare' and for the given new
+      * latitude and longitude.  Return a rotation vector that will
+      * transform the orientation of 'startSquare' to match the
+      * best surface for a new square at the new location.  The
+      * vector's length is the amount of rotation in degrees.
+      *
+      * Returns null if there are not enough stars in common. */
+    private Vector3f calcRequiredRotation(
+        SurfaceSquare startSquare,
+        StarData[] starData,
+        float newLatitude,
+        float newLongitude)
+    {
+        // Set of stars visible at the start and end squares and
+        // above 20 degrees above the horizon.
+        HashMap<String, Vector3f> startStars =
+            getVisibleStars(starData, startSquare.latitude, startSquare.longitude);
+        HashMap<String, Vector3f> endStars =
+            getVisibleStars(starData, newLatitude, newLongitude);
+
+        // Current best rotation and average difference.
+        Vector3f currentRotation = new Vector3f(0,0,0);
+
+        // Iteratively refine the current rotation by computing the
+        // average correction rotation and applying it until that
+        // correction drops below a certain threshold.
+        for (int iterationCount = 0; iterationCount < 100; iterationCount++) {
+            // Accumulate the vector sum of all the rotation difference
+            // vectors as well as the sum of their lengths.
+            Vector3f diffSum = new Vector3f(0,0,0);
+            float diffLengthSum = 0;
+            int diffCount = 0;
+
+            for (HashMap.Entry<String, Vector3f> e : startStars.entrySet()) {
+                String starName = e.getKey();
+                Vector3f startVector = e.getValue();
+
+                Vector3f endVector = endStars.get(starName);
+                if (endVector == null) {
+                    continue;
+                }
+
+                // Calculate a difference rotation vector from the
+                // rotated start vector to the end vector.
+                Vector3f rot = startVector.rotateAA(currentRotation)
+                                          .rotationToBecome(endVector);
+
+                // Accumulate it.
+                diffSum = diffSum.plus(rot);
+                diffLengthSum += rot.length();
+                diffCount++;
+            }
+
+            if (diffCount < 2) {
+                log("reqRot: not enough stars");
+                return null;
+            }
+
+            // Calculate the average correction rotation.
+            Vector3f avgDiff = diffSum.times(1.0f / diffCount);
+
+            // If the correction angle is small enough, stop.
+            if (avgDiff.length() < 0.01) {
+                log("reqRot finished: iters="+iterationCount+
+                    " avgDiffLen="+avgDiff.length()+
+                    " diffLengthSum="+diffLengthSum+
+                    " diffCount="+diffCount);
+                return currentRotation;
+            }
+
+            // Otherwise, apply it to the current rotation and
+            // iterate again.
+            currentRotation = currentRotation.plus(avgDiff);
+        }
+
+        log("reqRot: hit iteration limit!");
+        return currentRotation;
+    }
+
+    /** For every star in 'starData' that matches 'latitude' and
+      * 'longitude', and has an elevation of at least 20 degrees,
+      * add it to a map from star name to azEl vector. */
+    private HashMap<String, Vector3f> getVisibleStars(
+        StarData[] starData,
+        float latitude,
+        float longitude)
+    {
+        HashMap<String, Vector3f> ret = new HashMap<String, Vector3f>();
+
+        for (StarData sd : starData) {
+            if (sd.latitude == latitude &&
+                sd.longitude == longitude &&
+                sd.elevation >= 20)
+            {
+                ret.put(sd.name,
+                    azimuthElevationToVector(sd.azimuth, sd.elevation));
+            }
+        }
+
+        return ret;
+    }
+
+    /** Convert a pair of azimuth and elevation, in degrees, to a unit
+      * vector that points in the same direction, in a coordinate system
+      * where 0 degrees azimuth is -Z, East is +X, and up is +Y. */
+    private Vector3f azimuthElevationToVector(float azimuth, float elevation)
+    {
+        // Start by pointing a vector at 0 degrees.
+        Vector3f v = new Vector3f(0, 0, -1);
+
+        // Now rotate it up to align with elevation.
+        v = v.rotate(elevation, new Vector3f(1, 0, 0));
+
+        // Now rotate it East to align with azimuth.
+        v = v.rotate(azimuth, new Vector3f(0, 1, 0));
+
+        return v;
     }
 
     /** Add a square to 'surfaceSquares'. */
