@@ -339,6 +339,10 @@ public class EarthShape
         // Future matrix manipulations are for the model.
         gl.glMatrixMode(GL2.GL_MODELVIEW);
 
+        // Use thicker lines so they will show up better if/when I
+        // make a screenshot recording.
+        gl.glLineWidth(2);
+
         // Make axis normals point toward +Y since my light is
         // above the scene.
         gl.glNormal3f(0,1,0);
