@@ -12,10 +12,17 @@ public class FloatUtil {
             v += Math.floor(-v / limit) * limit;
         }
         else if (v >= limit) {
-            v -= Math.ceil(v / limit) * limit;
+            v -= Math.floor(v / limit) * limit;
         }
         return v;
     }
+
+    /** Return a value 'x' in [lo, hi) such that 'v-x'
+     * is an integer multiple of 'limit'.  */
+   public static float modulus2(float v, float lo, float hi)
+   {
+       return lo + modulus(v - lo, hi - lo);
+   }
 
     /** Clamp v to [lo,hi]. */
     public static float clamp(float v, float lo, float hi)

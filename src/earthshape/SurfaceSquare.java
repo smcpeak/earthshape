@@ -47,6 +47,17 @@ public class SurfaceSquare {
         this.latitude = latitude;
         this.longitude = longitude;
     }
+
+    public String toString()
+    {
+        return "Sq(c="+this.center+
+            ", n="+this.north+
+            ", u="+this.up+
+            ", s="+this.sizeKm+
+            ", lat="+this.latitude+
+            ", lng="+this.longitude+
+            ")";
+    }
 }
 
 // EOF

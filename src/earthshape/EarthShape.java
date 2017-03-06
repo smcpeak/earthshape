@@ -409,74 +409,6 @@ public class EarthShape
             gl.glEnd();
         }
 
-        // Scale everything that follows up by 2x.
-        gl.glPushMatrix();
-        gl.glScalef(2,2,2);
-        //gl.glScalef(0.5f,0.5f,0.5f);
-
-        // Draw a colored triangle.
-        {
-            gl.glBegin(GL.GL_TRIANGLES);
-            gl.glNormal3f(0,0,1);
-
-            // Red in lower-left.
-            glMaterialColor3f(gl, 1, 0, 0);
-            gl.glVertex3f(0.25f, 0.25f, 0);
-
-            // Green in lower-right.
-            glMaterialColor3f(gl, 0, 1, 0);
-            gl.glVertex3f(0.75f, 0.25f, 0);
-
-            // Blue in upper-left.
-            glMaterialColor3f(gl, 0, 0, 1);
-            gl.glVertex3f(0.25f, 0.75f, 0);
-
-            gl.glEnd();
-        }
-
-        // Draw a textured triangle.
-        {
-            this.compassTexture.enable(gl);
-            this.compassTexture.bind(gl);
-
-            // Reset base color to white (otherwise, GL remembers the
-            // blue color used for the final vertex of the colored
-            // triangle, and the new triangle will be blue too!).
-            glMaterialColor3f(gl, 1,1,1);
-
-            gl.glBegin(GL.GL_TRIANGLES);
-
-            // Upper-right.
-            gl.glTexCoord2f(1.0f, 1.0f);
-            gl.glVertex3f(0.8f, 0.8f, 0);
-
-            // Upper-left.
-            gl.glTexCoord2f(0.0f, 1.0f);
-            gl.glVertex3f(0.3f, 0.8f, 0);
-
-            // Lower-right.
-            gl.glTexCoord2f(1.0f, 0.0f);
-            gl.glVertex3f(0.8f, 0.3f, 0);
-
-            gl.glEnd();
-        }
-
-        gl.glPopMatrix();
-
-        // Draw an initial surface rectangle.
-        this.drawCompassRect(gl,
-            new Vector3f(1, 0, -2),
-            new Vector3f(1, 0, -1),
-            new Vector3f(2, 0, -2),
-            new Vector3f(2, 0, -1));
-
-        // Draw another that curves down.
-        this.drawCompassRect(gl,
-            new Vector3f(2, 0, -2),
-            new Vector3f(2, 0, -1),
-            new Vector3f(3, -0.2f, -2),
-            new Vector3f(3, -0.2f, -1));
-
         this.drawEarthSurface(gl);
 
         this.compassTexture.disable(gl);
@@ -535,6 +467,8 @@ public class EarthShape
       * 'surfaceSquares'. */
     private void buildEarthSurface()
     {
+        log("building Earth");
+
         // Size of squares to build, in km.
         float sizeKm = 1000;
 
@@ -546,7 +480,7 @@ public class EarthShape
             new Vector3f(0,1,0),      // up
             sizeKm,
             38, -58);                 // 38N, 122W
-        this.surfaceSquares.add(square);
+        this.addSurfaceSquare(square);
 
         // Calculate celestial North for the chosen starting point and
         // its orientation.
@@ -560,42 +494,155 @@ public class EarthShape
             celestialNorth = square.north.rotate(square.latitude, squareEast);
         }
 
-        // Now take some steps 'sizeKm' East.
-        for (int i=0; i<40; i++) {
-            // Going East, distance is 111km * cos(lat) per degree
-            // of longitude.
-            float deltaLongitude =
-                (float)(sizeKm / (111.0 * FloatUtil.cosDegf(square.latitude)));
+        // Outer loop 1: Walk North as far as we can.
+        SurfaceSquare outer = square;
+        while (true) {
+            // Inner loop: Walk East until we get back to
+            // the same longitude.
+            SurfaceSquare inner = outer;
+            SurfaceSquare prev = inner;
+            while (true) {
+                inner = this.addEastSquare(inner, +1, celestialNorth);
+                if (prev.longitude < outer.longitude &&
+                                     outer.longitude <= inner.longitude) {
+                    break;
+                }
+                prev = inner;
+            }
 
-            // North and Up are then rotated by that much about the
-            // celestial pole.
-            Vector3f newNorth =
-                square.north.rotate(deltaLongitude, celestialNorth);
-            Vector3f newUp =
-                square.up.rotate(deltaLongitude, celestialNorth);
-
-            // Calculate the old and new East, then take their average
-            // to get a direction along which to move the center without
-            // adding a systematic bias that resists the curvature.
-            // (If we just add 'oldEast', then the edges of adjacent
-            // squares end up with significant vertical separation,
-            // making the join lines very non-flat.)
-            Vector3f oldEast = square.north.cross(square.up).normalize();
-            Vector3f newEast = newNorth.cross(newUp).normalize();
-            Vector3f avgEast = oldEast.plus(newEast).normalize();
-
-            // Move the center East by 100 km.
-            Vector3f newCenter = square.center.plus(avgEast);
-
-            // Put these details into a new square object, treating
-            // it as our new "current" square.
-            square = new SurfaceSquare(
-                newCenter, newNorth, newUp,
-                sizeKm,
-                square.latitude,      // did not change
-                square.longitude + deltaLongitude);
-            this.surfaceSquares.add(square);
+            // Go North another step.
+            outer = this.addNorthSquare(outer, +1);
+            if (outer == null) {
+                break;
+            }
         }
+
+        // Outer loop 2: Walk South as far as we can.
+        outer = square;
+        while (true) {
+            // Inner loop: Walk East until we get back to
+            // the same longitude.
+            SurfaceSquare inner = outer;
+            SurfaceSquare prev = inner;
+            while (true) {
+                inner = this.addEastSquare(inner, +1, celestialNorth);
+                if (prev.longitude < outer.longitude &&
+                                     outer.longitude <= inner.longitude) {
+                    break;
+                }
+                prev = inner;
+            }
+
+            // Go South another step.
+            outer = this.addNorthSquare(outer, -1);
+            if (outer == null) {
+                break;
+            }
+        }
+
+        log("finished building Earth; nsquares="+this.surfaceSquares.size());
+    }
+
+    /** Construct a square adjacent to 'square' by going East or West a
+      * distance of 'square.sizeKm'.  Go East if 'polarity' is +1,
+      * otherwise West.  Add the square to 'surfaceSquares' and return
+      * it. */
+    private SurfaceSquare addEastSquare(
+        SurfaceSquare square,
+        float polarity,
+        Vector3f celestialNorth)
+    {
+        // Going East, distance is 111km * cos(lat) per degree
+        // of longitude.
+        float deltaLongitude =
+            (float)(square.sizeKm * polarity /
+                      (111.0 * FloatUtil.cosDegf(square.latitude)));
+
+        // North and Up are then rotated by that much about the
+        // celestial pole.
+        Vector3f newNorth =
+            square.north.rotate(deltaLongitude, celestialNorth);
+        Vector3f newUp =
+            square.up.rotate(deltaLongitude, celestialNorth);
+
+        // Calculate the old and new East, then take their average
+        // to get a direction along which to move the center without
+        // adding a systematic bias that resists the curvature.
+        // (If we just add 'oldEast', then the edges of adjacent
+        // squares end up with significant vertical separation,
+        // making the join lines very non-flat.)
+        Vector3f oldEast = square.north.cross(square.up).normalize();
+        Vector3f newEast = newNorth.cross(newUp).normalize();
+        Vector3f avgEast = oldEast.plus(newEast).normalize();
+
+        // Move the center East or West by sizeKm.
+        Vector3f newCenter = square.center.plus(avgEast.times(
+            square.sizeKm * SPACE_UNITS_PER_KM * polarity));
+
+        // Put these details into a new square object, treating
+        // it as our new "current" square.
+        square = new SurfaceSquare(
+            newCenter, newNorth, newUp,
+            square.sizeKm,
+            square.latitude,      // did not change
+            FloatUtil.modulus2(square.longitude + deltaLongitude, -180, 180));
+        this.addSurfaceSquare(square);
+
+        return square;
+    }
+
+    /** Construct a square adjacent to 'square' by going North or South a
+      * distance of 'square.sizeKm'.  Go North if 'polarity' is +1,
+      * otherwise South.  Add the square to 'surfaceSquares' and return
+      * it.  However, if we cannot go North or South due to crossing the
+      * poles, then return null. */
+    private SurfaceSquare addNorthSquare(
+        SurfaceSquare square,
+        float polarity)
+    {
+        // Going North, distance is 111km per degree of latitude.
+        float deltaLatitude =
+            (float)(square.sizeKm * polarity / 111.0);
+
+        // Check for going past the poles.  That will cause a reveral
+        // of North and South that I do not want.
+        float newLatitude = square.latitude + deltaLatitude;
+        if (!( -90 <= newLatitude && newLatitude <= 90 )) {
+            return null;
+        }
+
+        // North and Up are then rotated by that much about
+        // local East.
+        Vector3f oldEast = square.north.cross(square.up).normalize();
+        Vector3f newNorth =
+            square.north.rotate(-deltaLatitude, oldEast);
+        Vector3f newUp =
+            square.up.rotate(-deltaLatitude, oldEast);
+
+        // Average of new and old North.
+        Vector3f avgNorth = square.north.plus(newNorth).normalize();
+
+        // Move the center North or South by sizeKm.
+        Vector3f newCenter = square.center.plus(avgNorth.times(
+            square.sizeKm * SPACE_UNITS_PER_KM * polarity));
+
+        // Put these details into a new square object, treating
+        // it as our new "current" square.
+        square = new SurfaceSquare(
+            newCenter, newNorth, newUp,
+            square.sizeKm,
+            square.latitude + deltaLatitude,
+            square.longitude);
+        this.addSurfaceSquare(square);
+
+        return square;
+    }
+
+    /** Add a square to 'surfaceSquares'. */
+    private void addSurfaceSquare(SurfaceSquare s)
+    {
+        this.surfaceSquares.add(s);
+        log("added square: "+s);
     }
 
     /** Draw what is in 'surfaceSquares'. */
