@@ -368,6 +368,17 @@ public class EarthShape
             }
 
             gl.glEnd();
+
+            // Draw a "+X" at the positive end for reference.
+            gl.glPushMatrix();
+            gl.glTranslatef(100, 10, 0);
+            gl.glScalef(10, 10, 10);
+            gl.glRotatef(-90, 0, 1, 0);
+            gl.glTranslatef(-1, 0, 0);
+            drawPlus(gl);
+            gl.glTranslatef(1, 0, 0);
+            drawX(gl);
+            gl.glPopMatrix();
         }
 
         // Y axis.
@@ -390,6 +401,17 @@ public class EarthShape
             }
 
             gl.glEnd();
+
+            // Draw a "+Y" at the positive end for reference.
+            gl.glPushMatrix();
+            gl.glTranslatef(0, 100, 10);
+            gl.glScalef(10, 10, 10);
+            gl.glRotatef(90, 1, 0, 0);
+            gl.glTranslatef(-1, 0, 0);
+            drawPlus(gl);
+            gl.glTranslatef(1, 0, 0);
+            drawY(gl);
+            gl.glPopMatrix();
         }
 
         // Z axis.
@@ -412,6 +434,17 @@ public class EarthShape
             }
 
             gl.glEnd();
+
+            // Draw a "+Z" at the positive end for reference.
+            gl.glPushMatrix();
+            gl.glTranslatef(0, 10, 100);
+            gl.glScalef(10, 10, 10);
+            gl.glRotatef(180, 0, 1, 0);
+            gl.glTranslatef(-1, 0, 0);
+            drawPlus(gl);
+            gl.glTranslatef(1, 0, 0);
+            drawZ(gl);
+            gl.glPopMatrix();
         }
 
         this.drawEarthSurface(gl);
@@ -712,6 +745,51 @@ public class EarthShape
         gl.glEnd();
     }
 
+    /** Draw a 2D "+" in the [0,1] box. */
+    private void drawPlus(GL2 gl)
+    {
+        gl.glBegin(GL.GL_LINES);
+        gl.glVertex2f(.2f, .5f);
+        gl.glVertex2f(.8f, .5f);
+        gl.glVertex2f(.5f, .2f);
+        gl.glVertex2f(.5f, .8f);
+        gl.glEnd();
+    }
+
+    /** Draw a 2D "X" in the [0,1] box. */
+    private void drawX(GL2 gl)
+    {
+        gl.glBegin(GL.GL_LINES);
+        gl.glVertex2f(0f, 0f);
+        gl.glVertex2f(1f, 1f);
+        gl.glVertex2f(0f, 1f);
+        gl.glVertex2f(1f, 0f);
+        gl.glEnd();
+    }
+
+    /** Draw a 2D "Y" in the [0,1] box. */
+    private void drawY(GL2 gl)
+    {
+        gl.glBegin(GL.GL_LINES);
+        gl.glVertex2f(.5f, 0f);
+        gl.glVertex2f(.5f, .5f);
+        gl.glVertex2f(.5f, .5f);
+        gl.glVertex2f(0f, 1f);
+        gl.glVertex2f(.5f, .5f);
+        gl.glVertex2f(1f, 1f);
+        gl.glEnd();
+    }
+
+    /** Draw a 2D "Z" in the [0,1] box. */
+    private void drawZ(GL2 gl)
+    {
+        gl.glBegin(GL.GL_LINE_STRIP);
+        gl.glVertex2f(0f, 1f);
+        gl.glVertex2f(1f, 1f);
+        gl.glVertex2f(0f, 0f);
+        gl.glVertex2f(1f, 0f);
+        gl.glEnd();
+    }
 
     /** Called when the window is resized.  The superclass does
       * basic resize handling, namely adjusting the viewport to
