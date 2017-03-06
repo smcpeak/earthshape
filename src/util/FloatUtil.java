@@ -9,7 +9,7 @@ public class FloatUtil {
     public static float modulus(float v, float limit)
     {
         if (v < 0) {
-            v += Math.floor(-v / limit) * limit;
+            v += Math.ceil(-v / limit) * limit;
         }
         else if (v >= limit) {
             v -= Math.floor(v / limit) * limit;
@@ -36,21 +36,59 @@ public class FloatUtil {
         return v;
     }
 
-    /** Convert degrees to radians. */
+    /** Convert degrees to radians using 'float'. */
     public static float degreesToRadiansf(float degrees)
     {
         return (float)(degrees / 180.0 * Math.PI);
     }
 
-    /** Sne of degrees. */
-    public static float sinDegf(float degrees)
+    /** Convert radians to degrees using 'float'. */
+    public static float radiansToDegreesf(float radians)
     {
-        return (float)Math.cos(degreesToRadiansf(degrees));
+        return (float)(radians / Math.PI * 180.0);
     }
 
-    /** Cosine of degrees. */
+    /** Sine of degrees, as 'float'. */
+    public static float sinDegf(float degrees)
+    {
+        return (float)Math.sin(degreesToRadiansf(degrees));
+    }
+
+    /** Cosine of degrees, as 'float'. */
     public static float cosDegf(float degrees)
     {
         return (float)Math.cos(degreesToRadiansf(degrees));
     }
+
+    /** Calculate the angle between two angles expressed as azimuth
+      * and elevation, in degrees.  This also works for longitude
+      * (as azimuth) and latitude (as elevation).  It is derived
+      * from the "rule of cosines" for spherical trigonometry. */
+    public static float sphericalSeparationAngle(
+        float az1, float el1,
+        float az2, float el2)
+    {
+        // Product of cosines.
+        float cosines = FloatUtil.cosDegf(el1) *
+                        FloatUtil.cosDegf(el2) *
+                        FloatUtil.cosDegf(az2 - az1);
+
+        // Product of sines.
+        float sines = FloatUtil.sinDegf(el1) *
+                      FloatUtil.sinDegf(el2);
+
+        // Sum; when the inputs are the same, this can be slightly
+        // greater than 1 or less than -1 due to rounding.
+        float sum = cosines + sines;
+        if (-1 <= sum && sum <= 1) {
+            // Inverse cosine of the sum.
+            return FloatUtil.radiansToDegreesf(
+                (float)Math.acos(sum));
+        }
+        else {
+            return 0;
+        }
+
+    }
+
 }

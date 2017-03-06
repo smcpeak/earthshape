@@ -474,168 +474,152 @@ public class EarthShape
 
         // Start with an arbitrary square centered at the origin
         // the 3D space, and at SF, CA in the real world.
-        SurfaceSquare square = new SurfaceSquare(
+        float startLatitude = 38;     // 38N
+        float startLongitude = -58;   // 122W
+        SurfaceSquare startSquare = new SurfaceSquare(
             new Vector3f(0,0,0),      // center
             new Vector3f(0,0,-1),     // north
             new Vector3f(0,1,0),      // up
             sizeKm,
-            38, -58);                 // 38N, 122W
-        this.addSurfaceSquare(square);
-
-        // Calculate celestial North for the chosen starting point and
-        // its orientation.
-        Vector3f celestialNorth;
-        {
-            // Local East at that point.
-            Vector3f squareEast = square.north.cross(square.up).normalize();
-
-            // Given the chosen starting point, this is the direction of
-            // celestial North.
-            celestialNorth = square.north.rotate(square.latitude, squareEast);
-        }
+            startLatitude,
+            startLongitude);
+        this.addSurfaceSquare(startSquare);
 
         // Outer loop 1: Walk North as far as we can.
-        SurfaceSquare outer = square;
-        while (true) {
+        SurfaceSquare outer = startSquare;
+        for (float latitude = startLatitude;
+             latitude < 90;
+             latitude += 9)
+        {
+            // Go North another step.
+            outer = this.addAdjacentSquare(outer, latitude, startLongitude);
+
             // Inner loop: Walk East until we get back to
             // the same longitude.
+            float longitude = startLongitude;
+            float prevLongitude = longitude;
             SurfaceSquare inner = outer;
-            SurfaceSquare prev = inner;
             while (true) {
-                inner = this.addEastSquare(inner, +1, celestialNorth);
-                if (prev.longitude < outer.longitude &&
-                                     outer.longitude <= inner.longitude) {
+                inner = this.addAdjacentSquare(inner, latitude, longitude);
+                if (prevLongitude < outer.longitude &&
+                                    outer.longitude <= longitude) {
                     break;
                 }
-                prev = inner;
-            }
-
-            // Go North another step.
-            outer = this.addNorthSquare(outer, +1);
-            if (outer == null) {
-                break;
+                prevLongitude = longitude;
+                longitude = FloatUtil.modulus2(longitude+9, -180, 180);
             }
         }
 
         // Outer loop 2: Walk South as far as we can.
-        outer = square;
-        while (true) {
+        outer = startSquare;
+        for (float latitude = startLatitude - 9;
+             latitude > -90;
+             latitude -= 9)
+        {
+            // Go North another step.
+            outer = this.addAdjacentSquare(outer, latitude, startLongitude);
+
             // Inner loop: Walk East until we get back to
             // the same longitude.
+            float longitude = startLongitude;
+            float prevLongitude = longitude;
             SurfaceSquare inner = outer;
-            SurfaceSquare prev = inner;
             while (true) {
-                inner = this.addEastSquare(inner, +1, celestialNorth);
-                if (prev.longitude < outer.longitude &&
-                                     outer.longitude <= inner.longitude) {
+                inner = this.addAdjacentSquare(inner, latitude, longitude);
+                if (prevLongitude < outer.longitude &&
+                                    outer.longitude <= longitude) {
                     break;
                 }
-                prev = inner;
+                prevLongitude = longitude;
+                longitude = FloatUtil.modulus2(longitude+9, -180, 180);
             }
 
-            // Go South another step.
-            outer = this.addNorthSquare(outer, -1);
-            if (outer == null) {
-                break;
-            }
         }
 
         log("finished building Earth; nsquares="+this.surfaceSquares.size());
     }
 
-    /** Construct a square adjacent to 'square' by going East or West a
-      * distance of 'square.sizeKm'.  Go East if 'polarity' is +1,
-      * otherwise West.  Add the square to 'surfaceSquares' and return
-      * it. */
-    private SurfaceSquare addEastSquare(
-        SurfaceSquare square,
-        float polarity,
-        Vector3f celestialNorth)
+    /** Given square 'old', add an adjacent square at the given
+      * latitude and longitude.  The relative orientation of the
+      * new square will determined using the latitude and longitude,
+      * at this stage as a proxy for star observation data.  The size
+      * will be the same as the old square.
+      * This works best when the squares are nearby since this
+      * procedure assumes the surface is locally flat. */
+    private SurfaceSquare addAdjacentSquare(
+        SurfaceSquare old,
+        float newLatitude,
+        float newLongitude)
     {
-        // Going East, distance is 111km * cos(lat) per degree
-        // of longitude.
-        float deltaLongitude =
-            (float)(square.sizeKm * polarity /
-                      (111.0 * FloatUtil.cosDegf(square.latitude)));
+        // Calculate local East for 'old'.
+        Vector3f oldEast = old.north.cross(old.up).normalize();
 
-        // North and Up are then rotated by that much about the
-        // celestial pole.
-        Vector3f newNorth =
-            square.north.rotate(deltaLongitude, celestialNorth);
-        Vector3f newUp =
-            square.up.rotate(deltaLongitude, celestialNorth);
+        // Calculate celestial North for 'old', which is given by
+        // the latitude plus geographic North.
+        Vector3f celestialNorth =
+            old.north.rotate(old.latitude, oldEast);
 
-        // Calculate the old and new East, then take their average
-        // to get a direction along which to move the center without
-        // adding a systematic bias that resists the curvature.
-        // (If we just add 'oldEast', then the edges of adjacent
-        // squares end up with significant vertical separation,
-        // making the join lines very non-flat.)
-        Vector3f oldEast = square.north.cross(square.up).normalize();
-        Vector3f newEast = newNorth.cross(newUp).normalize();
-        Vector3f avgEast = oldEast.plus(newEast).normalize();
+        // Calculate the angle along the spherical Earth subtended
+        // by the arc from 'old' to the new coordinates.
+        float arcAngleDegrees = FloatUtil.sphericalSeparationAngle(
+            old.longitude, old.latitude,
+            newLongitude, newLatitude);
 
-        // Move the center East or West by sizeKm.
-        Vector3f newCenter = square.center.plus(avgEast.times(
-            square.sizeKm * SPACE_UNITS_PER_KM * polarity));
+        // Calculate the distance along the surface that separates
+        // these points by using the fact that there are 111 km per
+        // degree of arc.
+        float distanceKm = (float)(111.0 * arcAngleDegrees);
 
-        // Put these details into a new square object, treating
-        // it as our new "current" square.
-        square = new SurfaceSquare(
-            newCenter, newNorth, newUp,
-            square.sizeKm,
-            square.latitude,      // did not change
-            FloatUtil.modulus2(square.longitude + deltaLongitude, -180, 180));
-        this.addSurfaceSquare(square);
+        // Get lat/long deltas.
+        float deltaLatitude = newLatitude - old.latitude;
+        float deltaLongitude = FloatUtil.modulus2(
+            newLongitude - old.longitude, -180, 180);
 
-        return square;
-    }
-
-    /** Construct a square adjacent to 'square' by going North or South a
-      * distance of 'square.sizeKm'.  Go North if 'polarity' is +1,
-      * otherwise South.  Add the square to 'surfaceSquares' and return
-      * it.  However, if we cannot go North or South due to crossing the
-      * poles, then return null. */
-    private SurfaceSquare addNorthSquare(
-        SurfaceSquare square,
-        float polarity)
-    {
-        // Going North, distance is 111km per degree of latitude.
-        float deltaLatitude =
-            (float)(square.sizeKm * polarity / 111.0);
-
-        // Check for going past the poles.  That will cause a reveral
-        // of North and South that I do not want.
-        float newLatitude = square.latitude + deltaLatitude;
-        if (!( -90 <= newLatitude && newLatitude <= 90 )) {
-            return null;
+        // If we didn't move, just return the old square.
+        if (deltaLongitude == 0 && deltaLatitude == 0) {
+            return old;
         }
 
-        // North and Up are then rotated by that much about
-        // local East.
-        Vector3f oldEast = square.north.cross(square.up).normalize();
+        // Compute the new orientation vectors by first rotating
+        // around local East to account for change in latitude, then
+        // celestial North for change in longitude.
         Vector3f newNorth =
-            square.north.rotate(-deltaLatitude, oldEast);
+            old.north.rotate(-deltaLatitude, oldEast)
+                     .rotate(deltaLongitude, celestialNorth);
         Vector3f newUp =
-            square.up.rotate(-deltaLatitude, oldEast);
+            old.up.rotate(-deltaLatitude, oldEast)
+                  .rotate(deltaLongitude, celestialNorth);
+        Vector3f newEast = newNorth.cross(newUp).normalize();
 
-        // Average of new and old North.
-        Vector3f avgNorth = square.north.plus(newNorth).normalize();
+        // Calculate the average compass heading, in degrees North
+        // of East, used to go from the old
+        // location to the new.  This is rather crude because it
+        // doesn't properly account for the fact that longitude
+        // lines get closer together near the poles.
+        float headingDegrees = FloatUtil.radiansToDegreesf(
+            (float)Math.atan2(deltaLatitude, deltaLongitude));
 
-        // Move the center North or South by sizeKm.
-        Vector3f newCenter = square.center.plus(avgNorth.times(
-            square.sizeKm * SPACE_UNITS_PER_KM * polarity));
+        // For both old and new, calculate a unit vector for the
+        // travel direction.  Then average them to approximate the
+        // average travel direction.
+        Vector3f oldTravel = oldEast.rotate(headingDegrees, old.up);
+        Vector3f newTravel = newEast.rotate(headingDegrees, newUp);
+        Vector3f avgTravel = oldTravel.plus(newTravel).normalize();
 
-        // Put these details into a new square object, treating
-        // it as our new "current" square.
-        square = new SurfaceSquare(
+        // Calculate the new square's center as 'distance' units
+        // along 'avgTravel'.
+        Vector3f newCenter = old.center.plus(
+            avgTravel.times(distanceKm * SPACE_UNITS_PER_KM));
+
+        // Make the new square and add it to the list.
+        SurfaceSquare ret = new SurfaceSquare(
             newCenter, newNorth, newUp,
-            square.sizeKm,
-            square.latitude + deltaLatitude,
-            square.longitude);
-        this.addSurfaceSquare(square);
+            old.sizeKm,
+            newLatitude,      // did not change
+            newLongitude);
+        this.addSurfaceSquare(ret);
 
-        return square;
+        return ret;
     }
 
     /** Add a square to 'surfaceSquares'. */
