@@ -29,6 +29,7 @@ import com.jogamp.opengl.GLAutoDrawable;
 import com.jogamp.opengl.GLCapabilities;
 import com.jogamp.opengl.GLEventListener;
 import com.jogamp.opengl.awt.GLCanvas;
+import com.jogamp.opengl.util.Animator;
 import com.jogamp.opengl.util.texture.Texture;
 import com.jogamp.opengl.util.texture.TextureData;
 import com.jogamp.opengl.util.texture.TextureIO;
@@ -79,15 +80,23 @@ public class EarthShape
       * angle changes by this many degrees. */
     private static final float CAMERA_VERTICAL_SENSITIVITY = 0.5f;
 
-    /** Speed of camera movement.  Non-zero while camera movement underway. */
-    private float cameraSpeed = 0;
-
-    /** When the camera starts moving, it moves this fast. */
-    private static final float INITIAL_CAMERA_SPEED = 0.1f;
+    /** Velocity of camera movement, in world coordinates.  The magnitude
+      * is units per second. */
+    private Vector3f cameraVelocity = new Vector3f(0,0,0);
 
     /** As the camera continues moving, it accelerates by this
-      * amount with each step. */
-    private static final float CAMERA_ACCELERATION = 0.02f;
+      * amount with each additional key press event. */
+    private static final float CAMERA_ACCELERATION = 4f;
+
+    /** Max amount of friction acceleration to apply to camera
+      * velocity, in units per second per second, when at least
+      * one movement key is being held.  */
+    private static final float MOVING_CAMERA_FRICTION = 2f;
+
+    /** Max amount of friction acceleration to apply to camera
+      * velocity, in units per second per second, when no
+      * movement keys are being held.  */
+    private static final float STATIONARY_CAMERA_FRICTION = 5f;
 
     /** Widget to show various state variables such as camera position. */
     private Label statusLabel = new Label();
@@ -102,6 +111,22 @@ public class EarthShape
 
     /** Blank cursor, used to hide the mouse cursor. */
     private Cursor blankCursor;
+
+    /** Animator object for the GL canvas.  Valid between init and
+      * dispose. */
+    private Animator animator;
+
+    /** The thread that last issued a 'log' command.  This is used to
+      * only log thread names when there is interleaving. */
+    private static Thread lastLoggedThread = null;
+
+    /** The value of the millisecond timer the last time physics was
+      * updated. */
+    private long lastPhysicsUpdateMillis;
+
+    /** For each possible movement direction, true if that direction's
+      * key is held down. */
+    private boolean[] moveKeys = new boolean[MoveDirection.values().length];
 
     public EarthShape()
     {
@@ -139,6 +164,8 @@ public class EarthShape
 
         this.setupJOGL();
 
+        this.lastPhysicsUpdateMillis = System.currentTimeMillis();
+
         this.glCanvas.addKeyListener(this);
         this.glCanvas.addMouseListener(this);
         this.glCanvas.addMouseMotionListener(this);
@@ -174,7 +201,17 @@ public class EarthShape
     /** Print a message to the console with a timestamp. */
     private static void log(String msg)
     {
-        System.out.println(""+System.currentTimeMillis()+": "+msg);
+        Thread t = Thread.currentThread();
+        if (t != EarthShape.lastLoggedThread) {
+            System.out.println(""+System.currentTimeMillis()+
+                               " ["+t.getName()+"]"+
+                               ": "+msg);
+            EarthShape.lastLoggedThread = t;
+        }
+        else {
+            System.out.println(""+System.currentTimeMillis()+
+                               ": "+msg);
+        }
     }
 
     /** Initialize the GL context. */
@@ -206,6 +243,10 @@ public class EarthShape
             System.exit(2);
         }
 
+        // Set up an animator to keep redrawing.  This is not started
+        // until we enter "FPS" mode.
+        this.animator = new Animator(drawable);
+
         // Use a light blue background.
         gl.glClearColor(0.8f, 0.9f, 1.0f, 0);
         //gl.glClearColor(0,0,0,0);
@@ -234,14 +275,23 @@ public class EarthShape
     public void dispose(GLAutoDrawable drawable) {
         log("dispose");
         GL2 gl = drawable.getGL().getGL2();
+
         this.compassTexture.destroy(gl);
         this.compassTexture = null;
+
+        this.animator.remove(drawable);
+        this.animator.stop();
+        this.animator = null;
     }
 
     /** Draw one frame to the screen. */
     @Override
     public void display(GLAutoDrawable drawable) {
         //log("display");
+
+        // First, update object locations per physics rules.
+        this.updatePhysics();
+
         GL2 gl = drawable.getGL().getGL2();
 
         gl.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT);
@@ -256,9 +306,12 @@ public class EarthShape
         // adjusting the edges, the FOV becomes larger!
         gl.glFrustum(-1, 1, -1, 1, 1, 200);
 
+        // Rotate and position camera.  Effectively, these
+        // transformations happen in the reverse order they are
+        // written here; first we translate, then yaw, then
+        // finally pitch.
         gl.glRotatef(-this.cameraPitchDegrees, +1, 0, 0);
         gl.glRotatef(-this.cameraAzimuthDegrees, 0, +1, 0);
-
         {
             Vector3f c = this.cameraPosition;
             gl.glTranslatef(-c.x(), -c.y(), -c.z());
@@ -276,7 +329,8 @@ public class EarthShape
         // Future matrix manipulations are for the model.
         gl.glMatrixMode(GL2.GL_MODELVIEW);
 
-        // Make axis normals point toward +Y?
+        // Make axis normals point toward +Y since my light is
+        // above the scene.
         gl.glNormal3f(0,1,0);
 
         // X axis.
@@ -427,6 +481,7 @@ public class EarthShape
             new float[] { r,g,b,1 }, 0);
     }
 
+    /** Draw a rectangle with the compass texture. */
     private void drawCompassRect(
         GL2 gl,
         float nwx, float nwy, float nwz,
@@ -466,11 +521,67 @@ public class EarthShape
     }
 
     /** Called when the window is resized.  The superclass does
-     * basic resize handling, namely adjusting the viewport to
-     * fill the canvas, so we do not need to do anything more. */
+      * basic resize handling, namely adjusting the viewport to
+      * fill the canvas, so we do not need to do anything more. */
     @Override
     public void reshape(GLAutoDrawable drawable, int x, int y, int width, int height) {
         //log("reshape");
+    }
+
+    /** Update state variables to reflect passage of time. */
+    private void updatePhysics()
+    {
+        // Everything that happens should be scaled according to how
+        // much real time has elapsed since the last physics update
+        // so that the motion appears smooth even when the frames per
+        // second varies.
+        long newMillis = System.currentTimeMillis();
+        float elapsedSeconds = (newMillis - this.lastPhysicsUpdateMillis) / 1000.0f;
+
+        // Update camera velocity based on move keys.
+        boolean moving = false;
+        for (MoveDirection md : MoveDirection.values()) {
+            if (this.moveKeys[md.ordinal()]) {
+                moving = true;
+
+                // Rotate the direction of 'md' according to the
+                // current camera azimuth.
+                Vector3f rd = md.direction.rotate(this.cameraAzimuthDegrees,
+                    new Vector3f(0, +1, 0));
+
+                // Scale it per camera acceleration and elapsed time.
+                Vector3f srd = rd.times(CAMERA_ACCELERATION * elapsedSeconds);
+
+                // Apply that to the camera velocity.
+                this.cameraVelocity = this.cameraVelocity.plus(srd);
+            }
+        }
+
+        // Update camera position.
+        if (!this.cameraVelocity.isZero()){
+            // Move camera.
+            this.cameraPosition =
+                this.cameraPosition.plus(this.cameraVelocity.times(elapsedSeconds));
+
+            // Apply friction to the velocity.
+            Vector3f v = this.cameraVelocity;
+            float speed = (float)v.length();
+            float maxFrictionAccel = moving?
+                MOVING_CAMERA_FRICTION : STATIONARY_CAMERA_FRICTION;
+            maxFrictionAccel *= elapsedSeconds;
+
+            // Remove up to maxFrictionAccel speed.
+            if (speed < maxFrictionAccel) {
+                this.cameraVelocity = new Vector3f(0,0,0);
+            }
+            else {
+                this.cameraVelocity =
+                    v.minus(v.normalize().times(maxFrictionAccel));
+            }
+        }
+
+        this.setStatusLabel();
+        this.lastPhysicsUpdateMillis = newMillis;
     }
 
     public static void main(String[] args)
@@ -478,58 +589,29 @@ public class EarthShape
         (new EarthShape()).setVisible(true);
     }
 
+    /** Map from KeyEvent key code to corresponding movement
+      * direction, or null if it does not correspond. */
+    private static MoveDirection keyCodeToMoveDirection(int code)
+    {
+        switch (code) {
+            case KeyEvent.VK_A:     return MoveDirection.MD_LEFT;
+            case KeyEvent.VK_D:     return MoveDirection.MD_RIGHT;
+            case KeyEvent.VK_SPACE: return MoveDirection.MD_UP;
+            case KeyEvent.VK_Z:     return MoveDirection.MD_DOWN;
+            case KeyEvent.VK_W:     return MoveDirection.MD_FORWARD;
+            case KeyEvent.VK_S:     return MoveDirection.MD_BACKWARD;
+            default:                return null;
+        }
+    }
+
     @Override
     public void keyPressed(KeyEvent ev) {
         //log("key pressed: "+ev);
 
-        if (this.cameraSpeed == 0) {
-            this.cameraSpeed = INITIAL_CAMERA_SPEED;
+        MoveDirection md = EarthShape.keyCodeToMoveDirection(ev.getKeyCode());
+        if (md != null) {
+            this.moveKeys[md.ordinal()] = true;
         }
-        else {
-            this.cameraSpeed += CAMERA_ACCELERATION;
-        }
-
-        switch (ev.getKeyCode()) {
-            case KeyEvent.VK_A:
-                this.moveCamera(new Vector3f(-1,0,0));
-                break;
-
-            case KeyEvent.VK_D:
-                this.moveCamera(new Vector3f(+1,0,0));
-                break;
-
-            case KeyEvent.VK_W:
-                this.moveCamera(new Vector3f(0,0,-1));
-                break;
-
-            case KeyEvent.VK_S:
-                this.moveCamera(new Vector3f(0,0,+1));
-                break;
-
-            case KeyEvent.VK_SPACE:
-                this.moveCamera(new Vector3f(0,+1,0));
-                break;
-
-            case KeyEvent.VK_Z:
-                this.moveCamera(new Vector3f(0,-1,0));
-                break;
-        }
-    }
-
-    /** Move the camera in the indicated direction (which should be
-      * a unit vector) by the current camera speed.  The direction
-      * is interpreted as being relative to the camera's current
-      * direction: +X is right, +Y is up, +Z is backward. */
-    private void moveCamera(Vector3f direction)
-    {
-        // First rotate the direction according to camera azimuth.
-        Vector3f rd = direction.rotate(this.cameraAzimuthDegrees,
-            new Vector3f(0, +1, 0));
-
-        this.cameraPosition =
-            this.cameraPosition.plus(rd.times(this.cameraSpeed));
-        this.setStatusLabel();
-        this.glCanvas.display();
     }
 
     /** Set the status label text to reflect other state variables. */
@@ -547,7 +629,10 @@ public class EarthShape
 
     @Override
     public void keyReleased(KeyEvent ev) {
-        this.cameraSpeed = 0;
+        MoveDirection md = EarthShape.keyCodeToMoveDirection(ev.getKeyCode());
+        if (md != null) {
+            this.moveKeys[md.ordinal()] = false;
+        }
     }
 
     @Override
@@ -567,6 +652,7 @@ public class EarthShape
         log("mouse pressed: ev="+ev);
         if (ev.getButton() == MouseEvent.BUTTON1) {
             this.fpsCameraMode = !this.fpsCameraMode;
+
             this.setStatusLabel();
 
             if (this.fpsCameraMode) {
@@ -574,10 +660,16 @@ public class EarthShape
                 // to the center and hide it.
                 this.centerMouse(ev);
                 ev.getComponent().setCursor(this.blankCursor);
+
+                // Only run the animator thread in FPS mode.
+                this.animator.start();
             }
             else {
                 // Un-hide the mouse cursor.
                 ev.getComponent().setCursor(null);
+
+                // And stop the animator.
+                this.animator.stop();
             }
         }
     }
@@ -640,7 +732,6 @@ public class EarthShape
             float newPitch = this.cameraPitchDegrees + dy * CAMERA_VERTICAL_SENSITIVITY;
             this.cameraPitchDegrees = FloatUtil.clamp(newPitch, -90, 90);
 
-            this.glCanvas.display();
             this.setStatusLabel();
         }
     }
