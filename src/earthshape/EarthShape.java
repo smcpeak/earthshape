@@ -304,7 +304,7 @@ public class EarthShape
         // left/right/top/bottom values defines the field of view.
         // If you move the clipping plane nearer the camera without
         // adjusting the edges, the FOV becomes larger!
-        gl.glFrustum(-0.1, 0.1, -0.1, 0.1, 0.1, 100);
+        gl.glFrustum(-0.1, 0.1, -0.1, 0.1, 0.1, 300);
 
         // Rotate and position camera.  Effectively, these
         // transformations happen in the reverse order they are
@@ -456,17 +456,19 @@ public class EarthShape
 
         // Draw an initial surface rectangle.
         this.drawCompassRect(gl,
-            1, 0, -2,
-            1, 0, -1,
-            2, 0, -2,
-            2, 0, -1);
+            new Vector3f(1, 0, -2),
+            new Vector3f(1, 0, -1),
+            new Vector3f(2, 0, -2),
+            new Vector3f(2, 0, -1));
 
         // Draw another that curves down.
         this.drawCompassRect(gl,
-            2, 0, -2,
-            2, 0, -1,
-            3, -0.2f, -2,
-            3, -0.2f, -1);
+            new Vector3f(2, 0, -2),
+            new Vector3f(2, 0, -1),
+            new Vector3f(3, -0.2f, -2),
+            new Vector3f(3, -0.2f, -1));
+
+        this.drawEarthSurface(gl);
 
         this.compassTexture.disable(gl);
 
@@ -484,41 +486,112 @@ public class EarthShape
     /** Draw a rectangle with the compass texture. */
     private void drawCompassRect(
         GL2 gl,
-        float nwx, float nwy, float nwz,
-        float swx, float swy, float swz,
-        float nex, float ney, float nez,
-        float sex, float sey, float sez)
+        Vector3f nw,
+        Vector3f sw,
+        Vector3f ne,
+        Vector3f se)
     {
+        gl.glEnable(GL.GL_TEXTURE_2D);
+
         gl.glBegin(GL.GL_TRIANGLE_STRIP);
 
         this.compassTexture.bind(gl);
+        glMaterialColor3f(gl, 1, 1, 1);
 
         // Normal vector, based on just three vertices (since these
         // are supposed to be flat anyway).
-        Vector3f nw = new Vector3f(nwx, nwy, nwz);
-        Vector3f sw = new Vector3f(swx, swy, swz);
-        Vector3f se = new Vector3f(sex, sey, sez);
         Vector3f normal = (se.minus(sw)).cross(nw.minus(sw));
         gl.glNormal3f(normal.x(), normal.y(), normal.z());
 
         // NW corner.
         gl.glTexCoord2f(0,1);
-        gl.glVertex3f(nwx, nwy, nwz);
+        gl.glVertex3fv(nw.getArray(), 0);
 
         // SW corner.
         gl.glTexCoord2f(0,0);
-        gl.glVertex3f(swx, swy, swz);
+        gl.glVertex3fv(sw.getArray(), 0);
 
         // NE corner.
         gl.glTexCoord2f(1,1);
-        gl.glVertex3f(nex, ney, nez);
+        gl.glVertex3fv(ne.getArray(), 0);
 
         // SE corner.
         gl.glTexCoord2f(1,0);
-        gl.glVertex3f(sex, sey, sez);
+        gl.glVertex3fv(se.getArray(), 0);
 
         gl.glEnd();
     }
+
+    /** Draw more of the Earth's surface. */
+    private void drawEarthSurface(GL2 gl)
+    {
+        // Start with an arbitrary square centered at 0,0.
+        // The square will, for the moment, be assumed to be
+        // at the equator.
+        Vector3f center = new Vector3f(0,0,0);
+        Vector3f north = new Vector3f(0,0,-1);
+        Vector3f up = new Vector3f(0,1,0);
+
+        // Now simulate the process of gradually moving East
+        // by 100 km at a time.  One unit in the 3D world coordinates
+        // will be 100 km.
+        for (int i=0; i < 400; i++) {
+            // Draw the square.
+            this.drawSquare(gl, center, north, up);
+
+            // The new 'up' is tilted East by 1/100 of 90 degrees.
+            float degrees = (float)(1.0 / 100.0 * 90.0);
+            Vector3f newUp = up.rotate(degrees, north);
+
+            // Since we are at the equator, North does not change.
+            Vector3f newNorth = north;
+
+            // Calculate the old and new East, then take their average
+            // to get a direction along which to move the center without
+            // adding a systematic bias that resists the curvature.
+            // (If we just add 'oldEast', then the edges of adjacent
+            // squares do not meet if curvature is non-zero.)
+            Vector3f oldEast = north.cross(up).normalize();
+            Vector3f newEast = newNorth.cross(newUp).normalize();
+            Vector3f avgEast = oldEast.plus(newEast).normalize();
+
+            // Move the center East by 100 km.
+            Vector3f newCenter = center.plus(avgEast);
+
+            // Update our "current" position.
+            center = newCenter;
+            north = newNorth;
+            up = newUp;
+        }
+
+    }
+
+    /** Draw one surface square. */
+    private void drawSquare(GL2 gl, Vector3f center,
+                            Vector3f north, Vector3f up)
+    {
+        Vector3f east = north.cross(up);
+
+        // Scale north and east by half of desired square size.
+        Vector3f n = north.normalize().times(0.5f);
+        Vector3f e = east.normalize().times(0.5f);
+
+        Vector3f nw = center.plus(n).minus(e);
+        Vector3f sw = center.minus(n).minus(e);
+        Vector3f ne = center.plus(n).plus(e);
+        Vector3f se = center.minus(n).plus(e);
+        this.drawCompassRect(gl, nw, sw, ne, se);
+
+        // Also draw a surface normal.
+        gl.glDisable(GL.GL_TEXTURE_2D);
+        gl.glBegin(GL.GL_LINES);
+        glMaterialColor3f(gl, 0.5f, 0.5f, 0);    // Dark yellow
+        gl.glNormal3f(0,1,0);
+        gl.glVertex3fv(center.getArray(), 0);
+        gl.glVertex3fv(center.plus(up).getArray(), 0);
+        gl.glEnd();
+    }
+
 
     /** Called when the window is resized.  The superclass does
       * basic resize handling, namely adjusting the viewport to
