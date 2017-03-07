@@ -925,9 +925,9 @@ public class EarthShape
         // correction drops below a certain threshold.
         for (int iterationCount = 0; iterationCount < 100; iterationCount++) {
             // Accumulate the vector sum of all the rotation difference
-            // vectors as well as the sum of their lengths.
+            // vectors as well as the max length.
             Vector3f diffSum = new Vector3f(0,0,0);
-            float diffLengthSum = 0;
+            float maxDiffLength = 0;
             int diffCount = 0;
 
             for (HashMap.Entry<String, Vector3f> e : startStars.entrySet()) {
@@ -946,7 +946,7 @@ public class EarthShape
 
                 // Accumulate it.
                 diffSum = diffSum.plus(rot);
-                diffLengthSum += rot.length();
+                maxDiffLength = (float)Math.max(maxDiffLength, rot.length());
                 diffCount++;
             }
 
@@ -958,11 +958,16 @@ public class EarthShape
             // Calculate the average correction rotation.
             Vector3f avgDiff = diffSum.times(1.0f / diffCount);
 
-            // If the correction angle is small enough, stop.
-            if (avgDiff.length() < 0.01) {
+            // If the correction angle is small enough, stop.  For any set
+            // of observations, we should be able to drive the average
+            // difference arbitrarily close to zero (this is like finding
+            // the centroid, except in spherical rather than flat space).
+            // The real question is whether the *maximum* difference is
+            // large enough to indicate that the data is inconsistent.
+            if (avgDiff.length() < 0.001) {
                 log("reqRot finished: iters="+iterationCount+
                     " avgDiffLen="+avgDiff.length()+
-                    " diffLengthSum="+diffLengthSum+
+                    " maxDiffLength="+maxDiffLength+
                     " diffCount="+diffCount);
                 return currentRotation;
             }
