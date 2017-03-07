@@ -773,46 +773,52 @@ public class EarthShape
         // Size of squares to build, in km.
         float sizeKm = 1000;
 
-        // Start with an arbitrary square centered at the origin
-        // the 3D space, and at SF, CA in the real world.
-        float startLatitude = 38;     // 38N
-        float startLongitude = -122;  // 122W
-        SurfaceSquare startSquare = new SurfaceSquare(
-            new Vector3f(0,0,0),      // center
-            new Vector3f(0,0,-1),     // north
-            new Vector3f(0,1,0),      // up
-            sizeKm,
-            startLatitude,
-            startLongitude);
-        addMatchingData(startSquare, starData);
-        this.addSurfaceSquare(startSquare);
+        // Work through the data in order, assuming that observations
+        // for a given location are contiguous, and that the data appears
+        // in a good walk order.
+        float curLatitude = 0;
+        float curLongitude = 0;
+        SurfaceSquare curSquare = null;
+        for (StarData sd : starData) {
+            // Skip forward to next location.
+            if (curSquare != null && sd.latitude == curLatitude && sd.longitude == curLongitude) {
+                continue;
+            }
+            log("buildEarth: building lat="+sd.latitude+" long="+sd.longitude);
 
-        // Calculate a rotation vector that will best align
-        // the current square's star observations with the
-        // next square's.
-        float latitude = 38;
-        float longitude = -113;
-        Vector3f rot = calcRequiredRotation(startSquare, starData, latitude, longitude);
-        if (rot == null) {
-            return;    // give up
+            if (curSquare == null) {
+                // First square will be placed at the 3D origin with
+                // its North pointed along the -Z axis.
+                curSquare = new SurfaceSquare(
+                    new Vector3f(0,0,0),      // center
+                    new Vector3f(0,0,-1),     // north
+                    new Vector3f(0,1,0),      // up
+                    sizeKm,
+                    sd.latitude,
+                    sd.longitude);
+                this.addSurfaceSquare(curSquare);
+            }
+            else {
+                // Calculate a rotation vector that will best align
+                // the current square's star observations with the
+                // next square's.
+                Vector3f rot = calcRequiredRotation(curSquare, starData, sd.latitude, sd.longitude);
+                if (rot == null) {
+                    log("buildEarth: could not place next square!");
+                    return;    // give up
+                }
+
+                // Make the new square from the old and the computed
+                // change in orientation.
+                curSquare =
+                    addRotatedAdjacentSquare(curSquare, sd.latitude, sd.longitude, rot);
+            }
+
+            this.addMatchingData(curSquare, starData);
+
+            curLatitude = sd.latitude;
+            curLongitude = sd.longitude;
         }
-
-        // Make the new square from the old and the computed
-        // change in orientation.
-        SurfaceSquare s =
-            addRotatedAdjacentSquare(startSquare, latitude, longitude, rot);
-
-        // Do the next spot too.
-        latitude = 38;
-        longitude = -104;
-        rot = calcRequiredRotation(s, starData, latitude, longitude);
-        if (rot == null) {
-            return;    // give up
-        }
-
-        // Make the new square from the old and the computed
-        // change in orientation.
-        s = addRotatedAdjacentSquare(s, latitude, longitude, rot);
     }
 
     /** Add a square adjacent to 'old', positioned at the given latitude
@@ -969,6 +975,12 @@ public class EarthShape
                     " avgDiffLen="+avgDiff.length()+
                     " maxDiffLength="+maxDiffLength+
                     " diffCount="+diffCount);
+                if (maxDiffLength > 0.2) {
+                    // For the data I am working with, I estimate it is
+                    // accurate to within 0.2 degrees.  Consequently,
+                    // there should not be a max difference that large.
+                    log("reqRot: WARNING: maxDiffLength greater than 0.2");
+                }
                 return currentRotation;
             }
 
