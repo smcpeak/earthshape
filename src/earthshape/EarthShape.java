@@ -147,6 +147,15 @@ public class EarthShape
       * Otherwise, draw them using the EarthMap texture. */
     private boolean drawCompasses = true;
 
+    /** Current aspect ratio: canvas width divided by canvas height
+      * in pixels.  (Really, aspect ratio ought to reflect physical
+      * size ratio, but I will assume pixels are square; fortunately,
+      * they usually are.) */
+    private float aspectRatio = 1.0f;
+
+    /** Desired distance between camera and front clipping plane. */
+    private static final float FRONT_CLIP_DISTANCE = 0.1f;
+
     public EarthShape()
     {
         super("Earth Shape");
@@ -347,7 +356,12 @@ public class EarthShape
         // left/right/top/bottom values defines the field of view.
         // If you move the clipping plane nearer the camera without
         // adjusting the edges, the FOV becomes larger!
-        gl.glFrustum(-0.1, 0.1, -0.1, 0.1, 0.1, 300);
+        gl.glFrustum(-FRONT_CLIP_DISTANCE * this.aspectRatio,     // left
+                     FRONT_CLIP_DISTANCE * this.aspectRatio,      // right
+                     -FRONT_CLIP_DISTANCE,                        // bottom
+                     FRONT_CLIP_DISTANCE,                         // top
+                     FRONT_CLIP_DISTANCE,                         // front clip
+                     300);                                        // back clip
 
         // Rotate and position camera.  Effectively, these
         // transformations happen in the reverse order they are
@@ -1134,6 +1148,10 @@ public class EarthShape
     @Override
     public void reshape(GLAutoDrawable drawable, int x, int y, int width, int height) {
         //log("reshape");
+
+        // Just keep track of the aspect ratio.  During display, we will
+        // adjust the camera view in a corresponding way.
+        this.aspectRatio = (float)width / (float)height;
     }
 
     /** Update state variables to reflect passage of time. */
