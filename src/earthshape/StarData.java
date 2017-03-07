@@ -43,6 +43,15 @@ public class StarData {
         this.elevation = (float)elevation_;
     }
 
+    public String toString()
+    {
+        return "lat="+latitude+
+               ", lng="+longitude+
+               ", name=\""+name+
+               "\", az="+azimuth+
+               ", el="+elevation;
+    }
+
     /** Get some data I have hardcoded. */
     public static StarData[] getHardcodedData()
     {
@@ -75,7 +84,7 @@ public class StarData {
 
         return new StarData[] {
             new StarData(38,-122,"Capella",302.8,71.2),
-            new StarData(38,-122,"Betelgeuse",205.2,57.1),
+            new StarData(38,-122,"Betelgeuse",205.0,57.2),
             new StarData(38,-122,"Rigel",210.5,38.8),
             new StarData(38,-122,"Aldebaran",242.9,53.9),
             new StarData(38,-122,"Sirius",181.1,35.2),
