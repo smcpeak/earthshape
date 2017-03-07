@@ -34,6 +34,15 @@ public class SurfaceSquare {
       * the real world. */
     public float longitude;
 
+    /** Amount by which this square has been rotated away from
+      * the nominal orientation where North is -Z and East is +X.
+      * I should not have to store this; this is a band-aid until
+      * I fix the underlying problem properly.
+      *
+      * The vector gives an axis, and its magnitude is the rotation
+      * angle in degrees. */
+    public Vector3f rotationFromNominal;
+
     /** Star observations taken from this point at some
       * point in time. */
     public ArrayList<StarData> starData = new ArrayList<StarData>();
@@ -44,7 +53,8 @@ public class SurfaceSquare {
         Vector3f up,
         float sizeKm,
         float latitude,
-        float longitude)
+        float longitude,
+        Vector3f rotationFromNominal_)
     {
         this.center = center;
         this.north = north;
@@ -52,17 +62,22 @@ public class SurfaceSquare {
         this.sizeKm = sizeKm;
         this.latitude = latitude;
         this.longitude = longitude;
+        this.rotationFromNominal = rotationFromNominal_;
     }
 
     public String toString()
     {
+        Vector3f east = this.north.cross(this.up);
+        Vector3f celestialNorth = this.north.rotate(latitude, east);
+
         return "Sq(c="+this.center+
             ", n="+this.north+
             ", u="+this.up+
             ", s="+this.sizeKm+
             ", lat="+this.latitude+
             ", lng="+this.longitude+
-            ")";
+            ", rfn="+this.rotationFromNominal+
+            ", cn="+celestialNorth+")";
     }
 }
 

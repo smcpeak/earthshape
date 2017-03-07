@@ -164,6 +164,11 @@ public class EarthShape
     /** Menu item to toggle 'drawSurfaceNormals'. */
     private CheckboxMenuItem drawSurfaceNormalsCBItem;
 
+    /** If true, draw celestial North vectors on each square.  For
+      * now this is always disabled; I just added it for a temporary
+      * debugging task. */
+    private boolean drawCelestialNorth = false;
+
     /** Current aspect ratio: canvas width divided by canvas height
       * in pixels.  (Really, aspect ratio ought to reflect physical
       * size ratio, but I will assume pixels are square; fortunately,
@@ -731,7 +736,8 @@ public class EarthShape
             new Vector3f(0,1,0),      // up
             sizeKm,
             startLatitude,
-            startLongitude);
+            startLongitude,
+            new Vector3f(0,0,0));
         this.addSurfaceSquare(startSquare);
 
         // Outer loop 1: Walk North as far as we can.
@@ -807,7 +813,8 @@ public class EarthShape
             new Vector3f(0,1,0),      // up
             sizeKm,
             startLatitude,
-            startLongitude);
+            startLongitude,
+            new Vector3f(0,0,0));
         this.addSurfaceSquare(startSquare);
 
         SurfaceSquare square = startSquare;
@@ -883,9 +890,12 @@ public class EarthShape
 
         // Begin by grabbing the hardcoded star data.
         StarData[] starData = StarData.getHardcodedData();
+        StarCatalog[] starCatalog = StarCatalog.makeCatalog();
 
         // Size of squares to build, in km.
         float sizeKm = 1000;
+
+        SurfaceSquare firstSquare = null;
 
         // Work through the data in order, assuming that observations
         // for a given location are contiguous, and that the data appears
@@ -909,17 +919,20 @@ public class EarthShape
                     new Vector3f(0,1,0),      // up
                     sizeKm,
                     sd.latitude,
-                    sd.longitude);
+                    sd.longitude,
+                    new Vector3f(0,0,0));
                 this.addSurfaceSquare(curSquare);
+                firstSquare = curSquare;
             }
             else {
                 // Calculate a rotation vector that will best align
                 // the current square's star observations with the
                 // next square's.
-                Vector3f rot = calcRequiredRotation(curSquare, starData, sd.latitude, sd.longitude);
+                Vector3f rot = calcRequiredRotation(curSquare, starData,
+                    starCatalog, sd.latitude, sd.longitude);
                 if (rot == null) {
                     log("buildEarth: could not place next square!");
-                    return;    // give up
+                    break;
                 }
 
                 // Make the new square from the old and the computed
@@ -934,8 +947,114 @@ public class EarthShape
             curLongitude = sd.longitude;
         }
 
+        // Go one step North from first square;
+        {
+            curSquare = firstSquare;
+            float newLatitude = 38 + 9;
+            float newLongitude = -122;
+
+            log("buildEarth: building lat="+newLatitude+" long="+newLongitude);
+
+            Vector3f rot = calcRequiredRotation(curSquare, starData,
+                starCatalog, newLatitude, newLongitude);
+            if (rot == null) {
+                log("buildEarth: could not place next square!");
+            }
+
+            curSquare =
+                addRotatedAdjacentSquare(curSquare, newLatitude, newLongitude, rot);
+
+            this.addMatchingData(curSquare, starData);
+
+            curLatitude = newLatitude;
+            curLongitude = newLongitude;
+
+        }
+
+        // From here, keep exploring, relying on the synthetic catalog.
+        this.buildLatitudeStrip(curSquare, +9, starData, starCatalog);
+        this.buildLatitudeStrip(curSquare, -9, starData, starCatalog);
+        this.buildLongitudeStrip(curSquare, +9, starData, starCatalog);
+        this.buildLongitudeStrip(curSquare, -9, starData, starCatalog);
+
         this.redrawCanvas();
         log("buildEarth: finished using star data");
+    }
+
+    /** Build squares by going North or South from a starting square
+      * until we add 20 or we can't add any more.  At each spot, also
+      * build latitude strips in both directions. */
+    private void buildLongitudeStrip(SurfaceSquare startSquare,
+        float deltaLatitude,
+        StarData[] starData,
+        StarCatalog[] starCatalog)
+    {
+        float curLatitude = startSquare.latitude;
+        float curLongitude = startSquare.longitude;
+        SurfaceSquare curSquare = startSquare;
+
+        while (true) {
+            float newLatitude = curLatitude + deltaLatitude;
+            if (!( -90 < newLatitude && newLatitude < 90 )) {
+                // Do not go past the poles.
+                break;
+            }
+            float newLongitude = curLongitude;
+
+            log("buildEarth: building lat="+newLatitude+" long="+newLongitude);
+
+            Vector3f rot = calcRequiredRotation(curSquare, starData,
+                starCatalog, newLatitude, newLongitude);
+            if (rot == null) {
+                log("buildEarth: could not place next square!");
+                break;
+            }
+
+            curSquare =
+                addRotatedAdjacentSquare(curSquare, newLatitude, newLongitude, rot);
+
+            this.addMatchingData(curSquare, starData);
+
+            curLatitude = newLatitude;
+            curLongitude = newLongitude;
+
+            // Also build strips in each direction.
+            this.buildLatitudeStrip(curSquare, +9, starData, starCatalog);
+            this.buildLatitudeStrip(curSquare, -9, starData, starCatalog);
+        }
+    }
+
+    /** Build squares by going East or West from a starting square
+      * until we add 20 or we can't add any more. */
+    private void buildLatitudeStrip(SurfaceSquare startSquare,
+        float deltaLongitude,
+        StarData[] starData,
+        StarCatalog[] starCatalog)
+    {
+        float curLatitude = startSquare.latitude;
+        float curLongitude = startSquare.longitude;
+        SurfaceSquare curSquare = startSquare;
+
+        for (int i=0; i < 20; i++) {
+            float newLatitude = curLatitude;
+            float newLongitude = FloatUtil.modulus2(curLongitude + deltaLongitude, -180, 180);
+            log("buildEarth: building lat="+newLatitude+" long="+newLongitude);
+
+            Vector3f rot = calcRequiredRotation(curSquare, starData,
+                starCatalog, newLatitude, newLongitude);
+            if (rot == null) {
+                log("buildEarth: could not place next square!");
+                break;
+            }
+
+            curSquare =
+                addRotatedAdjacentSquare(curSquare, newLatitude, newLongitude, rot);
+
+            this.addMatchingData(curSquare, starData);
+
+            curLatitude = newLatitude;
+            curLongitude = newLongitude;
+        }
     }
 
     /** Cause the GL canvas to redraw. */
@@ -1011,7 +1130,8 @@ public class EarthShape
             newCenter, newNorth, newUp,
             old.sizeKm,
             newLatitude,      // did not change
-            newLongitude);
+            newLongitude,
+            Vector3f.composeRotations(old.rotationFromNominal, rotation));
         this.addSurfaceSquare(ret);
 
         return ret;
@@ -1040,15 +1160,16 @@ public class EarthShape
     private Vector3f calcRequiredRotation(
         SurfaceSquare startSquare,
         StarData[] starData,
+        StarCatalog[] starCatalog,
         float newLatitude,
         float newLongitude)
     {
         // Set of stars visible at the start and end squares and
         // above 20 degrees above the horizon.
         HashMap<String, Vector3f> startStars =
-            getVisibleStars(starData, startSquare.latitude, startSquare.longitude);
+            getVisibleStars(starData, starCatalog, startSquare.latitude, startSquare.longitude);
         HashMap<String, Vector3f> endStars =
-            getVisibleStars(starData, newLatitude, newLongitude);
+            getVisibleStars(starData, starCatalog, newLatitude, newLongitude);
 
         // Current best rotation and average difference.
         Vector3f currentRotation = new Vector3f(0,0,0);
@@ -1056,7 +1177,7 @@ public class EarthShape
         // Iteratively refine the current rotation by computing the
         // average correction rotation and applying it until that
         // correction drops below a certain threshold.
-        for (int iterationCount = 0; iterationCount < 100; iterationCount++) {
+        for (int iterationCount = 0; iterationCount < 1000; iterationCount++) {
             // Accumulate the vector sum of all the rotation difference
             // vectors as well as the max length.
             Vector3f diffSum = new Vector3f(0,0,0);
@@ -1072,10 +1193,21 @@ public class EarthShape
                     continue;
                 }
 
+                // Both vectors must first be rotated the way the start
+                // surface was rotated since its creation so that when
+                // we compute the final required rotation, it can be
+                // applied to the start surface in its existing orientation,
+                // not the norminal orientation that the star vectors have
+                // before I do this.
+                startVector = startVector.rotateAA(startSquare.rotationFromNominal);
+                endVector = endVector.rotateAA(startSquare.rotationFromNominal);
+
                 // Calculate a difference rotation vector from the
-                // rotated start vector to the end vector.
-                Vector3f rot = startVector.rotateAA(currentRotation)
-                                          .rotationToBecome(endVector);
+                // rotated end vector to the start vector.  Rotating
+                // the end star in one direction is like rotating
+                // the start terrain in the opposite direction.
+                Vector3f rot = endVector.rotateAA(currentRotation)
+                                        .rotationToBecome(startVector);
 
                 // Accumulate it.
                 diffSum = diffSum.plus(rot);
@@ -1125,16 +1257,33 @@ public class EarthShape
       * add it to a map from star name to azEl vector. */
     private HashMap<String, Vector3f> getVisibleStars(
         StarData[] starData,
+        StarCatalog[] starCatalog,
         float latitude,
         float longitude)
     {
         HashMap<String, Vector3f> ret = new HashMap<String, Vector3f>();
 
+        // First use any manual data I have.
         for (StarData sd : starData) {
             if (sd.latitude == latitude &&
                 sd.longitude == longitude &&
                 sd.elevation >= 20)
             {
+                ret.put(sd.name,
+                    azimuthElevationToVector(sd.azimuth, sd.elevation));
+            }
+        }
+
+        // Then use the synthetic data.
+        for (StarCatalog sc : starCatalog) {
+            if (ret.containsKey(sc.name)) {
+                continue;
+            }
+
+            // Synthesize an observation.
+            StarData sd = sc.makeObservation(1488772800.0 /*2017-03-05 20:00 -08:00*/,
+                latitude, longitude);
+            if (sd.elevation >= 20) {
                 ret.put(sd.name,
                     azimuthElevationToVector(sd.azimuth, sd.elevation));
             }
@@ -1148,14 +1297,14 @@ public class EarthShape
       * where 0 degrees azimuth is -Z, East is +X, and up is +Y. */
     private Vector3f azimuthElevationToVector(float azimuth, float elevation)
     {
-        // Start by pointing a vector at 0 degrees.
+        // Start by pointing a vector at 0 degrees azimuth (North).
         Vector3f v = new Vector3f(0, 0, -1);
 
         // Now rotate it up to align with elevation.
         v = v.rotate(elevation, new Vector3f(1, 0, 0));
 
         // Now rotate it East to align with azimuth.
-        v = v.rotate(azimuth, new Vector3f(0, 1, 0));
+        v = v.rotate(-azimuth, new Vector3f(0, 1, 0));
 
         return v;
     }
@@ -1207,6 +1356,21 @@ public class EarthShape
             gl.glNormal3f(0,1,0);
             gl.glVertex3fv(s.center.getArray(), 0);
             gl.glVertex3fv(s.center.plus(s.up).getArray(), 0);
+            gl.glEnd();
+        }
+
+        // Draw a line to celestial North.
+        if (this.drawCelestialNorth) {
+            gl.glDisable(GL.GL_TEXTURE_2D);
+            gl.glBegin(GL.GL_LINES);
+            glMaterialColor3f(gl, 1, 0, 0);    // Red
+            gl.glNormal3f(0,1,0);
+
+            gl.glVertex3fv(s.center.getArray(), 0);
+
+            Vector3f celestialNorth = s.north.rotate(s.latitude, east);
+            gl.glVertex3fv(s.center.plus(celestialNorth.times(5)).getArray(), 0);
+
             gl.glEnd();
         }
     }
