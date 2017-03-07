@@ -109,6 +109,15 @@ public class StarData {
             new StarData(38,-95,"Procyon",205.3,54.6),
             new StarData(38,-95,"Polaris",359.1,37.9),
             new StarData(38,-95,"Dubhe",31.7,57.1),
+
+            new StarData(38,-86,"Capella",300.2,46.3),
+            new StarData(38,-86,"Betelgeuse",248.6,35.9),
+            new StarData(38,-86,"Rigel",243.7,17.8),
+            new StarData(38,-86,"Aldebaran",271.0,26.2),
+            new StarData(38,-86,"Sirius",219.5,25.2),
+            new StarData(38,-86,"Procyon",218.8,50.9),
+            new StarData(38,-86,"Polaris",359.2,37.8),
+            new StarData(38,-86,"Dubhe",26.9,60.6),
         };
     }
 }
