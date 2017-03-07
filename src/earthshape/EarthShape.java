@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 
 import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL2;
@@ -37,7 +36,6 @@ import com.jogamp.opengl.util.texture.Texture;
 import com.jogamp.opengl.util.texture.TextureData;
 import com.jogamp.opengl.util.texture.TextureIO;
 
-import util.ContainerUtil;
 import util.FloatUtil;
 import util.Vector3f;
 
@@ -60,6 +58,13 @@ public class EarthShape
     /** Compass rose texture.  This is only valid between 'init' and
       * 'dispose'. */
     private Texture compassTexture;
+
+    /** Earth surface texture.  Valid between 'init' and 'dispose'.
+      * The texture I plan to load, EarthMap.jpg, comes from
+      * http://wennberg-wiki.caltech.edu/.  It is 2500x1250 and
+      * is an equirectangular projection.  The top is 90N, bottom
+      * is 90S, left is 180W, right is 180E. */
+    private Texture earthMapTexture;
 
     /** The main GL canvas. */
     private GLCanvas glCanvas;
@@ -137,6 +142,10 @@ public class EarthShape
 
     /** Squares of the surface we have built. */
     private ArrayList<SurfaceSquare> surfaceSquares = new ArrayList<SurfaceSquare>();
+
+    /** If true, draw surfaces using the abstract compass texture.
+      * Otherwise, draw them using the EarthMap texture. */
+    private boolean drawCompasses = true;
 
     public EarthShape()
     {
@@ -243,19 +252,9 @@ public class EarthShape
         // it requires a GL context because the textures are loaded into
         // the graphics card's memory in a device- and mode-dependent
         // format.
-        log("loading texture");
-        try {
-            InputStream stream = getClass().getResourceAsStream("textures/compass-rose.png");
-            TextureData data = TextureIO.newTextureData(
-                gl.getGLProfile(), stream, false /*mipmap*/, TextureIO.PNG);
-            this.compassTexture = TextureIO.newTexture(data);
-            log("loaded texture; mem="+this.compassTexture.getEstimatedMemorySize()+
-                ", coords="+this.compassTexture.getImageTexCoords());
-        }
-        catch (IOException exc) {
-            exc.printStackTrace();
-            System.exit(2);
-        }
+        log("loading textures");
+        this.compassTexture = loadTexture(gl, "textures/compass-rose.png", TextureIO.PNG);
+        this.earthMapTexture = loadTexture(gl, "textures/EarthMap.jpg", TextureIO.JPG);
 
         // Set up an animator to keep redrawing.  This is not started
         // until we enter "FPS" mode.
@@ -284,6 +283,33 @@ public class EarthShape
         // a consequence of non-unit normal vectors.
     }
 
+    /** Load and return a texture of a given name and type.  This exits
+      * the process if texture loading fails. */
+    private Texture loadTexture(GL2 gl, String fileName, String fileType)
+    {
+        InputStream stream = getClass().getResourceAsStream(fileName);
+        try {
+            TextureData data = TextureIO.newTextureData(
+                gl.getGLProfile(), stream, false /*mipmap*/, fileType);
+            Texture ret = TextureIO.newTexture(data);
+            log("loaded "+fileName+"; mem="+ret.getEstimatedMemorySize()+
+                ", coords="+ret.getImageTexCoords());
+            return ret;
+        }
+        catch (IOException e) {
+            // For now at least, failure to load a texture is fatal.
+            e.printStackTrace();
+            System.exit(2);
+            return null;
+        }
+        finally {
+            try {
+                stream.close();
+            }
+            catch (IOException e) {}
+        }
+    }
+
     /** Release allocated resources associated with the GL context. */
     @Override
     public void dispose(GLAutoDrawable drawable) {
@@ -292,6 +318,9 @@ public class EarthShape
 
         this.compassTexture.destroy(gl);
         this.compassTexture = null;
+
+        this.earthMapTexture.destroy(gl);
+        this.earthMapTexture = null;
 
         this.animator.remove(drawable);
         this.animator.stop();
@@ -453,8 +482,6 @@ public class EarthShape
 
         this.drawEarthSurface(gl);
 
-        this.compassTexture.disable(gl);
-
         gl.glFlush();
     }
 
@@ -475,10 +502,10 @@ public class EarthShape
         Vector3f se)
     {
         gl.glEnable(GL.GL_TEXTURE_2D);
+        this.compassTexture.bind(gl);
 
         gl.glBegin(GL.GL_TRIANGLE_STRIP);
 
-        this.compassTexture.bind(gl);
         glMaterialColor3f(gl, 1, 1, 1);
 
         // Normal vector, based on just three vertices (since these
@@ -505,6 +532,75 @@ public class EarthShape
         gl.glEnd();
     }
 
+    /** Draw a square with the earth map texture. */
+    private void drawEarthMapRect(
+        GL2 gl,
+        Vector3f nw,
+        Vector3f sw,
+        Vector3f ne,
+        Vector3f se,
+        float centerLatitude,
+        float centerLongitude,
+        float sizeKm)
+    {
+        // Calculate the latitudes of the North and South edges, assuming
+        // 111km per degree.  (222 is because I'm dividing in half in order
+        // to offset in both directions.)
+        float northLatitude = centerLatitude + (sizeKm / 222);
+        float southLatitude = centerLatitude - (sizeKm / 222);
+
+        // Calculate longitudes of the corners, assuming
+        // 111km * cos(latitude) per degree.
+        float neLongitude = (float)(centerLongitude + (sizeKm / (222 * FloatUtil.cosDegf(northLatitude))));
+        float nwLongitude = (float)(centerLongitude - (sizeKm / (222 * FloatUtil.cosDegf(northLatitude))));
+        float seLongitude = (float)(centerLongitude + (sizeKm / (222 * FloatUtil.cosDegf(southLatitude))));
+        float swLongitude = (float)(centerLongitude - (sizeKm / (222 * FloatUtil.cosDegf(southLatitude))));
+
+        gl.glEnable(GL.GL_TEXTURE_2D);
+        this.earthMapTexture.bind(gl);
+
+        gl.glBegin(GL.GL_TRIANGLE_STRIP);
+
+        glMaterialColor3f(gl, 1, 1, 1);
+
+        // Normal vector, based on just three vertices (since these
+        // are supposed to be flat anyway).
+        Vector3f normal = (se.minus(sw)).cross(nw.minus(sw));
+        gl.glNormal3f(normal.x(), normal.y(), normal.z());
+
+        // NW corner.
+        gl.glTexCoord2f(long2tex(nwLongitude), lat2tex(northLatitude));
+        gl.glVertex3fv(nw.getArray(), 0);
+
+        // SW corner.
+        gl.glTexCoord2f(long2tex(swLongitude), lat2tex(southLatitude));
+        gl.glVertex3fv(sw.getArray(), 0);
+
+        // NE corner.
+        gl.glTexCoord2f(long2tex(neLongitude), lat2tex(northLatitude));
+        gl.glVertex3fv(ne.getArray(), 0);
+
+        // SE corner.
+        gl.glTexCoord2f(long2tex(seLongitude), lat2tex(southLatitude));
+        gl.glVertex3fv(se.getArray(), 0);
+
+        gl.glEnd();
+    }
+
+    /** Convert a latitude to a 'v' texture coordinate for the Earth map. */
+    private float lat2tex(float latitude)
+    {
+        // -90 maps to the bottom (0), +90 maps to the top (1).
+        return (float)((latitude + 90) / 180);
+    }
+
+    /** Convert a longitude to a 'u' texture coordinate for the Earth map. */
+    private float long2tex(float longitude)
+    {
+        // -180 maps to the left (0), +180 maps to the right (1).
+        return (float)((longitude + 180) / 360);
+    }
+
     /** Build a portion of the Earth's surface.  Adds squares to
       * 'surfaceSquares'.  This works by iterating over latitude
       * and longitude pairs and assuming a spherical Earth. */
@@ -518,7 +614,7 @@ public class EarthShape
         // Start with an arbitrary square centered at the origin
         // the 3D space, and at SF, CA in the real world.
         float startLatitude = 38;     // 38N
-        float startLongitude = -58;   // 122W
+        float startLongitude = -122;  // 122W
         SurfaceSquare startSquare = new SurfaceSquare(
             new Vector3f(0,0,0),      // center
             new Vector3f(0,0,-1),     // north
@@ -581,10 +677,7 @@ public class EarthShape
         log("finished building Earth; nsquares="+this.surfaceSquares.size());
     }
 
-    /** Build the surface by walking randomly from a starting location.
-      * For the moment, this can only be activated by uncommenting a
-      * call site. */
-    @SuppressWarnings("unused")
+    /** Build the surface by walking randomly from a starting location. */
     private void randomWalkEarthSurface()
     {
         log("building Earth by random walk");
@@ -595,7 +688,7 @@ public class EarthShape
         // Start with an arbitrary square centered at the origin
         // the 3D space, and at SF, CA in the real world.
         float startLatitude = 38;     // 38N
-        float startLongitude = -58;   // 122W
+        float startLongitude = -122;  // 122W
         SurfaceSquare startSquare = new SurfaceSquare(
             new Vector3f(0,0,0),      // center
             new Vector3f(0,0,-1),     // north
@@ -994,7 +1087,13 @@ public class EarthShape
         Vector3f sw = s.center.minus(n).minus(e);
         Vector3f ne = s.center.plus(n).plus(e);
         Vector3f se = s.center.minus(n).plus(e);
-        this.drawCompassRect(gl, nw, sw, ne, se);
+
+        if (this.drawCompasses) {
+            this.drawCompassRect(gl, nw, sw, ne, se);
+        }
+        else {
+            this.drawEarthMapRect(gl, nw, sw, ne, se, s.latitude, s.longitude, s.sizeKm);
+        }
 
         // Also draw a surface normal.
         gl.glDisable(GL.GL_TEXTURE_2D);
@@ -1144,6 +1243,35 @@ public class EarthShape
         if (md != null) {
             this.moveKeys[md.ordinal()] = true;
         }
+
+        switch (ev.getKeyCode()) {
+            case KeyEvent.VK_C:
+                this.drawCompasses = !this.drawCompasses;
+                this.setStatusLabel();
+                this.glCanvas.display();
+                break;
+
+            case KeyEvent.VK_L:
+                this.surfaceSquares.clear();
+                this.buildEarthSurfaceWithLatLong();
+                this.glCanvas.display();
+                break;
+
+            case KeyEvent.VK_R:
+                this.surfaceSquares.clear();
+                this.randomWalkEarthSurface();
+                this.glCanvas.display();
+                break;
+
+            case KeyEvent.VK_T:
+                this.surfaceSquares.clear();
+                this.buildEarthSurfaceFromStarData();
+                this.glCanvas.display();
+                break;
+
+            default:
+                break;
+        }
     }
 
     /** Set the status label text to reflect other state variables. */
@@ -1153,6 +1281,7 @@ public class EarthShape
         sb.append("camera="+this.cameraPosition);
         sb.append(", az="+this.cameraAzimuthDegrees);
         sb.append(", pch="+this.cameraPitchDegrees);
+        sb.append(", tex="+(this.drawCompasses? "compass" : "earth"));
         if (this.fpsCameraMode) {
             sb.append(", FPS mode (click to exit)");
         }
