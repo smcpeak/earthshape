@@ -736,17 +736,6 @@ public class EarthShape
         Vector3f celestialNorth =
             old.north.rotate(old.latitude, oldEast);
 
-        // Calculate the angle along the spherical Earth subtended
-        // by the arc from 'old' to the new coordinates.
-        float arcAngleDegrees = FloatUtil.sphericalSeparationAngle(
-            old.longitude, old.latitude,
-            newLongitude, newLatitude);
-
-        // Calculate the distance along the surface that separates
-        // these points by using the fact that there are 111 km per
-        // degree of arc.
-        float distanceKm = (float)(111.0 * arcAngleDegrees);
-
         // Get lat/long deltas.
         float deltaLatitude = newLatitude - old.latitude;
         float deltaLongitude = FloatUtil.modulus2(
@@ -757,46 +746,19 @@ public class EarthShape
             return old;
         }
 
-        // Compute the new orientation vectors by first rotating
+        // What we want now is to first rotate Northward
         // around local East to account for change in latitude, then
-        // celestial North for change in longitude.
-        Vector3f newNorth =
-            old.north.rotate(-deltaLatitude, oldEast)
-                     .rotate(deltaLongitude, celestialNorth);
-        Vector3f newUp =
-            old.up.rotate(-deltaLatitude, oldEast)
-                  .rotate(deltaLongitude, celestialNorth);
-        Vector3f newEast = newNorth.cross(newUp).normalize();
+        // Eastward around celestial North for change in longitude.
+        Vector3f firstRotation = oldEast.times(-deltaLatitude);
+        Vector3f secondRotation = celestialNorth.times(deltaLongitude);
 
-        // Calculate the average compass heading, in degrees North
-        // of East, used to go from the old
-        // location to the new.  This is rather crude because it
-        // doesn't properly account for the fact that longitude
-        // lines get closer together near the poles.
-        float headingDegrees = FloatUtil.radiansToDegreesf(
-            (float)Math.atan2(deltaLatitude, deltaLongitude));
+        // But then we want to express the composition of those as a
+        // single rotation vector in order to call the general routine.
+        Vector3f combined = Vector3f.composeRotations(firstRotation, secondRotation);
 
-        // For both old and new, calculate a unit vector for the
-        // travel direction.  Then average them to approximate the
-        // average travel direction.
-        Vector3f oldTravel = oldEast.rotate(headingDegrees, old.up);
-        Vector3f newTravel = newEast.rotate(headingDegrees, newUp);
-        Vector3f avgTravel = oldTravel.plus(newTravel).normalize();
-
-        // Calculate the new square's center as 'distance' units
-        // along 'avgTravel'.
-        Vector3f newCenter = old.center.plus(
-            avgTravel.times(distanceKm * SPACE_UNITS_PER_KM));
-
-        // Make the new square and add it to the list.
-        SurfaceSquare ret = new SurfaceSquare(
-            newCenter, newNorth, newUp,
-            old.sizeKm,
-            newLatitude,      // did not change
-            newLongitude);
-        this.addSurfaceSquare(ret);
-
-        return ret;
+        // Now call into the general procedure for adding a square
+        // given the proper relative orientation rotation.
+        return addRotatedAdjacentSquare(old, newLatitude, newLongitude, combined);
     }
 
     /** Build a surface using star data rather than any presumed
@@ -861,8 +823,6 @@ public class EarthShape
         float newLongitude,
         Vector3f rotation)
     {
-        // TODO: Factor commonality with 'addAdjacentSquare'.
-
         // Calculate local East for 'old'.
         Vector3f oldEast = old.north.cross(old.up).normalize();
 

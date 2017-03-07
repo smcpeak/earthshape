@@ -60,6 +60,14 @@ public class Vector3f {
         return new Vector3f(x()*s, y()*s, z()*s);
     }
 
+    /** Return 'this' times scalar 's'. */
+    public Vector3f timesd(double s)
+    {
+        return new Vector3f((float)(x()*s),
+                            (float)(y()*s),
+                            (float)(z()*s));
+    }
+
     /** Return the square of the length of this vector. */
     public double lengthSquared()
     {
@@ -111,6 +119,12 @@ public class Vector3f {
         return this.rotate(degrees, axisAndAngle);
     }
 
+    /** Return dot product of 'this' and 'v'. */
+    public float dot(Vector3f v)
+    {
+        return x()*v.x() + y()*v.y() + z()*v.z();
+    }
+
     /** Return 'this' cross 'v'. */
     public Vector3f cross(Vector3f v)
     {
@@ -136,6 +150,36 @@ public class Vector3f {
         float degrees = FloatUtil.radiansToDegreesf(
             (float)Math.asin(v.length()));
         return v.normalize().times(degrees);
+    }
+
+    /** Compose two rotation vectors, where each has magnitude equal to
+      * the rotation angle in degrees. */
+    public static Vector3f composeRotations(Vector3f first, Vector3f second)
+    {
+        // The computation here is based on this question and answer:
+        // http://math.stackexchange.com/questions/382760/composition-of-two-axis-angle-rotations
+
+        // First rotation angle (in radians) and axis.
+        double beta = FloatUtil.degreesToRadians(first.length());
+        Vector3f m = first.normalize();
+
+        // Second rotation angle and axis.
+        double alpha = FloatUtil.degreesToRadians(second.length());
+        Vector3f l = second.normalize();
+
+        // Combined rotation angle, in radians.
+        double gamma = Math.acos(Math.cos(alpha/2) * Math.cos(beta/2) -
+                                 Math.sin(alpha/2) * Math.sin(beta/2) * l.dot(m)) * 2;
+
+        // Combined rotation axis, which should be a unit vector.
+        Vector3f n = ( l.timesd(Math.sin(alpha/2) * Math.cos(beta/2)).plus(
+                       m.timesd(Math.cos(alpha/2) * Math.sin(beta/2)).plus(
+                       (l.cross(m)).timesd(Math.sin(alpha/2) * Math.sin(beta/2)) ))).timesd(1/
+                     // ----------------------------------------------------------
+                                     Math.sin(gamma/2));
+
+        // Put axis and angle back together.
+        return n.timesd(FloatUtil.radiansToDegrees(gamma));
     }
 }
 

@@ -42,10 +42,22 @@ public class FloatUtil {
         return (float)(degrees / 180.0 * Math.PI);
     }
 
+    /** Convert degrees to radians using 'double'. */
+    public static double degreesToRadians(double degrees)
+    {
+        return degrees / 180.0 * Math.PI;
+    }
+
     /** Convert radians to degrees using 'float'. */
     public static float radiansToDegreesf(float radians)
     {
         return (float)(radians / Math.PI * 180.0);
+    }
+
+    /** Convert radians to degrees using 'double'. */
+    public static double radiansToDegrees(double radians)
+    {
+        return radians / Math.PI * 180.0;
     }
 
     /** Sine of degrees, as 'float'. */
