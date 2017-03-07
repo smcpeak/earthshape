@@ -158,6 +158,12 @@ public class EarthShape
     /** Menu item to toggle 'drawCompasses'. */
     private CheckboxMenuItem drawCompassesCBItem;
 
+    /** If true, draw surface normals as short line segments. */
+    private boolean drawSurfaceNormals = true;
+
+    /** Menu item to toggle 'drawSurfaceNormals'. */
+    private CheckboxMenuItem drawSurfaceNormalsCBItem;
+
     /** Current aspect ratio: canvas width divided by canvas height
       * in pixels.  (Really, aspect ratio ought to reflect physical
       * size ratio, but I will assume pixels are square; fortunately,
@@ -259,13 +265,19 @@ public class EarthShape
 
         Menu drawMenu = new Menu("Draw");
         this.drawCompassesCBItem =
-            new CheckboxMenuItem("Draw squares with compasses", this.drawCompasses);
-        this.drawCompassesCBItem.addItemListener(new ItemListener() {
-            public void itemStateChanged(ItemEvent e) {
-                EarthShape.this.toggleDrawCompasses();
-            }
-        });
-        drawMenu.add(this.drawCompassesCBItem);
+            addCBMenuItem(drawMenu, "Draw squares with compasses", this.drawCompasses,
+                new ItemListener() {
+                    public void itemStateChanged(ItemEvent e) {
+                        EarthShape.this.toggleDrawCompasses();
+                    }
+                });
+        this.drawSurfaceNormalsCBItem =
+            addCBMenuItem(drawMenu, "Draw surface normals", this.drawSurfaceNormals,
+                new ItemListener() {
+                    public void itemStateChanged(ItemEvent e) {
+                        EarthShape.this.toggleDrawSurfaceNormals();
+                    }
+                });
         menuBar.add(drawMenu);
 
         Menu buildMenu = new Menu("Build");
@@ -298,6 +310,16 @@ public class EarthShape
         MenuItem item = new MenuItem(itemLabel);
         item.addActionListener(listener);
         menu.add(item);
+    }
+
+    private static CheckboxMenuItem addCBMenuItem(Menu menu, String itemLabel,
+                                                  boolean initState, ItemListener listener)
+    {
+        CheckboxMenuItem cbItem =
+            new CheckboxMenuItem(itemLabel, initState);
+        cbItem.addItemListener(listener);
+        menu.add(cbItem);
+        return cbItem;
     }
 
     /** Print a message to the console with a timestamp. */
@@ -463,6 +485,9 @@ public class EarthShape
         // Make axis normals point toward +Y since my light is
         // above the scene.
         gl.glNormal3f(0,1,0);
+
+        // The axes are not textured.
+        gl.glDisable(GL.GL_TEXTURE_2D);
 
         // X axis.
         {
@@ -1175,13 +1200,15 @@ public class EarthShape
         }
 
         // Also draw a surface normal.
-        gl.glDisable(GL.GL_TEXTURE_2D);
-        gl.glBegin(GL.GL_LINES);
-        glMaterialColor3f(gl, 0.5f, 0.5f, 0);    // Dark yellow
-        gl.glNormal3f(0,1,0);
-        gl.glVertex3fv(s.center.getArray(), 0);
-        gl.glVertex3fv(s.center.plus(s.up).getArray(), 0);
-        gl.glEnd();
+        if (this.drawSurfaceNormals) {
+            gl.glDisable(GL.GL_TEXTURE_2D);
+            gl.glBegin(GL.GL_LINES);
+            glMaterialColor3f(gl, 0.5f, 0.5f, 0);    // Dark yellow
+            gl.glNormal3f(0,1,0);
+            gl.glVertex3fv(s.center.getArray(), 0);
+            gl.glVertex3fv(s.center.plus(s.up).getArray(), 0);
+            gl.glEnd();
+        }
     }
 
     /** Draw a 2D "+" in the [0,1] box. */
@@ -1358,6 +1385,14 @@ public class EarthShape
         this.redrawCanvas();
     }
 
+    /** Toggle the 'drawSurfaceNormals' flag. */
+    private void toggleDrawSurfaceNormals()
+    {
+        this.drawSurfaceNormals = !this.drawSurfaceNormals;
+        this.setStatusLabel();
+        this.redrawCanvas();
+    }
+
     /** Set the status label text to reflect other state variables.
       * This also updates the state of stateful menu items. */
     private void setStatusLabel()
@@ -1373,6 +1408,7 @@ public class EarthShape
         this.statusLabel.setText(sb.toString());
 
         this.drawCompassesCBItem.setState(this.drawCompasses);
+        this.drawSurfaceNormalsCBItem.setState(this.drawSurfaceNormals);
     }
 
     @Override
