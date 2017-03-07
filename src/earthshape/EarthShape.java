@@ -5,13 +5,21 @@ package earthshape;
 
 import java.awt.AWTException;
 import java.awt.BorderLayout;
+import java.awt.CheckboxMenuItem;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Frame;
 import java.awt.Label;
+import java.awt.Menu;
+import java.awt.MenuBar;
+import java.awt.MenuItem;
 import java.awt.Point;
 import java.awt.Robot;
 import java.awt.Toolkit;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
@@ -147,6 +155,9 @@ public class EarthShape
       * Otherwise, draw them using the EarthMap texture. */
     private boolean drawCompasses = true;
 
+    /** Menu item to toggle 'drawCompasses'. */
+    private CheckboxMenuItem drawCompassesCBItem;
+
     /** Current aspect ratio: canvas width divided by canvas height
       * in pixels.  (Really, aspect ratio ought to reflect physical
       * size ratio, but I will assume pixels are square; fortunately,
@@ -190,8 +201,6 @@ public class EarthShape
                 cursorImg, new Point(0, 0), "blank cursor");
         }
 
-        //this.buildEarthSurfaceWithLatLong();
-        //this.randomWalkEarthSurface();
         this.buildEarthSurfaceFromStarData();
 
         this.setupJOGL();
@@ -202,6 +211,9 @@ public class EarthShape
         this.glCanvas.addMouseListener(this);
         this.glCanvas.addMouseMotionListener(this);
 
+        this.buildMenuBar();
+
+        // Status bar on bottom.
         this.statusLabel = new Label();
         this.setStatusLabel();
         this.add(this.statusLabel, BorderLayout.SOUTH);
@@ -228,6 +240,64 @@ public class EarthShape
 
         // Associate the canvas with 'this' window.
         this.add(this.glCanvas, BorderLayout.CENTER);
+    }
+
+    /** Build the menu bar and attach it to 'this'. */
+    private void buildMenuBar()
+    {
+        MenuBar menuBar = new MenuBar();
+        this.setMenuBar(menuBar);
+
+        Menu fileMenu = new Menu("File");
+        addMenuItem(fileMenu, "Exit", new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                EarthShape.log("exit menu item invoked");
+                EarthShape.this.dispose();
+            }
+        });
+        menuBar.add(fileMenu);
+
+        Menu drawMenu = new Menu("Draw");
+        this.drawCompassesCBItem =
+            new CheckboxMenuItem("Draw squares with compasses", this.drawCompasses);
+        this.drawCompassesCBItem.addItemListener(new ItemListener() {
+            public void itemStateChanged(ItemEvent e) {
+                EarthShape.this.toggleDrawCompasses();
+            }
+        });
+        drawMenu.add(this.drawCompassesCBItem);
+        menuBar.add(drawMenu);
+
+        Menu buildMenu = new Menu("Build");
+        addMenuItem(buildMenu, "Build Earth using star data and no assumed shape",
+            new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    EarthShape.this.buildEarthSurfaceFromStarData();
+                }
+            });
+        addMenuItem(buildMenu, "Build complete Earth using assumed sphere",
+            new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    EarthShape.this.buildEarthSurfaceWithLatLong();
+                }
+            });
+        addMenuItem(buildMenu, "Build partial Earth using assumed sphere and random walk",
+            new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    EarthShape.this.randomWalkEarthSurface();
+                }
+            });
+        menuBar.add(buildMenu);
+    }
+
+    /** Make a new menu item and add it to 'menu' with the given
+      * label and listener. */
+    private static void addMenuItem(Menu menu, String itemLabel,
+                                    ActionListener listener)
+    {
+        MenuItem item = new MenuItem(itemLabel);
+        item.addActionListener(listener);
+        menu.add(item);
     }
 
     /** Print a message to the console with a timestamp. */
@@ -621,6 +691,7 @@ public class EarthShape
     private void buildEarthSurfaceWithLatLong()
     {
         log("building Earth");
+        this.surfaceSquares.clear();
 
         // Size of squares to build, in km.
         float sizeKm = 1000;
@@ -688,6 +759,7 @@ public class EarthShape
             }
         }
 
+        this.redrawCanvas();
         log("finished building Earth; nsquares="+this.surfaceSquares.size());
     }
 
@@ -695,6 +767,7 @@ public class EarthShape
     private void randomWalkEarthSurface()
     {
         log("building Earth by random walk");
+        this.surfaceSquares.clear();
 
         // Size of squares to build, in km.
         float sizeKm = 1000;
@@ -727,6 +800,7 @@ public class EarthShape
                 FloatUtil.modulus2(square.longitude + deltaLongitude, -180, 180));
         }
 
+        this.redrawCanvas();
         log("finished building Earth; nsquares="+this.surfaceSquares.size());
     }
 
@@ -780,6 +854,7 @@ public class EarthShape
     private void buildEarthSurfaceFromStarData()
     {
         log("building Earth using star data");
+        this.surfaceSquares.clear();
 
         // Begin by grabbing the hardcoded star data.
         StarData[] starData = StarData.getHardcodedData();
@@ -832,6 +907,19 @@ public class EarthShape
 
             curLatitude = sd.latitude;
             curLongitude = sd.longitude;
+        }
+
+        this.redrawCanvas();
+        log("buildEarth: finished using star data");
+    }
+
+    /** Cause the GL canvas to redraw. */
+    private void redrawCanvas()
+    {
+        // I want to be able to liberally call this, including before
+        // things are fully initialized, so check for null.
+        if (this.glCanvas != null) {
+            this.glCanvas.display();
         }
     }
 
@@ -1241,27 +1329,19 @@ public class EarthShape
 
         switch (ev.getKeyCode()) {
             case KeyEvent.VK_C:
-                this.drawCompasses = !this.drawCompasses;
-                this.setStatusLabel();
-                this.glCanvas.display();
+                this.toggleDrawCompasses();
                 break;
 
             case KeyEvent.VK_L:
-                this.surfaceSquares.clear();
                 this.buildEarthSurfaceWithLatLong();
-                this.glCanvas.display();
                 break;
 
             case KeyEvent.VK_R:
-                this.surfaceSquares.clear();
                 this.randomWalkEarthSurface();
-                this.glCanvas.display();
                 break;
 
             case KeyEvent.VK_T:
-                this.surfaceSquares.clear();
                 this.buildEarthSurfaceFromStarData();
-                this.glCanvas.display();
                 break;
 
             default:
@@ -1269,7 +1349,17 @@ public class EarthShape
         }
     }
 
-    /** Set the status label text to reflect other state variables. */
+    /** Toggle the 'drawCompasses' flag, then update state and redraw. */
+    private void toggleDrawCompasses()
+    {
+        log("toggleDrawCompasses");
+        this.drawCompasses = !this.drawCompasses;
+        this.setStatusLabel();
+        this.redrawCanvas();
+    }
+
+    /** Set the status label text to reflect other state variables.
+      * This also updates the state of stateful menu items. */
     private void setStatusLabel()
     {
         StringBuilder sb = new StringBuilder();
@@ -1281,6 +1371,8 @@ public class EarthShape
             sb.append(", FPS mode (click to exit)");
         }
         this.statusLabel.setText(sb.toString());
+
+        this.drawCompassesCBItem.setState(this.drawCompasses);
     }
 
     @Override
@@ -1326,6 +1418,9 @@ public class EarthShape
 
                 // And stop the animator.
                 this.animator.stop();
+
+                // Also kill any latent camera motion.
+                this.cameraVelocity = new Vector3f(0,0,0);
             }
         }
     }
