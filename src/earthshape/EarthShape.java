@@ -45,6 +45,14 @@ public class EarthShape
     private static Thread lastLoggedThread = null;
 
     // ---------- Instance variables ----------
+    // ---- Star Information ----
+    /** Some star observations I manually gathered. */
+    private StarObservation[] manualStarObservations = StarObservation.getManualObservations();
+
+    /** Some star celestial coordinates, which can be used to derive
+      * synthetic star observations. */
+    private StarCatalog[] starCatalog = StarCatalog.makeCatalog();
+
     // ---- Widgets ----
     /** Canvas showing the Earth surface built so far. */
     private EarthMapCanvas emCanvas;
@@ -400,9 +408,7 @@ public class EarthShape
         log("building Earth using star data");
         this.emCanvas.clearSurfaceSquares();
 
-        // Begin by grabbing the hardcoded star data.
-        StarObservation[] starObs = StarObservation.getManualObservations();
-        StarCatalog[] starCatalog = StarCatalog.makeCatalog();
+        StarObservation[] starObs = this.manualStarObservations;
 
         // Size of squares to build, in km.
         float sizeKm = 1000;
@@ -441,7 +447,7 @@ public class EarthShape
                 // the current square's star observations with the
                 // next square's.
                 Vector3f rot = calcRequiredRotation(curSquare, starObs,
-                    starCatalog, so.latitude, so.longitude);
+                    so.latitude, so.longitude);
                 if (rot == null) {
                     log("buildEarth: could not place next square!");
                     break;
@@ -468,7 +474,7 @@ public class EarthShape
             log("buildEarth: building lat="+newLatitude+" long="+newLongitude);
 
             Vector3f rot = calcRequiredRotation(curSquare, starObs,
-                starCatalog, newLatitude, newLongitude);
+                newLatitude, newLongitude);
             if (rot == null) {
                 log("buildEarth: could not place next square!");
             }
@@ -484,10 +490,10 @@ public class EarthShape
         }
 
         // From here, keep exploring, relying on the synthetic catalog.
-        this.buildLatitudeStrip(curSquare, +9, starObs, starCatalog);
-        this.buildLatitudeStrip(curSquare, -9, starObs, starCatalog);
-        this.buildLongitudeStrip(curSquare, +9, starObs, starCatalog);
-        this.buildLongitudeStrip(curSquare, -9, starObs, starCatalog);
+        this.buildLatitudeStrip(curSquare, +9, starObs);
+        this.buildLatitudeStrip(curSquare, -9, starObs);
+        this.buildLongitudeStrip(curSquare, +9, starObs);
+        this.buildLongitudeStrip(curSquare, -9, starObs);
 
         this.emCanvas.redrawCanvas();
         log("buildEarth: finished using star data");
@@ -497,9 +503,7 @@ public class EarthShape
       * until we add 20 or we can't add any more.  At each spot, also
       * build latitude strips in both directions. */
     private void buildLongitudeStrip(SurfaceSquare startSquare,
-        float deltaLatitude,
-        StarObservation[] starObs,
-        StarCatalog[] starCatalog)
+        float deltaLatitude, StarObservation[] starObs)
     {
         float curLatitude = startSquare.latitude;
         float curLongitude = startSquare.longitude;
@@ -516,7 +520,7 @@ public class EarthShape
             log("buildEarth: building lat="+newLatitude+" long="+newLongitude);
 
             Vector3f rot = calcRequiredRotation(curSquare, starObs,
-                starCatalog, newLatitude, newLongitude);
+                newLatitude, newLongitude);
             if (rot == null) {
                 log("buildEarth: could not place next square!");
                 break;
@@ -531,17 +535,15 @@ public class EarthShape
             curLongitude = newLongitude;
 
             // Also build strips in each direction.
-            this.buildLatitudeStrip(curSquare, +9, starObs, starCatalog);
-            this.buildLatitudeStrip(curSquare, -9, starObs, starCatalog);
+            this.buildLatitudeStrip(curSquare, +9, starObs);
+            this.buildLatitudeStrip(curSquare, -9, starObs);
         }
     }
 
     /** Build squares by going East or West from a starting square
       * until we add 20 or we can't add any more. */
     private void buildLatitudeStrip(SurfaceSquare startSquare,
-        float deltaLongitude,
-        StarObservation[] starObs,
-        StarCatalog[] starCatalog)
+        float deltaLongitude, StarObservation[] starObs)
     {
         float curLatitude = startSquare.latitude;
         float curLongitude = startSquare.longitude;
@@ -553,7 +555,7 @@ public class EarthShape
             log("buildEarth: building lat="+newLatitude+" long="+newLongitude);
 
             Vector3f rot = calcRequiredRotation(curSquare, starObs,
-                starCatalog, newLatitude, newLongitude);
+                newLatitude, newLongitude);
             if (rot == null) {
                 log("buildEarth: could not place next square!");
                 break;
@@ -662,16 +664,15 @@ public class EarthShape
     private Vector3f calcRequiredRotation(
         SurfaceSquare startSquare,
         StarObservation[] starObs,
-        StarCatalog[] starCatalog,
         float newLatitude,
         float newLongitude)
     {
         // Set of stars visible at the start and end squares and
         // above 20 degrees above the horizon.
         HashMap<String, Vector3f> startStars =
-            getVisibleStars(starObs, starCatalog, startSquare.latitude, startSquare.longitude);
+            getVisibleStars(starObs, startSquare.latitude, startSquare.longitude);
         HashMap<String, Vector3f> endStars =
-            getVisibleStars(starObs, starCatalog, newLatitude, newLongitude);
+            getVisibleStars(starObs, newLatitude, newLongitude);
 
         // Current best rotation and average difference.
         Vector3f currentRotation = new Vector3f(0,0,0);
@@ -759,7 +760,6 @@ public class EarthShape
       * add it to a map from star name to azEl vector. */
     private HashMap<String, Vector3f> getVisibleStars(
         StarObservation[] starObs,
-        StarCatalog[] starCatalog,
         float latitude,
         float longitude)
     {
@@ -777,7 +777,7 @@ public class EarthShape
         }
 
         // Then use the synthetic data.
-        for (StarCatalog sc : starCatalog) {
+        for (StarCatalog sc : this.starCatalog) {
             if (ret.containsKey(sc.name)) {
                 continue;
             }
