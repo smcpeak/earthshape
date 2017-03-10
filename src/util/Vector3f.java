@@ -3,36 +3,51 @@
 
 package util;
 
-/** A immutable 3D vector of float. */
+/** A immutable 3D vector of float.  This class exists, as opposed to
+  * directly using Vectorf, to provide some degree of dimensional safety
+  * for vector operations. */
 public class Vector3f {
     // ---- Instance data ----
-    /** Array of three vector components, in order x, y, z. */
-    private float[] vals;
+    /** Underlying vector components: x, y, z. */
+    private Vectorf under;
 
     // ---- Methods ----
     public Vector3f(float x, float y, float z)
     {
-        this.vals = new float[] {x,y,z};
+        this.under = new Vectorf(new float[] {x,y,z});
+    }
+
+    public Vector3f(Vectorf v3)
+    {
+        assert(v3.dim() == 3);
+        this.under = v3;
     }
 
     public float x()
     {
-        return vals[0];
+        return this.under.get(0);
     }
 
     public float y()
     {
-         return vals[1];
+         return this.under.get(1);
     }
 
     public float z()
     {
-        return vals[2];
+        return this.under.get(2);
+    }
+
+    /** Get the underlying Vectorf, which is useful to pass to routines
+      * that accept dynamically sized vectors. */
+    public Vectorf getUnder()
+    {
+        return this.under;
     }
 
     public String toString()
     {
-        return "("+x()+","+y()+","+z()+")";
+        return this.under.toString();
     }
 
     /** Get the values as an array.  For speed, this returns the
@@ -40,62 +55,56 @@ public class Vector3f {
       * modify it! */
     public float[] getArray()
     {
-        return vals;
+        return this.under.getArray();
     }
 
     /** Return sum of 'this' and 'v'. */
     public Vector3f plus(Vector3f v)
     {
-        return new Vector3f(x()+v.x(), y()+v.y(), z()+v.z());
+        return new Vector3f(this.under.plus(v.under));
     }
 
     /** Return 'this' minus 'v'. */
     public Vector3f minus(Vector3f v)
     {
-        return new Vector3f(x()-v.x(), y()-v.y(), z()-v.z());
+        return new Vector3f(this.under.minus(v.under));
     }
 
     /** Return 'this' times scalar 's'. */
     public Vector3f times(float s)
     {
-        return new Vector3f(x()*s, y()*s, z()*s);
+        return new Vector3f(this.under.times(s));
     }
 
     /** Return 'this' times scalar 's'. */
     public Vector3f timesd(double s)
     {
-        return new Vector3f((float)(x()*s),
-                            (float)(y()*s),
-                            (float)(z()*s));
+        return new Vector3f(this.under.timesd(s));
     }
 
     /** Return the square of the length of this vector. */
     public double lengthSquared()
     {
-        return x()*x() + y()*y() + z()*z();
+        return this.under.lengthSquared();
     }
 
     /** Return the length of this vector. */
     public double length()
     {
-        return Math.sqrt(lengthSquared());
+        return this.under.length();
     }
 
     /** True if this vector's length is zero. */
     public boolean isZero()
     {
-        return x()==0 && y()==0 && z()==0;
+        return this.under.isZero();
     }
 
     /** Return a normalized version of this vector.  The zero
       * vector is returned unchanged. */
     public Vector3f normalize()
     {
-        if (isZero()) {
-            return this;
-        }
-        float normFactor = (float)(1.0 / this.length());
-        return this.times(normFactor);
+        return new Vector3f(this.under.normalize());
     }
 
     /** Return this vector after rotating by 'degrees' about 'axis'.
@@ -123,7 +132,7 @@ public class Vector3f {
     /** Return dot product of 'this' and 'v'. */
     public float dot(Vector3f v)
     {
-        return x()*v.x() + y()*v.y() + z()*v.z();
+        return this.under.dot(v.under);
     }
 
     /** Return 'this' cross 'v'. */
