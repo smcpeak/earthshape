@@ -175,6 +175,13 @@ public class EarthShape
                     EarthShape.this.randomWalkEarthSurface();
                 }
             });
+        addMenuItem(buildMenu, "Start a new surface using star data",
+            KeyStroke.getKeyStroke('n'),
+            new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    EarthShape.this.startNewSurface();
+                }
+            });
         menuBar.add(buildMenu);
     }
 
@@ -802,6 +809,19 @@ public class EarthShape
         v = v.rotate(-azimuth, new Vector3f(0, 1, 0));
 
         return v;
+    }
+
+    /** Begin constructing a new surface using star data.  This just
+      * places down the initial square to represent a user-specified
+      * latitude and longitude.  The square is placed into 3D space
+      * at a fixed location. */
+    public void startNewSurface()
+    {
+        LatLongDialog d = new LatLongDialog(this, 38, -122);
+        if (d.exec()) {
+            log("LatLongDialog: lat="+d.finalLatitude+
+                ", lng="+d.finalLongitude);
+        }
     }
 
     public static void main(String[] args)
