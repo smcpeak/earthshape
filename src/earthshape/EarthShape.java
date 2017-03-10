@@ -79,6 +79,9 @@ public class EarthShape
     /** Menu item to toggle 'drawCelestialNorth'. */
     private JCheckBoxMenuItem drawCelestialNorthCBItem;
 
+    /** Menu item to toggle 'drawStarRays'. */
+    private JCheckBoxMenuItem drawStarRaysCBItem;
+
     // ---------- Methods ----------
     public EarthShape()
     {
@@ -167,6 +170,13 @@ public class EarthShape
                 new ActionListener() {
                     public void actionPerformed(ActionEvent e) {
                         EarthShape.this.toggleDrawCelestialNorth();
+                    }
+                });
+        this.drawStarRaysCBItem =
+            addCBMenuItem(drawMenu, "Draw star rays for active square", null, this.emCanvas.drawStarRays,
+                new ActionListener() {
+                    public void actionPerformed(ActionEvent e) {
+                        EarthShape.this.toggleDrawStarRays();
                     }
                 });
         menuBar.add(drawMenu);
@@ -814,7 +824,7 @@ public class EarthShape
     /** Convert a pair of azimuth and elevation, in degrees, to a unit
       * vector that points in the same direction, in a coordinate system
       * where 0 degrees azimuth is -Z, East is +X, and up is +Y. */
-    private Vector3f azimuthElevationToVector(float azimuth, float elevation)
+    public static Vector3f azimuthElevationToVector(float azimuth, float elevation)
     {
         // Start by pointing a vector at 0 degrees azimuth (North).
         Vector3f v = new Vector3f(0, 0, -1);
@@ -847,6 +857,8 @@ public class EarthShape
                 d.finalLatitude,
                 d.finalLongitude,
                 new Vector3f(0,0,0));
+            this.activeSquare.showAsActive = true;
+            this.addMatchingData(this.activeSquare, this.manualStarObservations);
             this.emCanvas.addSurfaceSquare(this.activeSquare);
             this.emCanvas.redrawCanvas();
         }
@@ -882,6 +894,14 @@ public class EarthShape
         this.emCanvas.redrawCanvas();
     }
 
+    /** Toggle the 'drawStarRays' flag. */
+    public void toggleDrawStarRays()
+    {
+        this.emCanvas.drawStarRays = !this.emCanvas.drawStarRays;
+        this.setStatusLabel();
+        this.emCanvas.redrawCanvas();
+    }
+
     /** Set the status label text to reflect other state variables.
       * This also updates the state of stateful menu items. */
     public void setStatusLabel()
@@ -897,6 +917,7 @@ public class EarthShape
         this.drawCompassesCBItem.setSelected(this.emCanvas.drawCompasses);
         this.drawSurfaceNormalsCBItem.setSelected(this.emCanvas.drawSurfaceNormals);
         this.drawCelestialNorthCBItem.setSelected(this.emCanvas.drawCelestialNorth);
+        this.drawStarRaysCBItem.setSelected(this.emCanvas.drawStarRays);
     }
 }
 

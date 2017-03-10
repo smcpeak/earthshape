@@ -152,6 +152,10 @@ public class EarthMapCanvas
     /** If true, draw celestial North vectors on each square. */
     public boolean drawCelestialNorth = false;
 
+    /** If true, draw rays to star observations for the active
+      * square. */
+    public boolean drawStarRays = true;
+
     // ---- GL canvas support ----
     /** The underlying GL canvas. */
     private GLCanvas glCanvas;
@@ -234,8 +238,8 @@ public class EarthMapCanvas
         // until we enter "FPS" mode.
         this.animator = new Animator(drawable);
 
-        // Use a light blue background.
-        gl.glClearColor(0.8f, 0.9f, 1.0f, 0);
+        // Use a dark background, like the night sky.
+        gl.glClearColor(0, 0, 0.1f, 0);
         //gl.glClearColor(0,0,0,0);
 
         // Enable lighting generally.
@@ -706,6 +710,69 @@ public class EarthMapCanvas
             gl.glVertex3fv(s.center.plus(celestialNorth.times(5)).getArray(), 0);
 
             gl.glEnd();
+        }
+
+        // Draw a box above the active square.
+        if (s.showAsActive) {
+            // A shorter version of "up".  I want to go a short distance so
+            // the line is visible above the texture, but not so far
+            // that the association with the square is unclear.
+            Vector3f upShort = s.up.times(0.01f);
+
+            gl.glDisable(GL.GL_TEXTURE_2D);
+            gl.glBegin(GL.GL_LINE_LOOP);
+            glMaterialColor3f(gl, 0, 1, 1);    // Cyan
+            gl.glNormal3f(0,1,0);
+
+            gl.glVertex3fv(nw.plus(upShort).getArray(), 0);
+            gl.glVertex3fv(sw.plus(upShort).getArray(), 0);
+            gl.glVertex3fv(se.plus(upShort).getArray(), 0);
+            gl.glVertex3fv(ne.plus(upShort).getArray(), 0);
+
+            gl.glEnd();
+
+            // Also draw rays to the stars observed here.
+            if (this.drawStarRays) {
+                for (StarObservation so : s.starObs) {
+                    // Limit ourselves to these three stars for the moment.
+                    float rayBrightness = 0;
+                    if (so.name == "Polaris") {
+                        rayBrightness = 1;
+                    }
+                    else if (so.name == "Rigel") {
+                        rayBrightness = 0.9f;
+                    }
+                    else if (so.name == "Procyon") {
+                        rayBrightness = 0.8f;
+                    }
+                    else {
+                        continue;
+                    }
+
+                    // Ray to star in nominal, -Z facing, coordinates
+                    Vector3f nominalRay =
+                        EarthShape.azimuthElevationToVector(so.azimuth, so.elevation);
+
+                    // Ray to star in map coordinates, taking into account
+                    // how the current surface is rotated.
+                    Vector3f localRay = nominalRay.rotateAA(s.rotationFromNominal);
+
+                    gl.glBegin(GL.GL_LINES);
+                    glMaterialColor3f(gl, rayBrightness, rayBrightness, rayBrightness);
+
+                    gl.glVertex3fv(s.center.getArray(), 0);
+
+                    // The observation is just a direction, so we draw
+                    // the ray as infinitely long (except it will be
+                    // clipped by the far clipping plane).  This does
+                    // not mean we are assuming the star is actually
+                    // infinitely far, just that it must be somewhere
+                    // along this line.
+                    gl.glVertex4f(localRay.x(), localRay.y(), localRay.z(), 0);
+
+                    gl.glEnd();
+                }
+            }
         }
     }
 

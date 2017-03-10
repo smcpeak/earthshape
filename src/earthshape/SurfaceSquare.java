@@ -47,6 +47,11 @@ public class SurfaceSquare {
       * point in time. */
     public ArrayList<StarObservation> starObs = new ArrayList<StarObservation>();
 
+    /** If true, draw a special marker to indicate the square is
+      * "active", meaning it is the square upon which we will
+      * build more squares. */
+    public boolean showAsActive = false;
+
     public SurfaceSquare(
         Vector3f center,
         Vector3f north,
@@ -77,7 +82,9 @@ public class SurfaceSquare {
             ", lat="+this.latitude+
             ", lng="+this.longitude+
             ", rfn="+this.rotationFromNominal+
-            ", cn="+celestialNorth+")";
+            ", cn="+celestialNorth+
+            ", ac="+this.showAsActive+
+            ")";
     }
 }
 
