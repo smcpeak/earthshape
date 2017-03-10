@@ -1,4 +1,4 @@
-// StarData.java
+// StarObservation.java
 // See copyright.txt for license and terms of use.
 
 package earthshape;
@@ -7,7 +7,7 @@ package earthshape;
   * Earth at a particular point in time.  For now, the point in
   * time is not stored as data, as it is assumed that all
   * observations are from the same point in time. */
-public class StarData {
+public class StarObservation {
     // Latitude of observer in degrees North of equator.
     // Should be in [-90,90].
     public float latitude;
@@ -29,7 +29,7 @@ public class StarData {
     // use observations where elevation is at least 20.
     public float elevation;
 
-    public StarData(
+    public StarObservation(
         float latitude_,
         float longitude_,
         String name_,
@@ -52,8 +52,8 @@ public class StarData {
                ", el="+elevation;
     }
 
-    /** Get some data I have hardcoded. */
-    public static StarData[] getHardcodedData()
+    /** Get some manually gathered data I have hardcoded. */
+    public static StarObservation[] getManualObservations()
     {
         // This data comes from the online planetarium at
         // "https://in-the-sky.org/skymap.php".  I manually
@@ -82,51 +82,51 @@ public class StarData {
         // replicate what someone with only a hand sextant and
         // a dark sky might do.
 
-        return new StarData[] {
-            new StarData(38,-122,"Capella",302.8,71.2),
-            new StarData(38,-122,"Betelgeuse",205.0,57.2),
-            new StarData(38,-122,"Rigel",210.5,38.8),
-            new StarData(38,-122,"Aldebaran",242.9,53.9),
-            new StarData(38,-122,"Sirius",181.1,35.2),
-            new StarData(38,-122,"Procyon",157.5,55.2),
-            new StarData(38,-122,"Polaris",359.3,38.2),
-            new StarData(38,-122,"Dubhe",36.9,44.8),
+        return new StarObservation[] {
+            new StarObservation(38,-122,"Capella",302.8,71.2),
+            new StarObservation(38,-122,"Betelgeuse",205.0,57.2),
+            new StarObservation(38,-122,"Rigel",210.5,38.8),
+            new StarObservation(38,-122,"Aldebaran",242.9,53.9),
+            new StarObservation(38,-122,"Sirius",181.1,35.2),
+            new StarObservation(38,-122,"Procyon",157.5,55.2),
+            new StarObservation(38,-122,"Polaris",359.3,38.2),
+            new StarObservation(38,-122,"Dubhe",36.9,44.8),
 
-            new StarData(38,-113,"Capella",299.1,65.1),
-            new StarData(38,-113,"Betelgeuse",219.1,53.3),
-            new StarData(38,-113,"Rigel",220.3,34.6),
-            new StarData(38,-113,"Aldebaran",251.6,47.2),
-            new StarData(38,-113,"Sirius",191.5,34.4),
-            new StarData(38,-113,"Procyon",173.3,57),
-            new StarData(38,-113,"Polaris",359.2,38.1),
-            new StarData(38,-113,"Dubhe",36.4,49.1),
+            new StarObservation(38,-113,"Capella",299.1,65.1),
+            new StarObservation(38,-113,"Betelgeuse",219.1,53.3),
+            new StarObservation(38,-113,"Rigel",220.3,34.6),
+            new StarObservation(38,-113,"Aldebaran",251.6,47.2),
+            new StarObservation(38,-113,"Sirius",191.5,34.4),
+            new StarObservation(38,-113,"Procyon",173.3,57),
+            new StarObservation(38,-113,"Polaris",359.2,38.1),
+            new StarObservation(38,-113,"Dubhe",36.4,49.1),
 
-            new StarData(38,-104,"Capella",298.2,58.9),
-            new StarData(38,-104,"Betelgeuse",230.9,48.3),
-            new StarData(38,-104,"Rigel",229.1,29.7),
-            new StarData(38,-104,"Aldebaran",258.9,40.4),
-            new StarData(38,-104,"Sirius",201.5,32.5),
-            new StarData(38,-104,"Procyon",189.8,56.9),
-            new StarData(38,-104,"Polaris",359.1,38.1),
-            new StarData(38,-104,"Dubhe",34.7,53.2),
+            new StarObservation(38,-104,"Capella",298.2,58.9),
+            new StarObservation(38,-104,"Betelgeuse",230.9,48.3),
+            new StarObservation(38,-104,"Rigel",229.1,29.7),
+            new StarObservation(38,-104,"Aldebaran",258.9,40.4),
+            new StarObservation(38,-104,"Sirius",201.5,32.5),
+            new StarObservation(38,-104,"Procyon",189.8,56.9),
+            new StarObservation(38,-104,"Polaris",359.1,38.1),
+            new StarObservation(38,-104,"Dubhe",34.7,53.2),
 
-            new StarData(38,-95,"Capella",298.7,52.5),
-            new StarData(38,-95,"Betelgeuse",240.5,42.3),
-            new StarData(38,-95,"Rigel",236.8,24.0),
-            new StarData(38,-95,"Aldebaran",265.2,33.4),
-            new StarData(38,-95,"Sirius",210.9,29.3),
-            new StarData(38,-95,"Procyon",205.3,54.6),
-            new StarData(38,-95,"Polaris",359.1,37.9),
-            new StarData(38,-95,"Dubhe",31.7,57.1),
+            new StarObservation(38,-95,"Capella",298.7,52.5),
+            new StarObservation(38,-95,"Betelgeuse",240.5,42.3),
+            new StarObservation(38,-95,"Rigel",236.8,24.0),
+            new StarObservation(38,-95,"Aldebaran",265.2,33.4),
+            new StarObservation(38,-95,"Sirius",210.9,29.3),
+            new StarObservation(38,-95,"Procyon",205.3,54.6),
+            new StarObservation(38,-95,"Polaris",359.1,37.9),
+            new StarObservation(38,-95,"Dubhe",31.7,57.1),
 
-            new StarData(38,-86,"Capella",300.2,46.3),
-            new StarData(38,-86,"Betelgeuse",248.6,35.9),
-            new StarData(38,-86,"Rigel",243.7,17.8),
-            new StarData(38,-86,"Aldebaran",271.0,26.2),
-            new StarData(38,-86,"Sirius",219.5,25.2),
-            new StarData(38,-86,"Procyon",218.8,50.9),
-            new StarData(38,-86,"Polaris",359.2,37.8),
-            new StarData(38,-86,"Dubhe",26.9,60.6),
+            new StarObservation(38,-86,"Capella",300.2,46.3),
+            new StarObservation(38,-86,"Betelgeuse",248.6,35.9),
+            new StarObservation(38,-86,"Rigel",243.7,17.8),
+            new StarObservation(38,-86,"Aldebaran",271.0,26.2),
+            new StarObservation(38,-86,"Sirius",219.5,25.2),
+            new StarObservation(38,-86,"Procyon",218.8,50.9),
+            new StarObservation(38,-86,"Polaris",359.2,37.8),
+            new StarObservation(38,-86,"Dubhe",26.9,60.6),
         };
     }
 }

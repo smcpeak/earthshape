@@ -1,5 +1,5 @@
 // StarCatalog.java
-// See copyright.txt
+// See copyright.txt for license and terms of use.
 
 package earthshape;
 
@@ -9,7 +9,7 @@ import java.util.regex.Pattern;
 import util.FloatUtil;
 
 /** A small, hardcoded catalog of star locations on the celestial
-  * sphere. This is used to synthesize observational data that
+  * sphere.  This is used to synthesize observational data that
   * should match the online planetarium I am using.  Each object
   * represents one star. */
 public class StarCatalog {
@@ -108,7 +108,7 @@ public class StarCatalog {
       * @param unixTime is seconds since 1970-01-01 00:00 GMT.
       * @param latitude is degrees North of the equator.
       * @param longitude is degrees East of the prime meridian. */
-    public StarData makeObservation(
+    public StarObservation makeObservation(
         double unixTime,
         float latitudeDegrees,
         float longitudeDegrees)
@@ -147,7 +147,7 @@ public class StarCatalog {
         azimuthRadians += Math.PI;
 
         // Finally, combine everything into an observation.
-        return new StarData(
+        return new StarObservation(
             latitudeDegrees,
             longitudeDegrees,
             this.name,
@@ -178,15 +178,15 @@ public class StarCatalog {
 
     /** Calculate and print one observation, and compare it to what is
       * in the manually gathered observation data. */
-    private static void printObs(StarData[] manualObs, StarCatalog sc,
+    private static void printObs(StarObservation[] manualObs, StarCatalog sc,
         double unixTime, float latitude, float longitude)
     {
-        StarData obs = sc.makeObservation(unixTime, latitude, longitude);
+        StarObservation obs = sc.makeObservation(unixTime, latitude, longitude);
         System.out.println(obs);
 
         // Find the corresponding manual entry.
         boolean found = false;
-        for (StarData m : manualObs) {
+        for (StarObservation m : manualObs) {
             if (m.name.equals(obs.name) &&
                 m.latitude == latitude &&
                 m.longitude == longitude)
@@ -211,10 +211,12 @@ public class StarCatalog {
     public static void main(String args[])
     {
         // Get the manual data.
-        StarData[] manualObs = StarData.getHardcodedData();
+        StarObservation[] manualObs = StarObservation.getManualObservations();
 
         // Calculate and print out observation data corresponding
-        // to the points I gathered manually.
+        // to the points I gathered manually.  The purpose is to
+        // confirm that my mathematical predictions agree with the
+        // manual observations.
         double obsUnixTime = 1488772800.0;
         StarCatalog catalog[] = makeCatalog();
         for (StarCatalog sc : catalog) {

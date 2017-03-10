@@ -45,7 +45,7 @@ public class SurfaceSquare {
 
     /** Star observations taken from this point at some
       * point in time. */
-    public ArrayList<StarData> starData = new ArrayList<StarData>();
+    public ArrayList<StarObservation> starObs = new ArrayList<StarObservation>();
 
     public SurfaceSquare(
         Vector3f center,
