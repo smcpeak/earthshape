@@ -809,27 +809,6 @@ public class EarthMapCanvas
         if (md != null) {
             this.moveKeys[md.ordinal()] = true;
         }
-
-        switch (ev.getKeyCode()) {
-            case KeyEvent.VK_C:
-                this.earthShapeFrame.toggleDrawCompasses();
-                break;
-
-            case KeyEvent.VK_L:
-                this.earthShapeFrame.buildEarthSurfaceWithLatLong();
-                break;
-
-            case KeyEvent.VK_R:
-                this.earthShapeFrame.randomWalkEarthSurface();
-                break;
-
-            case KeyEvent.VK_T:
-                this.earthShapeFrame.buildEarthSurfaceFromStarData();
-                break;
-
-            default:
-                break;
-        }
     }
 
     @Override

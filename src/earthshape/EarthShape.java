@@ -16,6 +16,7 @@ import javax.swing.JLabel;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
+import javax.swing.KeyStroke;
 
 import com.jogamp.opengl.GLCapabilities;
 
@@ -119,7 +120,7 @@ public class EarthShape
         this.setJMenuBar(menuBar);
 
         JMenu fileMenu = new JMenu("File");
-        addMenuItem(fileMenu, "Exit", new ActionListener() {
+        addMenuItem(fileMenu, "Exit", null, new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 EarthShape.log("exit menu item invoked");
                 EarthShape.this.dispose();
@@ -129,21 +130,22 @@ public class EarthShape
 
         JMenu drawMenu = new JMenu("Draw");
         this.drawCompassesCBItem =
-            addCBMenuItem(drawMenu, "Draw squares with compasses", this.emCanvas.drawCompasses,
+            addCBMenuItem(drawMenu, "Draw squares with compasses", KeyStroke.getKeyStroke('c'),
+                this.emCanvas.drawCompasses,
                 new ActionListener() {
                     public void actionPerformed(ActionEvent e) {
                         EarthShape.this.toggleDrawCompasses();
                     }
                 });
         this.drawSurfaceNormalsCBItem =
-            addCBMenuItem(drawMenu, "Draw surface normals", this.emCanvas.drawSurfaceNormals,
+            addCBMenuItem(drawMenu, "Draw surface normals", null, this.emCanvas.drawSurfaceNormals,
                 new ActionListener() {
                     public void actionPerformed(ActionEvent e) {
                         EarthShape.this.toggleDrawSurfaceNormals();
                     }
                 });
         this.drawCelestialNorthCBItem =
-            addCBMenuItem(drawMenu, "Draw celestial North", this.emCanvas.drawCelestialNorth,
+            addCBMenuItem(drawMenu, "Draw celestial North", null, this.emCanvas.drawCelestialNorth,
                 new ActionListener() {
                     public void actionPerformed(ActionEvent e) {
                         EarthShape.this.toggleDrawCelestialNorth();
@@ -153,18 +155,21 @@ public class EarthShape
 
         JMenu buildMenu = new JMenu("Build");
         addMenuItem(buildMenu, "Build Earth using star data and no assumed shape",
+            KeyStroke.getKeyStroke('t'),
             new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
                     EarthShape.this.buildEarthSurfaceFromStarData();
                 }
             });
         addMenuItem(buildMenu, "Build complete Earth using assumed sphere",
+            KeyStroke.getKeyStroke('l'),
             new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
                     EarthShape.this.buildEarthSurfaceWithLatLong();
                 }
             });
         addMenuItem(buildMenu, "Build partial Earth using assumed sphere and random walk",
+            KeyStroke.getKeyStroke('r'),
             new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
                     EarthShape.this.randomWalkEarthSurface();
@@ -175,20 +180,26 @@ public class EarthShape
 
     /** Make a new menu item and add it to 'menu' with the given
       * label and listener. */
-    private static void addMenuItem(JMenu menu, String itemLabel,
+    private static void addMenuItem(JMenu menu, String itemLabel, KeyStroke accelerator,
                                     ActionListener listener)
     {
         JMenuItem item = new JMenuItem(itemLabel);
         item.addActionListener(listener);
+        if (accelerator != null) {
+            item.setAccelerator(accelerator);
+        }
         menu.add(item);
     }
 
-    private static JCheckBoxMenuItem addCBMenuItem(JMenu menu, String itemLabel,
+    private static JCheckBoxMenuItem addCBMenuItem(JMenu menu, String itemLabel, KeyStroke accelerator,
                                                    boolean initState, ActionListener listener)
     {
         JCheckBoxMenuItem cbItem =
             new JCheckBoxMenuItem(itemLabel, initState);
         cbItem.addActionListener(listener);
+        if (accelerator != null) {
+            cbItem.setAccelerator(accelerator);
+        }
         menu.add(cbItem);
         return cbItem;
     }
