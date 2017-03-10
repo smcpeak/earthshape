@@ -60,46 +60,17 @@ public class EarthShape
                // And mouse input for the GL canvas.
                MouseListener, MouseMotionListener
 {
-    // AWT boilerplate.
+    // --------- Constants ----------
+    /** AWT boilerplate generated serial ID. */
     private static final long serialVersionUID = 3903955302894393226L;
-
-    /** Compass rose texture.  This is only valid between 'init' and
-      * 'dispose'. */
-    private Texture compassTexture;
-
-    /** Earth surface texture.  Valid between 'init' and 'dispose'.
-      * The texture I plan to load, EarthMap.jpg, comes from
-      * http://wennberg-wiki.caltech.edu/.  It is 2500x1250 and
-      * is an equirectangular projection.  The top is 90N, bottom
-      * is 90S, left is 180W, right is 180E. */
-    private Texture earthMapTexture;
-
-    /** The main GL canvas. */
-    private GLCanvas glCanvas;
-
-    /** Camera position in space. */
-    private Vector3f cameraPosition = new Vector3f(1,1,2);
-
-    /** Azimuth angle in which the camera is looking, in degrees
-      * to the left of the -Z axis.  It is kept in [0,360), wrapping
-      * as it gets to either extreme. */
-    private float cameraAzimuthDegrees = 0;
 
     /** When the mouse moves one pixel horizontally, the camera
       * azimuth turns by this many degrees. */
     private static final float CAMERA_HORIZONTAL_SENSITIVITY = 0.5f;
 
-    /** Camera pitch angle, in degrees.  In [-90,90], where +90 is
-      * straight up. */
-    private float cameraPitchDegrees = 0;
-
     /** When the mouse moves one pixel vertically, the camera pitch
       * angle changes by this many degrees. */
     private static final float CAMERA_VERTICAL_SENSITIVITY = 0.5f;
-
-    /** Velocity of camera movement, in world coordinates.  The magnitude
-      * is units per second. */
-    private Vector3f cameraVelocity = new Vector3f(0,0,0);
 
     /** As the camera continues moving, it accelerates by this
       * amount with each additional key press event. */
@@ -115,70 +86,111 @@ public class EarthShape
       * movement keys are being held.  */
     private static final float STATIONARY_CAMERA_FRICTION = 5f;
 
+    /** Units in 3D space coordinates per km in surface being mapped. */
+    private static final float SPACE_UNITS_PER_KM = 0.001f;
+
+    /** Desired distance between camera and front clipping plane. */
+    private static final float FRONT_CLIP_DISTANCE = 0.1f;
+
+    // ---------- Class variables ----------
+    /** The thread that last issued a 'log' command.  This is used to
+      * only log thread names when there is interleaving. */
+    private static Thread lastLoggedThread = null;
+
+    // ---------- Instance variables ----------
+    // ---- Textures ----
+    /** Compass rose texture.  This is only valid between 'init' and
+      * 'dispose'. */
+    private Texture compassTexture;
+
+    /** Earth surface texture.  Valid between 'init' and 'dispose'.
+      * The texture I plan to load, EarthMap.jpg, comes from
+      * http://wennberg-wiki.caltech.edu/.  It is 2500x1250 and
+      * is an equirectangular projection.  The top is 90N, bottom
+      * is 90S, left is 180W, right is 180E. */
+    private Texture earthMapTexture;
+
+    /** Blank cursor, used to hide the mouse cursor. */
+    private Cursor blankCursor;
+
+    // ---- Widgets ----
+    /** The main GL canvas. */
+    private GLCanvas glCanvas;
+
+    /** Animator object for the GL canvas.  Valid between init and
+      * dispose. */
+    private Animator animator;
+
     /** Widget to show various state variables such as camera position. */
     private Label statusLabel = new Label();
+
+    /** Menu item to toggle 'drawCompasses'. */
+    private CheckboxMenuItem drawCompassesCBItem;
+
+    /** Menu item to toggle 'drawSurfaceNormals'. */
+    private CheckboxMenuItem drawSurfaceNormalsCBItem;
+
+    /** Menu item to toggle 'drawCelestialNorth'. */
+    private CheckboxMenuItem drawCelestialNorthCBItem;
+
+    // ---- Camera position and motion ----
+    /** Camera position in space. */
+    private Vector3f cameraPosition = new Vector3f(1,1,2);
+
+    /** Azimuth angle in which the camera is looking, in degrees
+      * to the left of the -Z axis.  It is kept in [0,360), wrapping
+      * as it gets to either extreme. */
+    private float cameraAzimuthDegrees = 0;
+
+    /** Camera pitch angle, in degrees.  In [-90,90], where +90 is
+      * straight up. */
+    private float cameraPitchDegrees = 0;
+
+    /** Velocity of camera movement, in world coordinates.  The magnitude
+      * is units per second. */
+    private Vector3f cameraVelocity = new Vector3f(0,0,0);
 
     /** True when we are in "first person shooter" camera control
       * mode, where mouse movement looks around and the mouse is
       * kept inside the canvas window. */
     private boolean fpsCameraMode = false;
 
+    /** The value of the millisecond timer the last time physics was
+      * updated.  Currently, "physics" is only used as part of the
+      * camera control system. */
+    private long lastPhysicsUpdateMillis;
+
+    // ---- Input device support ----
     /** "Robot" interface object, used to move the mouse in FPS mode. */
     private Robot robotObject;
-
-    /** Blank cursor, used to hide the mouse cursor. */
-    private Cursor blankCursor;
-
-    /** Animator object for the GL canvas.  Valid between init and
-      * dispose. */
-    private Animator animator;
-
-    /** The thread that last issued a 'log' command.  This is used to
-      * only log thread names when there is interleaving. */
-    private static Thread lastLoggedThread = null;
-
-    /** The value of the millisecond timer the last time physics was
-      * updated. */
-    private long lastPhysicsUpdateMillis;
 
     /** For each possible movement direction, true if that direction's
       * key is held down. */
     private boolean[] moveKeys = new boolean[MoveDirection.values().length];
 
-    /** Units in 3D space coordinates per km in surface being mapped. */
-    private static final float SPACE_UNITS_PER_KM = 0.001f;
-
-    /** Squares of the surface we have built. */
-    private ArrayList<SurfaceSquare> surfaceSquares = new ArrayList<SurfaceSquare>();
-
+    // ---- Draw options ----
     /** If true, draw surfaces using the abstract compass texture.
       * Otherwise, draw them using the EarthMap texture. */
     private boolean drawCompasses = true;
 
-    /** Menu item to toggle 'drawCompasses'. */
-    private CheckboxMenuItem drawCompassesCBItem;
-
     /** If true, draw surface normals as short line segments. */
     private boolean drawSurfaceNormals = true;
-
-    /** Menu item to toggle 'drawSurfaceNormals'. */
-    private CheckboxMenuItem drawSurfaceNormalsCBItem;
 
     /** If true, draw celestial North vectors on each square. */
     private boolean drawCelestialNorth = false;
 
-    /** Menu item to toggle 'drawCelestialNorth'. */
-    private CheckboxMenuItem drawCelestialNorthCBItem;
-
+    // ---- Window resize support ----
     /** Current aspect ratio: canvas width divided by canvas height
       * in pixels.  (Really, aspect ratio ought to reflect physical
       * size ratio, but I will assume pixels are square; fortunately,
       * they usually are.) */
     private float aspectRatio = 1.0f;
 
-    /** Desired distance between camera and front clipping plane. */
-    private static final float FRONT_CLIP_DISTANCE = 0.1f;
+    // ---- Virtual 3D map we are building or have built ----
+    /** Squares of the surface we have built. */
+    private ArrayList<SurfaceSquare> surfaceSquares = new ArrayList<SurfaceSquare>();
 
+    // ---------- Methods ----------
     public EarthShape()
     {
         super("Earth Shape");
