@@ -76,7 +76,7 @@ public class EarthMapCanvas
     private static final float STATIONARY_CAMERA_FRICTION = 5f;
 
     /** Desired distance between camera and front clipping plane. */
-    private static final float FRONT_CLIP_DISTANCE = 0.1f;
+    private static final float FRONT_CLIP_DISTANCE = 0.01f;
 
     // --------- Public constants ----------
     /** Units in 3D space coordinates per km in surface being mapped. */
@@ -351,6 +351,15 @@ public class EarthMapCanvas
         // Future matrix manipulations are for the model.
         gl.glMatrixMode(GL2.GL_MODELVIEW);
 
+        this.drawAxes(gl);
+
+        this.drawEarthSurface(gl);
+
+        gl.glFlush();
+    }
+
+    private void drawAxes(GL2 gl)
+    {
         // Use thicker lines so they will show up better if/when I
         // make a screenshot recording.
         gl.glLineWidth(2);
@@ -394,6 +403,17 @@ public class EarthMapCanvas
             gl.glTranslatef(1, 0, 0);
             drawX(gl);
             gl.glPopMatrix();
+
+            // And a "-X" at the other end.
+            gl.glPushMatrix();
+            gl.glTranslatef(-100, 10, 0);
+            gl.glScalef(10, 10, 10);
+            gl.glRotatef(+90, 0, 1, 0);
+            gl.glTranslatef(-1, 0, 0);
+            drawMinus(gl);
+            gl.glTranslatef(1, 0, 0);
+            drawX(gl);
+            gl.glPopMatrix();
         }
 
         // Y axis.
@@ -424,6 +444,17 @@ public class EarthMapCanvas
             gl.glRotatef(90, 1, 0, 0);
             gl.glTranslatef(-1, 0, 0);
             drawPlus(gl);
+            gl.glTranslatef(1, 0, 0);
+            drawY(gl);
+            gl.glPopMatrix();
+
+            // And "-Y".
+            gl.glPushMatrix();
+            gl.glTranslatef(0, -100, 20);
+            gl.glScalef(10, 10, 10);
+            gl.glRotatef(-90, 1, 0, 0);
+            gl.glTranslatef(-1, 0, 0);
+            drawMinus(gl);
             gl.glTranslatef(1, 0, 0);
             drawY(gl);
             gl.glPopMatrix();
@@ -460,11 +491,17 @@ public class EarthMapCanvas
             gl.glTranslatef(1, 0, 0);
             drawZ(gl);
             gl.glPopMatrix();
+
+            // And "-Z".
+            gl.glPushMatrix();
+            gl.glTranslatef(0, 10, -100);
+            gl.glScalef(10, 10, 10);
+            gl.glTranslatef(-1, 0, 0);
+            drawMinus(gl);
+            gl.glTranslatef(1, 0, 0);
+            drawZ(gl);
+            gl.glPopMatrix();
         }
-
-        this.drawEarthSurface(gl);
-
-        gl.glFlush();
     }
 
     /** Set the next vertex's color using glMaterial.  My intent is this
@@ -473,6 +510,13 @@ public class EarthMapCanvas
     {
         gl.glMaterialfv(GL.GL_FRONT_AND_BACK, GL2.GL_AMBIENT_AND_DIFFUSE,
             new float[] { r,g,b,1 }, 0);
+    }
+
+    /** This just calls glColor.  It is meant to ease going back and forth
+      * between ordinary colors and material colors. */
+    private static void glColor3f(GL2 gl, float r, float g, float b)
+    {
+        gl.glColor3f(r,g,b);
     }
 
     /** Draw a rectangle with the compass texture. */
@@ -680,6 +724,15 @@ public class EarthMapCanvas
         gl.glVertex2f(.8f, .5f);
         gl.glVertex2f(.5f, .2f);
         gl.glVertex2f(.5f, .8f);
+        gl.glEnd();
+    }
+
+    /** Draw a 2D "-" in the [0,1] box. */
+    private void drawMinus(GL2 gl)
+    {
+        gl.glBegin(GL.GL_LINES);
+        gl.glVertex2f(.2f, .5f);
+        gl.glVertex2f(.8f, .5f);
         gl.glEnd();
     }
 

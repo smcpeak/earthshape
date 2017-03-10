@@ -39,6 +39,11 @@ public class EarthShape
     /** AWT boilerplate generated serial ID. */
     private static final long serialVersionUID = 3903955302894393226L;
 
+    /** Size of the first constructed square, in kilometers.  The
+      * displayed size is then determined by the map scale, which
+      * is normally 1 unit per 1000 km. */
+    private static final float INITIAL_SQUARE_SIZE_KM = 1000;
+
     // ---------- Class variables ----------
     /** The thread that last issued a 'log' command.  This is used to
       * only log thread names when there is interleaving. */
@@ -52,6 +57,11 @@ public class EarthShape
     /** Some star celestial coordinates, which can be used to derive
       * synthetic star observations. */
     private StarCatalog[] starCatalog = StarCatalog.makeCatalog();
+
+    // ---- Interactive surface construction state ----
+    /** The square we will build upon when the next square is added.
+      * This may be null. */
+    private SurfaceSquare activeSquare;
 
     // ---- Widgets ----
     /** Canvas showing the Earth surface built so far. */
@@ -235,13 +245,20 @@ public class EarthShape
         }
     }
 
+    /** Clear out the virtual map and any dependent state. */
+    private void clearSurfaceSquares()
+    {
+        this.emCanvas.clearSurfaceSquares();
+        this.activeSquare = null;
+    }
+
     /** Build a portion of the Earth's surface.  Adds squares to
       * 'surfaceSquares'.  This works by iterating over latitude
       * and longitude pairs and assuming a spherical Earth. */
     public void buildEarthSurfaceWithLatLong()
     {
         log("building Earth");
-        this.emCanvas.clearSurfaceSquares();
+        this.clearSurfaceSquares();
 
         // Size of squares to build, in km.
         float sizeKm = 1000;
@@ -318,7 +335,7 @@ public class EarthShape
     public void randomWalkEarthSurface()
     {
         log("building Earth by random walk");
-        this.emCanvas.clearSurfaceSquares();
+        this.clearSurfaceSquares();
 
         // Size of squares to build, in km.
         float sizeKm = 1000;
@@ -406,7 +423,7 @@ public class EarthShape
     public void buildEarthSurfaceFromStarData()
     {
         log("building Earth using star data");
-        this.emCanvas.clearSurfaceSquares();
+        this.clearSurfaceSquares();
 
         StarObservation[] starObs = this.manualStarObservations;
 
@@ -819,8 +836,19 @@ public class EarthShape
     {
         LatLongDialog d = new LatLongDialog(this, 38, -122);
         if (d.exec()) {
-            log("LatLongDialog: lat="+d.finalLatitude+
+            log("starting new surface at lat="+d.finalLatitude+
                 ", lng="+d.finalLongitude);
+            this.clearSurfaceSquares();
+            this.activeSquare = new SurfaceSquare(
+                new Vector3f(0,0,0),      // center
+                new Vector3f(0,0,-1),     // north
+                new Vector3f(0,1,0),      // up
+                INITIAL_SQUARE_SIZE_KM,
+                d.finalLatitude,
+                d.finalLongitude,
+                new Vector3f(0,0,0));
+            this.emCanvas.addSurfaceSquare(this.activeSquare);
+            this.emCanvas.redrawCanvas();
         }
     }
 
@@ -858,7 +886,13 @@ public class EarthShape
       * This also updates the state of stateful menu items. */
     public void setStatusLabel()
     {
-        this.statusLabel.setText(this.emCanvas.getStatusString());
+        StringBuilder sb = new StringBuilder();
+        sb.append(this.emCanvas.getStatusString());
+        if (this.activeSquare != null) {
+            sb.append(", acsqlat="+this.activeSquare.latitude+
+                      ", acsqlng="+this.activeSquare.longitude);
+        }
+        this.statusLabel.setText(sb.toString());
 
         this.drawCompassesCBItem.setSelected(this.emCanvas.drawCompasses);
         this.drawSurfaceNormalsCBItem.setSelected(this.emCanvas.drawSurfaceNormals);
