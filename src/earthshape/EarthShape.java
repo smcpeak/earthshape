@@ -4,19 +4,18 @@
 package earthshape;
 
 import java.awt.BorderLayout;
-import java.awt.CheckboxMenuItem;
-import java.awt.Frame;
-import java.awt.Label;
-import java.awt.Menu;
-import java.awt.MenuBar;
-import java.awt.MenuItem;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.ItemEvent;
-import java.awt.event.ItemListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.util.HashMap;
+
+import javax.swing.JCheckBoxMenuItem;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
 
 import com.jogamp.opengl.GLCapabilities;
 
@@ -32,8 +31,8 @@ import util.Vector3f;
   * the code to construct the virtual 3D map using various algorithms.
   * The 3D display, along with its camera controls, is in EarthMapCanvas. */
 public class EarthShape
-    // For now at least, continue to use plain AWT.
-    extends Frame
+    // This is a Swing window.
+    extends JFrame
 {
     // --------- Constants ----------
     /** AWT boilerplate generated serial ID. */
@@ -50,16 +49,16 @@ public class EarthShape
     private EarthMapCanvas emCanvas;
 
     /** Widget to show various state variables such as camera position. */
-    private Label statusLabel = new Label();
+    private JLabel statusLabel = new JLabel();
 
     /** Menu item to toggle 'drawCompasses'. */
-    private CheckboxMenuItem drawCompassesCBItem;
+    private JCheckBoxMenuItem drawCompassesCBItem;
 
     /** Menu item to toggle 'drawSurfaceNormals'. */
-    private CheckboxMenuItem drawSurfaceNormalsCBItem;
+    private JCheckBoxMenuItem drawSurfaceNormalsCBItem;
 
     /** Menu item to toggle 'drawCelestialNorth'. */
-    private CheckboxMenuItem drawCelestialNorthCBItem;
+    private JCheckBoxMenuItem drawCelestialNorthCBItem;
 
     // ---------- Methods ----------
     public EarthShape()
@@ -87,7 +86,7 @@ public class EarthShape
         this.buildMenuBar();
 
         // Status bar on bottom.
-        this.statusLabel = new Label();
+        this.statusLabel = new JLabel();
         this.setStatusLabel();
         this.add(this.statusLabel, BorderLayout.SOUTH);
     }
@@ -116,10 +115,10 @@ public class EarthShape
     /** Build the menu bar and attach it to 'this'. */
     private void buildMenuBar()
     {
-        MenuBar menuBar = new MenuBar();
-        this.setMenuBar(menuBar);
+        JMenuBar menuBar = new JMenuBar();
+        this.setJMenuBar(menuBar);
 
-        Menu fileMenu = new Menu("File");
+        JMenu fileMenu = new JMenu("File");
         addMenuItem(fileMenu, "Exit", new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 EarthShape.log("exit menu item invoked");
@@ -128,31 +127,31 @@ public class EarthShape
         });
         menuBar.add(fileMenu);
 
-        Menu drawMenu = new Menu("Draw");
+        JMenu drawMenu = new JMenu("Draw");
         this.drawCompassesCBItem =
             addCBMenuItem(drawMenu, "Draw squares with compasses", this.emCanvas.drawCompasses,
-                new ItemListener() {
-                    public void itemStateChanged(ItemEvent e) {
+                new ActionListener() {
+                    public void actionPerformed(ActionEvent e) {
                         EarthShape.this.toggleDrawCompasses();
                     }
                 });
         this.drawSurfaceNormalsCBItem =
             addCBMenuItem(drawMenu, "Draw surface normals", this.emCanvas.drawSurfaceNormals,
-                new ItemListener() {
-                    public void itemStateChanged(ItemEvent e) {
+                new ActionListener() {
+                    public void actionPerformed(ActionEvent e) {
                         EarthShape.this.toggleDrawSurfaceNormals();
                     }
                 });
         this.drawCelestialNorthCBItem =
             addCBMenuItem(drawMenu, "Draw celestial North", this.emCanvas.drawCelestialNorth,
-                new ItemListener() {
-                    public void itemStateChanged(ItemEvent e) {
+                new ActionListener() {
+                    public void actionPerformed(ActionEvent e) {
                         EarthShape.this.toggleDrawCelestialNorth();
                     }
                 });
         menuBar.add(drawMenu);
 
-        Menu buildMenu = new Menu("Build");
+        JMenu buildMenu = new JMenu("Build");
         addMenuItem(buildMenu, "Build Earth using star data and no assumed shape",
             new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
@@ -176,20 +175,20 @@ public class EarthShape
 
     /** Make a new menu item and add it to 'menu' with the given
       * label and listener. */
-    private static void addMenuItem(Menu menu, String itemLabel,
+    private static void addMenuItem(JMenu menu, String itemLabel,
                                     ActionListener listener)
     {
-        MenuItem item = new MenuItem(itemLabel);
+        JMenuItem item = new JMenuItem(itemLabel);
         item.addActionListener(listener);
         menu.add(item);
     }
 
-    private static CheckboxMenuItem addCBMenuItem(Menu menu, String itemLabel,
-                                                  boolean initState, ItemListener listener)
+    private static JCheckBoxMenuItem addCBMenuItem(JMenu menu, String itemLabel,
+                                                   boolean initState, ActionListener listener)
     {
-        CheckboxMenuItem cbItem =
-            new CheckboxMenuItem(itemLabel, initState);
-        cbItem.addItemListener(listener);
+        JCheckBoxMenuItem cbItem =
+            new JCheckBoxMenuItem(itemLabel, initState);
+        cbItem.addActionListener(listener);
         menu.add(cbItem);
         return cbItem;
     }
@@ -830,9 +829,9 @@ public class EarthShape
     {
         this.statusLabel.setText(this.emCanvas.getStatusString());
 
-        this.drawCompassesCBItem.setState(this.emCanvas.drawCompasses);
-        this.drawSurfaceNormalsCBItem.setState(this.emCanvas.drawSurfaceNormals);
-        this.drawCelestialNorthCBItem.setState(this.emCanvas.drawCelestialNorth);
+        this.drawCompassesCBItem.setSelected(this.emCanvas.drawCompasses);
+        this.drawSurfaceNormalsCBItem.setSelected(this.emCanvas.drawSurfaceNormals);
+        this.drawCelestialNorthCBItem.setSelected(this.emCanvas.drawCelestialNorth);
     }
 }
 

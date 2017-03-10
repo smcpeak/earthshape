@@ -7,7 +7,6 @@ import java.awt.AWTException;
 import java.awt.BorderLayout;
 import java.awt.Cursor;
 import java.awt.Dimension;
-import java.awt.Panel;
 import java.awt.Point;
 import java.awt.Robot;
 import java.awt.Toolkit;
@@ -20,6 +19,8 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+
+import javax.swing.JPanel;
 
 import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL2;
@@ -41,8 +42,8 @@ import util.Vector3f;
   * other widgets, along with the surface construction algorithms, are
   * in EarthShape. */
 public class EarthMapCanvas
-    // This is an AWT panel object.
-    extends Panel
+    // This is a Swing panel object.
+    extends JPanel
     // Listen for GL draw events.
     implements GLEventListener,
                // Handle keyboard and mouse input.
