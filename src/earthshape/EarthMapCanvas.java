@@ -512,13 +512,6 @@ public class EarthMapCanvas
             new float[] { r,g,b,1 }, 0);
     }
 
-    /** This just calls glColor.  It is meant to ease going back and forth
-      * between ordinary colors and material colors. */
-    private static void glColor3f(GL2 gl, float r, float g, float b)
-    {
-        gl.glColor3f(r,g,b);
-    }
-
     /** Draw a rectangle with the compass texture. */
     private void drawCompassRect(
         GL2 gl,
