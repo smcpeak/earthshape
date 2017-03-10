@@ -164,10 +164,11 @@ public class EarthShape
     /** Menu item to toggle 'drawSurfaceNormals'. */
     private CheckboxMenuItem drawSurfaceNormalsCBItem;
 
-    /** If true, draw celestial North vectors on each square.  For
-      * now this is always disabled; I just added it for a temporary
-      * debugging task. */
+    /** If true, draw celestial North vectors on each square. */
     private boolean drawCelestialNorth = false;
+
+    /** Menu item to toggle 'drawCelestialNorth'. */
+    private CheckboxMenuItem drawCelestialNorthCBItem;
 
     /** Current aspect ratio: canvas width divided by canvas height
       * in pixels.  (Really, aspect ratio ought to reflect physical
@@ -281,6 +282,13 @@ public class EarthShape
                 new ItemListener() {
                     public void itemStateChanged(ItemEvent e) {
                         EarthShape.this.toggleDrawSurfaceNormals();
+                    }
+                });
+        this.drawCelestialNorthCBItem =
+            addCBMenuItem(drawMenu, "Draw celestial North", this.drawCelestialNorth,
+                new ItemListener() {
+                    public void itemStateChanged(ItemEvent e) {
+                        EarthShape.this.toggleDrawCelestialNorth();
                     }
                 });
         menuBar.add(drawMenu);
@@ -1557,6 +1565,14 @@ public class EarthShape
         this.redrawCanvas();
     }
 
+    /** Toggle the 'drawCelestialNorth' flag. */
+    private void toggleDrawCelestialNorth()
+    {
+        this.drawCelestialNorth = !this.drawCelestialNorth;
+        this.setStatusLabel();
+        this.redrawCanvas();
+    }
+
     /** Set the status label text to reflect other state variables.
       * This also updates the state of stateful menu items. */
     private void setStatusLabel()
@@ -1573,6 +1589,7 @@ public class EarthShape
 
         this.drawCompassesCBItem.setState(this.drawCompasses);
         this.drawSurfaceNormalsCBItem.setState(this.drawSurfaceNormals);
+        this.drawCelestialNorthCBItem.setState(this.drawCelestialNorth);
     }
 
     @Override
