@@ -991,7 +991,7 @@ public class EarthMapCanvas
             }
         }
 
-        this.earthShapeFrame.setStatusLabel();
+        this.earthShapeFrame.updateUIState();
         this.lastPhysicsUpdateMillis = newMillis;
     }
 
@@ -1084,7 +1084,7 @@ public class EarthMapCanvas
         if (ev.getButton() == MouseEvent.BUTTON1) {
             this.fpsCameraMode = !this.fpsCameraMode;
 
-            this.earthShapeFrame.setStatusLabel();
+            this.earthShapeFrame.updateUIState();
 
             if (this.fpsCameraMode) {
                 // When transition into FPS mode, move the mouse
@@ -1166,7 +1166,7 @@ public class EarthMapCanvas
             float newPitch = this.cameraPitchDegrees + dy * CAMERA_VERTICAL_SENSITIVITY;
             this.cameraPitchDegrees = FloatUtil.clamp(newPitch, -90, 90);
 
-            this.earthShapeFrame.setStatusLabel();
+            this.earthShapeFrame.updateUIState();
         }
     }
 

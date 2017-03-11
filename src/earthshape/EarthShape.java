@@ -69,7 +69,10 @@ public class EarthShape
     private EarthMapCanvas emCanvas;
 
     /** Widget to show various state variables such as camera position. */
-    private JLabel statusLabel = new JLabel();
+    private JLabel statusLabel;
+
+    /** Selected square info panel on right side. */
+    private InfoPanel infoPanel;
 
     /** Menu item to toggle 'drawCompasses'. */
     private JCheckBoxMenuItem drawCompassesCBItem;
@@ -99,7 +102,7 @@ public class EarthShape
 
         //this.addKeyListener(this);
 
-        this.setSize(800, 800);
+        this.setSize(950, 800);
         this.setLocationByPlatform(true);
 
         this.setupJOGL();
@@ -110,8 +113,12 @@ public class EarthShape
 
         // Status bar on bottom.
         this.statusLabel = new JLabel();
-        this.setStatusLabel();
         this.add(this.statusLabel, BorderLayout.SOUTH);
+
+        // Info panel on right.
+        this.add(this.infoPanel = new InfoPanel(), BorderLayout.EAST);
+
+        this.updateUIState();
     }
 
     /** Initialize the JOGL library, then create a GL canvas and
@@ -171,8 +178,6 @@ public class EarthShape
         //   Space - Move camera up
         //   , - Select previous square
         //   . - Select next square
-
-
 
         JMenu fileMenu = new JMenu("File");
         addMenuItem(fileMenu, "Exit", null, new ActionListener() {
@@ -942,7 +947,7 @@ public class EarthShape
         }
 
         this.emCanvas.redrawCanvas();
-        this.setStatusLabel();
+        this.updateUIState();
     }
 
     /** Add another square to the surface by building one adjacent
@@ -984,7 +989,7 @@ public class EarthShape
     {
         log("toggleDrawCompasses");
         this.emCanvas.drawCompasses = !this.emCanvas.drawCompasses;
-        this.setStatusLabel();
+        this.updateUIState();
         this.emCanvas.redrawCanvas();
     }
 
@@ -992,7 +997,7 @@ public class EarthShape
     public void toggleDrawSurfaceNormals()
     {
         this.emCanvas.drawSurfaceNormals = !this.emCanvas.drawSurfaceNormals;
-        this.setStatusLabel();
+        this.updateUIState();
         this.emCanvas.redrawCanvas();
     }
 
@@ -1000,7 +1005,7 @@ public class EarthShape
     public void toggleDrawCelestialNorth()
     {
         this.emCanvas.drawCelestialNorth = !this.emCanvas.drawCelestialNorth;
-        this.setStatusLabel();
+        this.updateUIState();
         this.emCanvas.redrawCanvas();
     }
 
@@ -1016,22 +1021,47 @@ public class EarthShape
         this.emCanvas.redrawCanvas();
     }
 
+    /** Update all stateful UI elements. */
+    public void updateUIState()
+    {
+        this.setStatusLabel();
+        this.setMenuState();
+        this.setInfoPanel();
+    }
+
     /** Set the status label text to reflect other state variables.
       * This also updates the state of stateful menu items. */
-    public void setStatusLabel()
+    private void setStatusLabel()
     {
         StringBuilder sb = new StringBuilder();
         sb.append(this.emCanvas.getStatusString());
-        if (this.activeSquare != null) {
-            sb.append(", acsqlat="+this.activeSquare.latitude+
-                      ", acsqlng="+this.activeSquare.longitude);
-        }
         this.statusLabel.setText(sb.toString());
+    }
 
+    /** Set the state of stateful menu items. */
+    private void setMenuState()
+    {
         this.drawCompassesCBItem.setSelected(this.emCanvas.drawCompasses);
         this.drawSurfaceNormalsCBItem.setSelected(this.emCanvas.drawSurfaceNormals);
         this.drawCelestialNorthCBItem.setSelected(this.emCanvas.drawCelestialNorth);
         this.drawStarRaysCBItem.setSelected(this.activeSquareDrawsStarRays());
+    }
+
+    /** Update the contents of the info panel. */
+    private void setInfoPanel()
+    {
+        StringBuilder sb = new StringBuilder();
+
+        if (this.activeSquare == null) {
+            sb.append("No active square.");
+        }
+        else {
+            sb.append("Active square:\n");
+            sb.append("  lat: "+this.activeSquare.latitude+"\n");
+            sb.append("  lng: "+this.activeSquare.longitude+"\n");
+        }
+
+        this.infoPanel.text.setText(sb.toString());
     }
 
     /** True if there is an active square and it is drawing star rays. */
