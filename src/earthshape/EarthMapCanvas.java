@@ -807,6 +807,19 @@ public class EarthMapCanvas
             gl.glVertex3fv(ne.plus(upShort).getArray(), 0);
 
             gl.glEnd();
+
+            // Also draw two line segments showing the translational
+            // path from the base square.
+            if (s.baseSquare != null && s.baseMidpoint != null) {
+                gl.glBegin(GL.GL_LINE_STRIP);
+                glMaterialColor3f(gl, 0, 1, 0);    // Green
+
+                glVertex3(gl, s.baseSquare.center.plus(upShort));
+                glVertex3(gl, s.baseMidpoint.plus(upShort));
+                glVertex3(gl, s.center.plus(upShort));
+
+                gl.glEnd();
+            }
         }
 
         // Also draw rays to the stars observed here.
@@ -822,7 +835,7 @@ public class EarthMapCanvas
                 // Bright line for rays at active square.
                 float rayBrightness = (s.showAsActive? 1.0f : 0.5f);
 
-                // Ray to star in nominal, -Z facing, coordinates
+                // Ray to star in nominal, -Z facing, coordinates.
                 Vector3f nominalRay =
                     EarthShape.azimuthElevationToVector(so.azimuth, so.elevation);
 
@@ -833,7 +846,7 @@ public class EarthMapCanvas
                 gl.glBegin(GL.GL_LINES);
                 glMaterialColor3f(gl, rayBrightness, rayBrightness, rayBrightness);
 
-                gl.glVertex3fv(s.center.getArray(), 0);
+                glVertex3(gl, s.center);
 
                 // The observation is just a direction, so we draw
                 // the ray as infinitely long (except it will be
@@ -851,6 +864,12 @@ public class EarthMapCanvas
                 gl.glEnd();
             }
         }
+    }
+
+    /** Add a vertex from a 3D vector. */
+    private static void glVertex3(GL2 gl, Vector3f pt)
+    {
+        gl.glVertex3fv(pt.getArray(), 0);
     }
 
     /** Draw a 2D "+" in the [0,1] box. */

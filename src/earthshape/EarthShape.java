@@ -344,6 +344,7 @@ public class EarthShape
             sizeKm,
             startLatitude,
             startLongitude,
+            null /*base*/, null /*midpoint*/,
             new Vector3f(0,0,0));
         this.emCanvas.addSurfaceSquare(startSquare);
 
@@ -421,6 +422,7 @@ public class EarthShape
             sizeKm,
             startLatitude,
             startLongitude,
+            null /*base*/, null /*midpoint*/,
             new Vector3f(0,0,0));
         this.emCanvas.addSurfaceSquare(startSquare);
 
@@ -525,6 +527,7 @@ public class EarthShape
                     sizeKm,
                     so.latitude,
                     so.longitude,
+                    null /*base*/, null /*midpoint*/,
                     new Vector3f(0,0,0));
                 this.emCanvas.addSurfaceSquare(curSquare);
                 firstSquare = curSquare;
@@ -709,12 +712,13 @@ public class EarthShape
         // average travel direction.
         Vector3f oldTravel = oldEast.rotate(headingDegrees, old.up);
         Vector3f newTravel = newEast.rotate(headingDegrees, newUp);
-        Vector3f avgTravel = oldTravel.plus(newTravel).normalize();
 
-        // Calculate the new square's center as 'distance' units
-        // along 'avgTravel'.
-        Vector3f newCenter = old.center.plus(
-            avgTravel.times(distanceKm * EarthMapCanvas.SPACE_UNITS_PER_KM));
+        // Calculate the new square's center by going half the distance
+        // according to the old orientation and then half the distance
+        // according to the new orientation, in world coordinates.
+        float halfDistWorld = distanceKm / 2.0f * EarthMapCanvas.SPACE_UNITS_PER_KM;
+        Vector3f midPoint = old.center.plus(oldTravel.times(halfDistWorld));
+        Vector3f newCenter = midPoint.plus(newTravel.times(halfDistWorld));
 
         // Make the new square and add it to the list.
         SurfaceSquare ret = new SurfaceSquare(
@@ -722,6 +726,8 @@ public class EarthShape
             old.sizeKm,
             newLatitude,      // did not change
             newLongitude,
+            old /*base*/,
+            midPoint,
             Vector3f.composeRotations(old.rotationFromNominal, rotation));
         this.emCanvas.addSurfaceSquare(ret);
 
@@ -916,6 +922,7 @@ public class EarthShape
                 INITIAL_SQUARE_SIZE_KM,
                 d.finalLatitude,
                 d.finalLongitude,
+                null /*base*/, null /*midpoint*/,
                 new Vector3f(0,0,0)));
             this.addMatchingData(this.activeSquare, this.manualStarObservations);
             this.emCanvas.addSurfaceSquare(this.activeSquare);

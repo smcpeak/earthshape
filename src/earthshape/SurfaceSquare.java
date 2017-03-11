@@ -34,6 +34,17 @@ public class SurfaceSquare {
       * the real world. */
     public float longitude;
 
+    /** The square, if any, that this one was constructed from
+      * by moving and rotating. */
+    public SurfaceSquare baseSquare;
+
+    /** If 'baseSquare' is not null, then this is not null, and
+      * indicates the midpoint between the two that was followed
+      * to arrive at this square's center.  It is not necessarily
+      * or even usually the point midway between the centers
+      * because it more closely follows the intervening curve. */
+    public Vector3f baseMidpoint;
+
     /** Amount by which this square has been rotated away from
       * the nominal orientation where North is -Z and East is +X.
       * I should not have to store this; this is a band-aid until
@@ -56,20 +67,24 @@ public class SurfaceSquare {
     public boolean drawStarRays = false;
 
     public SurfaceSquare(
-        Vector3f center,
-        Vector3f north,
-        Vector3f up,
-        float sizeKm,
-        float latitude,
-        float longitude,
+        Vector3f center_,
+        Vector3f north_,
+        Vector3f up_,
+        float sizeKm_,
+        float latitude_,
+        float longitude_,
+        SurfaceSquare baseSquare_,
+        Vector3f baseMidpoint_,
         Vector3f rotationFromNominal_)
     {
-        this.center = center;
-        this.north = north;
-        this.up = up;
-        this.sizeKm = sizeKm;
-        this.latitude = latitude;
-        this.longitude = longitude;
+        this.center = center_;
+        this.north = north_;
+        this.up = up_;
+        this.sizeKm = sizeKm_;
+        this.latitude = latitude_;
+        this.longitude = longitude_;
+        this.baseSquare = baseSquare_;
+        this.baseMidpoint = baseMidpoint_;
         this.rotationFromNominal = rotationFromNominal_;
     }
 
