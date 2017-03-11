@@ -174,6 +174,11 @@ public class EarthMapCanvas
       * between init and dispose. */
     private TextRenderer textRenderer;
 
+    /** Labels to draw at various locations.  This is cleared at the
+      * beginning of display(), so persistent labels must be re-added
+      * each time we draw a new frame. */
+    private ArrayList<CoordinateLabel> worldLabels = new ArrayList<CoordinateLabel>();
+
     // ---- Virtual 3D map we are building or have built ----
     /** Squares of the surface we have built. */
     private ArrayList<SurfaceSquare> surfaceSquares = new ArrayList<SurfaceSquare>();
@@ -369,10 +374,21 @@ public class EarthMapCanvas
         // Future matrix manipulations are for the model.
         gl.glMatrixMode(GL2.GL_MODELVIEW);
 
+        // Throw away labels from the prior frame.
+        this.worldLabels.clear();
+
         this.drawAxes(gl);
 
         this.drawEarthSurface(gl);
 
+        this.drawLabels(drawable, gl);
+
+        gl.glFlush();
+    }
+
+    /** Draw 'worldLabels'. */
+    private void drawLabels(GLAutoDrawable drawable, GL2 gl)
+    {
         // Get a matrix that projects from world coordinates to
         // abstract screen coordinates in [-1,1] x [-1,1].  This
         // must be done before we start drawing text because the
@@ -386,16 +402,13 @@ public class EarthMapCanvas
 
         this.textRenderer.beginRendering(
             drawable.getSurfaceWidth(), drawable.getSurfaceHeight());
-        this.textRenderer.setColor(1, 0, 1, 1);   // Purple
+        this.textRenderer.setColor(1, 0.3f, 1, 1);   // Dark pink
 
-        this.drawTextAtWorld(drawable, worldToAbstractScreen, "Origin", new Vector3f(0,0,0));
-        this.drawTextAtWorld(drawable, worldToAbstractScreen, "(1,0,0)", new Vector3f(1,0,0));
-        this.drawTextAtWorld(drawable, worldToAbstractScreen, "(0,1,0)", new Vector3f(0,1,0));
-        this.drawTextAtWorld(drawable, worldToAbstractScreen, "(0,0,1)", new Vector3f(0,0,1));
+        for (CoordinateLabel cl : this.worldLabels) {
+            this.drawTextAtWorld(drawable, worldToAbstractScreen, cl.label, cl.coordinate);
+        }
 
         this.textRenderer.endRendering();
-
-        gl.glFlush();
     }
 
     /** Get the GL matrix identified by 'pname'. */
@@ -406,14 +419,15 @@ public class EarthMapCanvas
         return new Matrix4f(entries);
     }
 
+    /** Draw some text on top of the GL canvas at a given world coordinate.
+      * 'wtas' is the product of the modelview and projection matrices.
+      * Note: The text will appear even if the point in question is hidden
+      * behind an intervening opaque object. */
     private void drawTextAtWorld(GLAutoDrawable drawable, Matrix4f wtas,
-                                 String text, Vector3f worldCoord)
+                                 String text, Vector4f worldCoord)
     {
-        // Point to draw, in world coordinates.
-        Vector4f pt = new Vector4f(worldCoord);
-
         // Transform to abstract screen coordinates.
-        Vector4f as = Matrix4f.multiply(pt, wtas);
+        Vector4f as = Matrix4f.multiply(worldCoord, wtas);
 
         if (as.z() < 0) {
             // The point is behind the camera.
@@ -835,7 +849,12 @@ public class EarthMapCanvas
                     // not mean we are assuming the star is actually
                     // infinitely far, just that it must be somewhere
                     // along this line.
-                    gl.glVertex4f(localRay.x(), localRay.y(), localRay.z(), 0);
+                    Vector4f localRayDirection = new Vector4f(
+                        localRay.x(), localRay.y(), localRay.z(), 0);
+                    gl.glVertex4fv(localRayDirection.getArray(), 0);
+
+                    // Also label this direction.
+                    this.worldLabels.add(new CoordinateLabel(localRayDirection, so.name));
 
                     gl.glEnd();
                 }
