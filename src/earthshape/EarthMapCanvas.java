@@ -985,6 +985,44 @@ public class EarthMapCanvas
         this.lastPhysicsUpdateMillis = newMillis;
     }
 
+    /** Get the square after 'sq' in 'surfaceSquares'.  This behaves like
+      * the list has an extra 'null' element, corresponding to the state
+      * where no square is active. */
+    public SurfaceSquare getNextSquare(SurfaceSquare sq, boolean forward)
+    {
+        if (sq == null) {
+            if (this.surfaceSquares.isEmpty()) {
+                return null;
+            }
+            else if (forward) {
+                return this.surfaceSquares.get(0);
+            }
+            else {
+                return this.surfaceSquares.get(this.surfaceSquares.size()-1);
+            }
+        }
+        else {
+            int i = this.surfaceSquares.indexOf(sq);
+            if (i < 0) {
+                return null;
+            }
+
+            if (forward) {
+                i++;
+            }
+            else {
+                i--;
+            }
+
+            if (0 <= i && i < this.surfaceSquares.size()) {
+                return this.surfaceSquares.get(i);
+            }
+            else {
+                return null;
+            }
+        }
+    }
+
     /** Map from KeyEvent key code to corresponding movement
       * direction, or null if it does not correspond. */
     private static MoveDirection keyCodeToMoveDirection(int code)

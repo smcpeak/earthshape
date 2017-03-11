@@ -22,6 +22,7 @@ import com.jogamp.opengl.GLCapabilities;
 
 import util.FloatUtil;
 import util.Vector3f;
+import util.swing.ModalDialog;
 
 /** This application demonstrates a procedure for inferring the shape
   * of a surface (such as the Earth) based on the observed locations of
@@ -210,7 +211,31 @@ public class EarthShape
                     EarthShape.this.startNewSurface();
                 }
             });
+        addMenuItem(buildMenu, "Add another square to the surface",
+            KeyStroke.getKeyStroke('m'),
+            new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    EarthShape.this.buildNextSquare();
+                }
+            });
         menuBar.add(buildMenu);
+
+        JMenu selectMenu = new JMenu("Select");
+        addMenuItem(selectMenu, "Select previous square",
+            KeyStroke.getKeyStroke(','),
+            new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    EarthShape.this.selectNextSquare(false /*forward*/);
+                }
+            });
+        addMenuItem(selectMenu, "Select next square",
+            KeyStroke.getKeyStroke('.'),
+            new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    EarthShape.this.selectNextSquare(true /*forward*/);
+                }
+            });
+        menuBar.add(selectMenu);
     }
 
     /** Make a new menu item and add it to 'menu' with the given
@@ -849,19 +874,59 @@ public class EarthShape
             log("starting new surface at lat="+d.finalLatitude+
                 ", lng="+d.finalLongitude);
             this.clearSurfaceSquares();
-            this.activeSquare = new SurfaceSquare(
+            this.setActiveSquare(new SurfaceSquare(
                 new Vector3f(0,0,0),      // center
                 new Vector3f(0,0,-1),     // north
                 new Vector3f(0,1,0),      // up
                 INITIAL_SQUARE_SIZE_KM,
                 d.finalLatitude,
                 d.finalLongitude,
-                new Vector3f(0,0,0));
-            this.activeSquare.showAsActive = true;
+                new Vector3f(0,0,0)));
             this.addMatchingData(this.activeSquare, this.manualStarObservations);
             this.emCanvas.addSurfaceSquare(this.activeSquare);
             this.emCanvas.redrawCanvas();
         }
+    }
+
+    /** Change which square is active. */
+    private void setActiveSquare(SurfaceSquare sq)
+    {
+        if (this.activeSquare != null) {
+            this.activeSquare.showAsActive = false;
+        }
+        this.activeSquare = sq;
+        if (this.activeSquare != null) {
+            this.activeSquare.showAsActive = true;
+        }
+    }
+
+    /** Add another square to the surface by building one adjacent
+      * to the active square. */
+    private void buildNextSquare()
+    {
+        if (this.activeSquare == null) {
+            ModalDialog.errorBox(this, "No square is active.");
+            return;
+        }
+
+        LatLongDialog d = new LatLongDialog(this,
+            this.activeSquare.latitude, this.activeSquare.longitude + 9);
+        if (d.exec()) {
+            // Add it initially with no rotation.  My plan is to add
+            // the rotation interactively afterward.
+            this.setActiveSquare(
+                this.addRotatedAdjacentSquare(this.activeSquare,
+                    d.finalLatitude, d.finalLongitude, new Vector3f(0,0,0)));
+
+            this.addMatchingData(this.activeSquare, this.manualStarObservations);
+            this.emCanvas.redrawCanvas();
+        }
+    }
+
+    /** Make the next square in 'emCanvas.surfaceSquares' active. */
+    private void selectNextSquare(boolean forward)
+    {
+        this.setActiveSquare(this.emCanvas.getNextSquare(this.activeSquare, forward));
     }
 
     public static void main(String[] args)

@@ -181,6 +181,11 @@ public class Vector3f {
         double gamma = Math.acos(Math.cos(alpha/2) * Math.cos(beta/2) -
                                  Math.sin(alpha/2) * Math.sin(beta/2) * l.dot(m)) * 2;
 
+        // Map very small angles to zero directly (rather than divide by zero).
+        if (gamma < 1e-20) {
+            return new Vector3f(0,0,0);
+        }
+
         // Combined rotation axis, which should be a unit vector.
         Vector3f n = ( l.timesd(Math.sin(alpha/2) * Math.cos(beta/2)).plus(
                        m.timesd(Math.cos(alpha/2) * Math.sin(beta/2)).plus(

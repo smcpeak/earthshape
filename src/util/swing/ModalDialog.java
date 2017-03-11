@@ -111,7 +111,7 @@ public class ModalDialog extends JDialog {
     }
 
     /** Show an error message. */
-    public void errorBox(Component parent, String message)
+    public static void errorBox(Component parent, String message)
     {
         JOptionPane pane = new JOptionPane();
         pane.setMessage(message);
