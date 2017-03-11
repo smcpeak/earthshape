@@ -1041,6 +1041,13 @@ public class EarthMapCanvas
         }
     }
 
+    public void turnOffAllStarRays()
+    {
+        for (SurfaceSquare s : this.surfaceSquares) {
+            s.drawStarRays = false;
+        }
+    }
+
     /** Map from KeyEvent key code to corresponding movement
       * direction, or null if it does not correspond. */
     private static MoveDirection keyCodeToMoveDirection(int code)

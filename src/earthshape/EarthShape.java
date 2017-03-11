@@ -6,6 +6,7 @@ package earthshape;
 import java.awt.BorderLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
@@ -240,6 +241,12 @@ public class EarthShape
                         EarthShape.this.toggleDrawStarRays();
                     }
                 });
+        addMenuItem(drawMenu, "Turn off all star rays", null,
+            new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    EarthShape.this.turnOffAllStarRays();
+                }
+            });
         menuBar.add(drawMenu);
 
         JMenu buildMenu = new JMenu("Build");
@@ -276,6 +283,13 @@ public class EarthShape
             new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
                     EarthShape.this.buildNextSquare();
+                }
+            });
+        addMenuItem(buildMenu, "Create new square 9 degrees to the East and orient it automatically",
+            KeyStroke.getKeyStroke(KeyEvent.VK_M, InputEvent.CTRL_DOWN_MASK),
+            new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    EarthShape.this.createAndAutomaticallyOrientSquare();
                 }
             });
         menuBar.add(buildMenu);
@@ -762,6 +776,10 @@ public class EarthShape
         float newLongitude,
         Vector3f rotation)
     {
+        // Normalize latitude and longitude.
+        newLatitude = FloatUtil.clamp(newLatitude, -90, 90);
+        newLongitude = FloatUtil.modulus2(newLongitude, -180, 180);
+
         // Calculate local East for 'old'.
         Vector3f oldEast = old.north.cross(old.up).normalize();
 
@@ -1189,6 +1207,20 @@ public class EarthShape
         this.setActiveSquare(this.emCanvas.getNextSquare(this.activeSquare, forward));
     }
 
+    /** Like hitting 'm', Enter, then '/'. */
+    private void createAndAutomaticallyOrientSquare()
+    {
+        SurfaceSquare base = this.activeSquare;
+        boolean drawStarRays = base.drawStarRays;
+        this.setActiveSquare(
+            this.addRotatedAdjacentSquare(this.activeSquare,
+                base.latitude, base.longitude + 9, new Vector3f(0,0,0)));
+        this.activeSquare.drawStarRays = drawStarRays;
+        this.addMatchingData(this.activeSquare, this.manualStarObservations);
+
+        this.automaticallyOrientActiveSquare();
+    }
+
     public static void main(String[] args)
     {
         (new EarthShape()).setVisible(true);
@@ -1228,6 +1260,12 @@ public class EarthShape
         else {
             this.activeSquare.drawStarRays = !this.activeSquare.drawStarRays;
         }
+        this.emCanvas.redrawCanvas();
+    }
+
+    private void turnOffAllStarRays()
+    {
+        this.emCanvas.turnOffAllStarRays();
         this.emCanvas.redrawCanvas();
     }
 
