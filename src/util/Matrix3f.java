@@ -36,6 +36,11 @@ public class Matrix3f {
     public float a32() { return this.mat.get(2,1); }
     public float a33() { return this.mat.get(2,2); }
 
+    public String toString()
+    {
+        return this.mat.toString();
+    }
+
     /** Left-multiply this matrix by 'v' and yield the result. */
     public Vector3f times(Vector3f v)
     {

@@ -7,6 +7,7 @@ import java.awt.AWTException;
 import java.awt.BorderLayout;
 import java.awt.Cursor;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.Point;
 import java.awt.Robot;
 import java.awt.Toolkit;
@@ -29,12 +30,15 @@ import com.jogamp.opengl.GLCapabilities;
 import com.jogamp.opengl.GLEventListener;
 import com.jogamp.opengl.awt.GLCanvas;
 import com.jogamp.opengl.util.Animator;
+import com.jogamp.opengl.util.awt.TextRenderer;
 import com.jogamp.opengl.util.texture.Texture;
 import com.jogamp.opengl.util.texture.TextureData;
 import com.jogamp.opengl.util.texture.TextureIO;
 
 import util.FloatUtil;
+import util.Matrix4f;
 import util.Vector3f;
+import util.Vector4f;
 
 /** Widget to show a virtual 3D map of a reconstruction of the surface
   * of the Earth based on astronomical observation.  This is just the
@@ -129,10 +133,6 @@ public class EarthMapCanvas
       * camera control system. */
     private long lastPhysicsUpdateMillis;
 
-    /** Animator object for the GL canvas.  Valid between init and
-      * dispose, and only enabled while camera is moving. */
-    private Animator animator;
-
     // ---- Input device support ----
     /** "Robot" interface object, used to move the mouse in FPS mode. */
     private Robot robotObject;
@@ -165,6 +165,14 @@ public class EarthMapCanvas
       * size ratio, but I will assume pixels are square; fortunately,
       * they usually are.) */
     private float aspectRatio = 1.0f;
+
+    /** Animator object for the GL canvas.  Valid between init and
+      * dispose. */
+    private Animator animator;
+
+    /** Object to allow drawing text on top of the GL canvas.  Valid
+      * between init and dispose. */
+    private TextRenderer textRenderer;
 
     // ---- Virtual 3D map we are building or have built ----
     /** Squares of the surface we have built. */
@@ -238,6 +246,9 @@ public class EarthMapCanvas
         // until we enter "FPS" mode.
         this.animator = new Animator(drawable);
 
+        // Create the text renderer too.
+        this.textRenderer = new TextRenderer(new Font("SansSerif", Font.BOLD, 16));
+
         // Use a dark background, like the night sky.
         gl.glClearColor(0, 0, 0.1f, 0);
         //gl.glClearColor(0,0,0,0);
@@ -303,6 +314,9 @@ public class EarthMapCanvas
         this.animator.remove(drawable);
         this.animator.stop();
         this.animator = null;
+
+        this.textRenderer.dispose();
+        this.textRenderer = null;
     }
 
     /** Draw one frame to the screen. */
@@ -359,7 +373,60 @@ public class EarthMapCanvas
 
         this.drawEarthSurface(gl);
 
+        // Get a matrix that projects from world coordinates to
+        // abstract screen coordinates in [-1,1] x [-1,1].  This
+        // must be done before we start drawing text because the
+        // GL matrices are changed by the text renderer.
+        Matrix4f worldToAbstractScreen;
+        {
+            Matrix4f view = getGlMatrix(gl, GL2.GL_MODELVIEW_MATRIX);
+            Matrix4f projection = getGlMatrix(gl, GL2.GL_PROJECTION_MATRIX);
+            worldToAbstractScreen = view.times(projection);
+        }
+
+        this.textRenderer.beginRendering(
+            drawable.getSurfaceWidth(), drawable.getSurfaceHeight());
+        this.textRenderer.setColor(1, 0, 1, 1);   // Purple
+
+        this.drawTextAtWorld(drawable, worldToAbstractScreen, "Origin", new Vector3f(0,0,0));
+        this.drawTextAtWorld(drawable, worldToAbstractScreen, "(1,0,0)", new Vector3f(1,0,0));
+        this.drawTextAtWorld(drawable, worldToAbstractScreen, "(0,1,0)", new Vector3f(0,1,0));
+        this.drawTextAtWorld(drawable, worldToAbstractScreen, "(0,0,1)", new Vector3f(0,0,1));
+
+        this.textRenderer.endRendering();
+
         gl.glFlush();
+    }
+
+    /** Get the GL matrix identified by 'pname'. */
+    private static Matrix4f getGlMatrix(GL2 gl, int pname)
+    {
+        float[] entries = new float[16];
+        gl.glGetFloatv(pname, entries, 0);
+        return new Matrix4f(entries);
+    }
+
+    private void drawTextAtWorld(GLAutoDrawable drawable, Matrix4f wtas,
+                                 String text, Vector3f worldCoord)
+    {
+        // Point to draw, in world coordinates.
+        Vector4f pt = new Vector4f(worldCoord);
+
+        // Transform to abstract screen coordinates.
+        Vector4f as = Matrix4f.multiply(pt, wtas);
+
+        if (as.z() < 0) {
+            // The point is behind the camera.
+            return;
+        }
+
+        // Convert to pixel coordinates in the drawable space.
+        int screenX = (int)((as.x() * 0.5 / as.w() + 0.5) * drawable.getSurfaceWidth());
+        int screenY = (int)((as.y() * 0.5 / as.w() + 0.5) * drawable.getSurfaceHeight());
+
+        // Put the label a few pixels away from the actual coordinate
+        // so they don't overlap as much.
+        this.textRenderer.draw(text, screenX+5, screenY+5);
     }
 
     private void drawAxes(GL2 gl)

@@ -21,6 +21,7 @@ public class Matrixf {
       * promise not to modify it after passing it in. */
     public Matrixf(int rows_, int cols_, float[] vals_)
     {
+        assert(vals_.length >= rows_ * cols_);
         this.rows = rows_;
         this.cols = cols_;
         this.vals = vals_;
@@ -44,6 +45,27 @@ public class Matrixf {
         return this.vals[r * this.cols + c];
     }
 
+    public String toString()
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append("[");
+        for (int r = 0; r < this.R(); r++) {
+            if (r > 0) {
+                sb.append(", ");
+            }
+            sb.append("(");
+            for (int c = 0; c < this.C(); c++) {
+                if (c > 0) {
+                    sb.append(", ");
+                }
+                sb.append(""+this.get(r,c));
+            }
+            sb.append(")");
+        }
+        sb.append("]");
+        return sb.toString();
+    }
+
     /** Left-multiply this matrix by vector 'v' and yield the result. */
     public Vectorf times(Vectorf v)
     {
@@ -58,6 +80,52 @@ public class Matrixf {
         }
 
         return new Vectorf(ret);
+    }
+
+    /** Right-multiply matrix 'm' by vector 'v'. */
+    public static Vectorf multiply(Vectorf v, Matrixf m)
+    {
+        assert(v.dim() == m.R());
+        float[] ret = new float[m.C()];
+
+        for (int c = 0; c < m.C(); c++) {
+            ret[c] = 0;
+            for (int i = 0; i < v.dim(); i++) {
+                ret[c] += v.get(i) * m.get(i,c);
+            }
+        }
+
+        return new Vectorf(ret);
+    }
+
+    /** Left-multiply this matrix by matrix 'm' and yield result. */
+    public Matrixf times(Matrixf m)
+    {
+        assert(this.C() == m.R());
+
+        // The result has the number of rows of the first operand
+        // and number of columns of the second operand.
+        int retRows = this.R();
+        int retCols = m.C();
+        float[] ret = new float[retRows * retCols];
+
+        // This is *not* an efficient implementation, it is just the
+        // naive, straightforward algorithm.
+
+        // Iterate through the entries of the result matrix.
+        for (int r = 0; r < retRows; r++) {
+            for (int c = 0; c < retCols; c++) {
+                ret[r * retCols + c] = 0;
+
+                // Iterate through the elements of the operand
+                // matrices that contribute to the result at (r,c).
+                for (int i=0; i < this.C(); i++) {
+                    ret[r * retCols + c] += this.get(r,i) * m.get(i,c);
+                }
+            }
+        }
+
+        return new Matrixf(retRows, retCols, ret);
     }
 
     /** Return the NxN identity matrix. */
