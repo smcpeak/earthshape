@@ -715,7 +715,7 @@ public class EarthMapCanvas
     public void addSurfaceSquare(SurfaceSquare s)
     {
         this.surfaceSquares.add(s);
-        log("added square: "+s);
+        //log("added square: "+s);
     }
 
     /** Remove a single surface square. */

@@ -6,6 +6,7 @@ package earthshape;
 import java.awt.BorderLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.util.HashMap;
@@ -179,9 +180,11 @@ public class EarthShape
         //   x
         //   y
         //   z - Move camera down
-        //   Space - Move camera up
         //   , - Select previous square
         //   . - Select next square
+        //   / - Automatically orient active square
+        //   Space - Move camera up
+        //   Delete - Delete active square
 
         JMenu fileMenu = new JMenu("File");
         addMenuItem(fileMenu, "Exit", null, new ActionListener() {
@@ -307,6 +310,21 @@ public class EarthShape
             new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
                     EarthShape.this.changeAdjustOrientationDegrees(0.5f);
+                }
+            });
+        editMenu.addSeparator();
+        addMenuItem(editMenu, "Automatically orient active square",
+            KeyStroke.getKeyStroke('/'),
+            new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    EarthShape.this.automaticallyOrientActiveSquare();
+                }
+            });
+        addMenuItem(editMenu, "Delete active square",
+            KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0),
+            new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    EarthShape.this.deleteActiveSquare();
                 }
             });
         menuBar.add(editMenu);
@@ -1046,12 +1064,22 @@ public class EarthShape
         // Now add that to the square's existing rotation.
         angleAxis = Vector3f.composeRotations(derived.rotationFromNominal, angleAxis);
 
+        // Now, replace the active square.
+        this.replaceWithNewRotation(base, derived, angleAxis);
+    }
+
+    /** Replace the square 'derived', with a new square that
+      * is computed from 'base' by applying 'newRotation'.  Also
+      * make the new square active. */
+    private void replaceWithNewRotation(
+        SurfaceSquare base, SurfaceSquare derived, Vector3f newRotation)
+    {
         // Now, replace the active square with a new one created by
         // rotating from the same base by this new amount.
         this.emCanvas.removeSurfaceSquare(derived);
         this.setActiveSquare(
             this.addRotatedAdjacentSquare(base,
-                derived.latitude, derived.longitude, angleAxis));
+                derived.latitude, derived.longitude, newRotation));
 
         // Copy some other data from the derived square that we
         // are in the process of discarding.
@@ -1066,6 +1094,41 @@ public class EarthShape
     {
         this.adjustOrientationDegrees *= multiplier;
         this.updateUIState();
+    }
+
+    /** Delete the active square. */
+    private void deleteActiveSquare()
+    {
+        if (this.activeSquare == null) {
+            ModalDialog.errorBox(this, "No active square.");
+            return;
+        }
+
+        this.emCanvas.removeSurfaceSquare(this.activeSquare);
+        this.setActiveSquare(null);
+    }
+
+    private void automaticallyOrientActiveSquare()
+    {
+        SurfaceSquare derived = this.activeSquare;
+        if (derived == null) {
+            ModalDialog.errorBox(this, "No active square.");
+            return;
+        }
+        SurfaceSquare base = derived.baseSquare;
+        if (base == null) {
+            ModalDialog.errorBox(this, "The active square has no base square.");
+        }
+
+        Vector3f rot = calcRequiredRotation(base, this.manualStarObservations,
+            derived.latitude, derived.longitude);
+        if (rot == null) {
+            ModalDialog.errorBox(this, "Could not determine proper orientation!");
+            return;
+        }
+
+        // Now, replace the active square.
+        this.replaceWithNewRotation(base, derived, rot);
     }
 
     /** Make the next square in 'emCanvas.surfaceSquares' active. */
