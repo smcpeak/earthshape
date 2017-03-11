@@ -10,6 +10,7 @@ import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.util.HashMap;
+import java.util.HashSet;
 
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JFrame;
@@ -805,14 +806,31 @@ public class EarthShape
     }
 
     /** Add to 'square.starObs' all entries of 'starObs' that have
-      * the same latitude and longitude. */
+      * the same latitude and longitude, and also are at least
+      * 20 degrees above the horizon. */
     private void addMatchingData(SurfaceSquare square, StarObservation[] starObs)
     {
+        // For which stars do I have manual data?
+        HashSet<String> manualStars = new HashSet<String>();
         for (StarObservation so : starObs) {
             if (square.latitude == so.latitude &&
                 square.longitude == so.longitude)
             {
-                square.starObs.add(so);
+                manualStars.add(so.name);
+                if (so.elevation >= 20.0f) {
+                    square.starObs.add(so);
+                }
+            }
+        }
+
+        // Synthesize observations for others.
+        for (StarCatalog sc : this.starCatalog) {
+            if (!manualStars.contains(sc.name)) {
+                StarObservation so = sc.makeObservation(StarObservation.unixTimeOfManualData,
+                    square.latitude, square.longitude);
+                if (so.elevation >= 20.0f) {
+                    square.starObs.add(so);
+                }
             }
         }
     }
@@ -946,7 +964,7 @@ public class EarthShape
             }
 
             // Synthesize an observation.
-            StarObservation so = sc.makeObservation(1488772800.0 /*2017-03-05 20:00 -08:00*/,
+            StarObservation so = sc.makeObservation(StarObservation.unixTimeOfManualData,
                 latitude, longitude);
             if (so.elevation >= 20) {
                 ret.put(so.name,

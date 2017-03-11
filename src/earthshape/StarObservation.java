@@ -129,6 +129,10 @@ public class StarObservation {
             new StarObservation(38,-86,"Dubhe",26.9,60.6),
         };
     }
+
+    /** Get the unix time of the manual observations.  This
+      * represents 2017-03-05 20:00 -08:00. */
+    public static final double unixTimeOfManualData = 1488772800.0;
 }
 
 // EOF
