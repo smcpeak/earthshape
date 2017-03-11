@@ -52,6 +52,9 @@ public class SurfaceSquare {
       * build more squares. */
     public boolean showAsActive = false;
 
+    /** If true, draw rays from this surface to its star observations. */
+    public boolean drawStarRays = false;
+
     public SurfaceSquare(
         Vector3f center,
         Vector3f north,
@@ -84,6 +87,7 @@ public class SurfaceSquare {
             ", rfn="+this.rotationFromNominal+
             ", cn="+celestialNorth+
             ", ac="+this.showAsActive+
+            ", ds="+this.drawStarRays+
             ")";
     }
 }

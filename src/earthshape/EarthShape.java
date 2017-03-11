@@ -141,6 +141,39 @@ public class EarthShape
         JMenuBar menuBar = new JMenuBar();
         this.setJMenuBar(menuBar);
 
+        // Used keys:
+        //   a - Move camera left
+        //   b
+        //   c - Toggle compass
+        //   d - Move camera right
+        //   e
+        //   f
+        //   g
+        //   h
+        //   i
+        //   j
+        //   k
+        //   l - Build spherical Earth
+        //   m - Add adjacent square to surface
+        //   n - Build new surface
+        //   o
+        //   p - Toggle star rays for active square
+        //   q
+        //   r - Build with random walk
+        //   s - Move camera backward
+        //   t - Build full Earth with star data
+        //   u
+        //   v
+        //   w - Move camera forward
+        //   x
+        //   y
+        //   z - Move camera down
+        //   Space - Move camera up
+        //   , - Select previous square
+        //   . - Select next square
+
+
+
         JMenu fileMenu = new JMenu("File");
         addMenuItem(fileMenu, "Exit", null, new ActionListener() {
             public void actionPerformed(ActionEvent e) {
@@ -174,7 +207,9 @@ public class EarthShape
                     }
                 });
         this.drawStarRaysCBItem =
-            addCBMenuItem(drawMenu, "Draw star rays for active square", null, this.emCanvas.drawStarRays,
+            addCBMenuItem(drawMenu, "Draw star rays for active square",
+                KeyStroke.getKeyStroke('p'),
+                this.activeSquareDrawsStarRays(),
                 new ActionListener() {
                     public void actionPerformed(ActionEvent e) {
                         EarthShape.this.toggleDrawStarRays();
@@ -898,6 +933,9 @@ public class EarthShape
         if (this.activeSquare != null) {
             this.activeSquare.showAsActive = true;
         }
+
+        this.emCanvas.redrawCanvas();
+        this.setStatusLabel();
     }
 
     /** Add another square to the surface by building one adjacent
@@ -962,8 +1000,12 @@ public class EarthShape
     /** Toggle the 'drawStarRays' flag. */
     public void toggleDrawStarRays()
     {
-        this.emCanvas.drawStarRays = !this.emCanvas.drawStarRays;
-        this.setStatusLabel();
+        if (this.activeSquare == null) {
+            ModalDialog.errorBox(this, "No square is active");
+        }
+        else {
+            this.activeSquare.drawStarRays = !this.activeSquare.drawStarRays;
+        }
         this.emCanvas.redrawCanvas();
     }
 
@@ -982,7 +1024,14 @@ public class EarthShape
         this.drawCompassesCBItem.setSelected(this.emCanvas.drawCompasses);
         this.drawSurfaceNormalsCBItem.setSelected(this.emCanvas.drawSurfaceNormals);
         this.drawCelestialNorthCBItem.setSelected(this.emCanvas.drawCelestialNorth);
-        this.drawStarRaysCBItem.setSelected(this.emCanvas.drawStarRays);
+        this.drawStarRaysCBItem.setSelected(this.activeSquareDrawsStarRays());
+    }
+
+    /** True if there is an active square and it is drawing star rays. */
+    private boolean activeSquareDrawsStarRays()
+    {
+        return this.activeSquare != null &&
+               this.activeSquare.drawStarRays;
     }
 }
 
