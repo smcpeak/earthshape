@@ -840,15 +840,8 @@ public class EarthMapCanvas
         // Also draw rays to the stars observed here.
         if (s.drawStarRays) {
             for (StarObservation so : s.starObs) {
-                // Limit ourselves to these three stars for the moment.
-                if (!( so.name == "Polaris" ||
-                       so.name == "Aldebaran" ||
-                       so.name == "Procyon" )) {
-                    continue;
-                }
-
                 // Bright line for rays at active square.
-                float rayBrightness = (s.showAsActive? 1.0f : 0.5f);
+                float rayBrightness = (s.showAsActive? 1.0f : 0.4f);
 
                 // Ray to star in nominal, -Z facing, coordinates.
                 Vector3f nominalRay =

@@ -11,6 +11,7 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JFrame;
@@ -61,6 +62,9 @@ public class EarthShape
       * synthetic star observations. */
     private StarCatalog[] starCatalog = StarCatalog.makeCatalog();
 
+    /** Set of stars that are enabled. */
+    private LinkedHashMap<String, Boolean> enabledStars = new LinkedHashMap<String, Boolean>();
+
     // ---- Interactive surface construction state ----
     /** The square we will build upon when the next square is added.
       * This may be null. */
@@ -106,7 +110,10 @@ public class EarthShape
             }
         });
 
-        //this.addKeyListener(this);
+        for (StarCatalog sc : this.starCatalog) {
+            // Initially all stars are enabled.
+            this.enabledStars.put(sc.name, true);
+        }
 
         this.setSize(950, 800);
         this.setLocationByPlatform(true);
@@ -188,6 +195,11 @@ public class EarthShape
         //   Delete - Delete active square
 
         JMenu fileMenu = new JMenu("File");
+        addMenuItem(fileMenu, "Choose enabled stars", null, new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                EarthShape.this.chooseEnabledStars();
+            }
+        });
         addMenuItem(fileMenu, "Exit", null, new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 EarthShape.log("exit menu item invoked");
@@ -383,6 +395,16 @@ public class EarthShape
         else {
             System.out.println(""+System.currentTimeMillis()+
                                ": "+msg);
+        }
+    }
+
+    /** Choose the set of stars to use.  This only affects new
+      * squares. */
+    private void chooseEnabledStars()
+    {
+        StarListDialog d = new StarListDialog(this, this.enabledStars);
+        if (d.exec()) {
+            this.enabledStars = d.stars;
         }
     }
 
@@ -814,12 +836,11 @@ public class EarthShape
         HashSet<String> manualStars = new HashSet<String>();
         for (StarObservation so : starObs) {
             if (square.latitude == so.latitude &&
-                square.longitude == so.longitude)
+                square.longitude == so.longitude &&
+                this.qualifyingStarObservation(so))
             {
                 manualStars.add(so.name);
-                if (so.elevation >= 20.0f) {
-                    square.starObs.add(so);
-                }
+                square.starObs.add(so);
             }
         }
 
@@ -828,7 +849,7 @@ public class EarthShape
             if (!manualStars.contains(sc.name)) {
                 StarObservation so = sc.makeObservation(StarObservation.unixTimeOfManualData,
                     square.latitude, square.longitude);
-                if (so.elevation >= 20.0f) {
+                if (this.qualifyingStarObservation(so)) {
                     square.starObs.add(so);
                 }
             }
@@ -936,6 +957,15 @@ public class EarthShape
         return currentRotation;
     }
 
+    /** True if the given observation is available for use, meaning
+      * it is high enough in the sky and is enabled. */
+    private boolean qualifyingStarObservation(StarObservation so)
+    {
+        return so.elevation >= 20.0f &&
+               this.enabledStars.containsKey(so.name) &&
+               this.enabledStars.get(so.name) == true;
+    }
+
     /** For every star in 'starObs' that matches 'latitude' and
       * 'longitude', and has an elevation of at least 20 degrees,
       * add it to a map from star name to azEl vector. */
@@ -950,7 +980,7 @@ public class EarthShape
         for (StarObservation so : starObs) {
             if (so.latitude == latitude &&
                 so.longitude == longitude &&
-                so.elevation >= 20)
+                this.qualifyingStarObservation(so))
             {
                 ret.put(so.name,
                     azimuthElevationToVector(so.azimuth, so.elevation));
@@ -966,7 +996,7 @@ public class EarthShape
             // Synthesize an observation.
             StarObservation so = sc.makeObservation(StarObservation.unixTimeOfManualData,
                 latitude, longitude);
-            if (so.elevation >= 20) {
+            if (this.qualifyingStarObservation(so)) {
                 ret.put(so.name,
                     azimuthElevationToVector(so.azimuth, so.elevation));
             }
@@ -1042,6 +1072,9 @@ public class EarthShape
             return;
         }
 
+        // The new square should draw star rays if the old did.
+        boolean drawStarRays = this.activeSquare.drawStarRays;
+
         LatLongDialog d = new LatLongDialog(this,
             this.activeSquare.latitude, this.activeSquare.longitude + 9);
         if (d.exec()) {
@@ -1050,6 +1083,7 @@ public class EarthShape
             this.setActiveSquare(
                 this.addRotatedAdjacentSquare(this.activeSquare,
                     d.finalLatitude, d.finalLongitude, new Vector3f(0,0,0)));
+            this.activeSquare.drawStarRays = drawStarRays;
 
             this.addMatchingData(this.activeSquare, this.manualStarObservations);
             this.emCanvas.redrawCanvas();
