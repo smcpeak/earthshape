@@ -724,7 +724,7 @@ public class EarthShape
         SurfaceSquare ret = new SurfaceSquare(
             newCenter, newNorth, newUp,
             old.sizeKm,
-            newLatitude,      // did not change
+            newLatitude,
             newLongitude,
             old /*base*/,
             midPoint,
