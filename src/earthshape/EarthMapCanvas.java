@@ -718,6 +718,21 @@ public class EarthMapCanvas
         log("added square: "+s);
     }
 
+    /** Remove a single surface square. */
+    public void removeSurfaceSquare(SurfaceSquare s)
+    {
+        this.surfaceSquares.remove(s);
+
+        // Go through the remaining squares and clean up any dangling
+        // base references.
+        for (SurfaceSquare r : this.surfaceSquares) {
+            if (r.baseSquare == s) {
+                r.baseSquare = null;
+                r.baseMidpoint = null;
+            }
+        }
+    }
+
     /** Remove all surface squares. */
     public void clearSurfaceSquares()
     {

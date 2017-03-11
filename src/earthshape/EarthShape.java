@@ -64,6 +64,10 @@ public class EarthShape
       * This may be null. */
     private SurfaceSquare activeSquare;
 
+    /** When adjusting the orientation of the active square, this
+      * is how many degrees to rotate at once. */
+    private float adjustOrientationDegrees = 1.0f;
+
     // ---- Widgets ----
     /** Canvas showing the Earth surface built so far. */
     private EarthMapCanvas emCanvas;
@@ -156,20 +160,20 @@ public class EarthShape
         //   e
         //   f
         //   g
-        //   h
-        //   i
-        //   j
-        //   k
-        //   l - Build spherical Earth
+        //   h - Build spherical Earth
+        //   i - Pitch active square down
+        //   j - Yaw active square left
+        //   k - Pitch active square up
+        //   l - Yaw active square right
         //   m - Add adjacent square to surface
         //   n - Build new surface
-        //   o
+        //   o - Roll active square right
         //   p - Toggle star rays for active square
         //   q
         //   r - Build with random walk
         //   s - Move camera backward
         //   t - Build full Earth with star data
-        //   u
+        //   u - Roll active square left
         //   v
         //   w - Move camera forward
         //   x
@@ -231,7 +235,7 @@ public class EarthShape
                 }
             });
         addMenuItem(buildMenu, "Build complete Earth using assumed sphere",
-            KeyStroke.getKeyStroke('l'),
+            KeyStroke.getKeyStroke('h'),
             new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
                     EarthShape.this.buildEarthSurfaceWithLatLong();
@@ -276,6 +280,49 @@ public class EarthShape
                 }
             });
         menuBar.add(selectMenu);
+
+        JMenu editMenu = new JMenu("Edit");
+        this.addAdjustOrientationMenuItem(editMenu,
+            "Roll active square right", 'o', new Vector3f(0, 0, -1));
+        this.addAdjustOrientationMenuItem(editMenu,
+            "Roll active square left", 'u', new Vector3f(0, 0, +1));
+        this.addAdjustOrientationMenuItem(editMenu,
+            "Pitch active square forward", 'i', new Vector3f(-1, 0, 0));
+        this.addAdjustOrientationMenuItem(editMenu,
+            "Pitch active square backward", 'k', new Vector3f(+1, 0, 0));
+        this.addAdjustOrientationMenuItem(editMenu,
+            "Yaw active square right", 'l', new Vector3f(0, -1, 0));
+        this.addAdjustOrientationMenuItem(editMenu,
+            "Yaw active square left", 'j', new Vector3f(0, +1, 0));
+        editMenu.addSeparator();
+        addMenuItem(editMenu, "Double active square adjustment angle",
+            KeyStroke.getKeyStroke('='),
+            new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    EarthShape.this.changeAdjustOrientationDegrees(2.0f);
+                }
+            });
+        addMenuItem(editMenu, "Halve active square adjustment angle",
+            KeyStroke.getKeyStroke('-'),
+            new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    EarthShape.this.changeAdjustOrientationDegrees(0.5f);
+                }
+            });
+        menuBar.add(editMenu);
+    }
+
+    /** Add a menu item to adjust the orientation of the active square. */
+    private void addAdjustOrientationMenuItem(
+        JMenu menu, String description, char key, Vector3f axis)
+    {
+        addMenuItem(menu, description,
+            KeyStroke.getKeyStroke(key),
+            new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    EarthShape.this.adjustActiveSquareOrientation(axis);
+                }
+            });
     }
 
     /** Make a new menu item and add it to 'menu' with the given
@@ -973,6 +1020,54 @@ public class EarthShape
         }
     }
 
+    /** If there is an active square, assume we just built it, and now
+      * we want to adjust its orientation.  'axis' indicates the axis
+      * about which to rotate, relative to the square's current orientation,
+      * where -Z is North, +Y is up, and +X is east, and (for the moment)
+      * the angle is fixed. */
+    private void adjustActiveSquareOrientation(Vector3f axis)
+    {
+        SurfaceSquare derived = this.activeSquare;
+        if (derived == null) {
+            ModalDialog.errorBox(this, "No active square.");
+            return;
+        }
+        SurfaceSquare base = derived.baseSquare;
+        if (base == null) {
+            ModalDialog.errorBox(this, "The active square has no base square.");
+        }
+
+        // Always 10 degrees for now.
+        Vector3f angleAxis = axis.times(this.adjustOrientationDegrees);
+
+        // Rotate the axis to align it with the square.
+        angleAxis = angleAxis.rotateAA(derived.rotationFromNominal);
+
+        // Now add that to the square's existing rotation.
+        angleAxis = Vector3f.composeRotations(derived.rotationFromNominal, angleAxis);
+
+        // Now, replace the active square with a new one created by
+        // rotating from the same base by this new amount.
+        this.emCanvas.removeSurfaceSquare(derived);
+        this.setActiveSquare(
+            this.addRotatedAdjacentSquare(base,
+                derived.latitude, derived.longitude, angleAxis));
+
+        // Copy some other data from the derived square that we
+        // are in the process of discarding.
+        this.activeSquare.drawStarRays = derived.drawStarRays;
+        this.activeSquare.starObs = derived.starObs;
+
+        this.emCanvas.redrawCanvas();
+    }
+
+    /** Change 'adjustOrientationDegrees' by the given multiplier. */
+    private void changeAdjustOrientationDegrees(float multiplier)
+    {
+        this.adjustOrientationDegrees *= multiplier;
+        this.updateUIState();
+    }
+
     /** Make the next square in 'emCanvas.surfaceSquares' active. */
     private void selectNextSquare(boolean forward)
     {
@@ -1053,13 +1148,18 @@ public class EarthShape
         StringBuilder sb = new StringBuilder();
 
         if (this.activeSquare == null) {
-            sb.append("No active square.");
+            sb.append("No active square.\n");
         }
         else {
             sb.append("Active square:\n");
             sb.append("  lat: "+this.activeSquare.latitude+"\n");
             sb.append("  lng: "+this.activeSquare.longitude+"\n");
+            sb.append("  rotx: "+this.activeSquare.rotationFromNominal.x()+"\n");
+            sb.append("  roty: "+this.activeSquare.rotationFromNominal.y()+"\n");
+            sb.append("  rotz: "+this.activeSquare.rotationFromNominal.z()+"\n");
         }
+
+        sb.append("adjDeg: "+this.adjustOrientationDegrees+"\n");
 
         this.infoPanel.text.setText(sb.toString());
     }
