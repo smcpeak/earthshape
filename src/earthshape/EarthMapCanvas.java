@@ -128,6 +128,9 @@ public class EarthMapCanvas
       * kept inside the canvas window. */
     private boolean fpsCameraMode = false;
 
+    /** True to ignore the next mouse movement in FPS mode. */
+    private boolean ignoreOneMouseMove = false;
+
     /** The value of the millisecond timer the last time physics was
       * updated.  Currently, "physics" is only used as part of the
       * camera control system. */
@@ -1088,10 +1091,19 @@ public class EarthMapCanvas
     public void mouseClicked(MouseEvent ev) {}
 
     @Override
-    public void mouseEntered(MouseEvent ev) {}
+    public void mouseEntered(MouseEvent ev) {
+        //log("mouse entered");
+        if (this.fpsCameraMode) {
+            // Ignore the next mouse move since it is coming
+            // from another window.
+            this.ignoreOneMouseMove = true;
+        }
+    }
 
     @Override
-    public void mouseExited(MouseEvent ev) {}
+    public void mouseExited(MouseEvent ev) {
+        //log("mouse exited");
+    }
 
     @Override
     public void mousePressed(MouseEvent ev) {
@@ -1157,6 +1169,13 @@ public class EarthMapCanvas
             // Move the mouse to the center of the clicked component,
             // and get that location.
             Point c = this.centerMouse(ev);
+
+            if (this.ignoreOneMouseMove) {
+                // The movement here is due to coming from another
+                // window, so do not change the camera angle.
+                this.ignoreOneMouseMove = false;
+                return;
+            }
 
             // Calculate delta.
             int dx = mouseAbsLoc.x - c.x;
