@@ -780,9 +780,6 @@ public class EarthShape
         newLatitude = FloatUtil.clamp(newLatitude, -90, 90);
         newLongitude = FloatUtil.modulus2(newLongitude, -180, 180);
 
-        // Calculate local East for 'old'.
-        Vector3f oldEast = old.north.cross(old.up).normalize();
-
         // Calculate the angle along the spherical Earth subtended
         // by the arc from 'old' to the new coordinates.
         float arcAngleDegrees = FloatUtil.sphericalSeparationAngle(
@@ -808,21 +805,21 @@ public class EarthShape
         // the old ones by the given amount.
         Vector3f newNorth = old.north.rotateAA(rotation);
         Vector3f newUp = old.up.rotateAA(rotation);
-        Vector3f newEast = newNorth.cross(newUp).normalize();
 
-        // Calculate the average compass heading, in degrees North
-        // of East, used to go from the old
-        // location to the new.  This is rather crude because it
-        // doesn't properly account for the fact that longitude
-        // lines get closer together near the poles.
-        float headingDegrees = FloatUtil.radiansToDegreesf(
-            (float)Math.atan2(deltaLatitude, deltaLongitude));
+        // Calculate headings, in degrees East of North, from
+        // the old square to the new and vice-versa.
+        float oldToNewHeading = FloatUtil.getLatLongPairHeading(
+            old.latitude, old.longitude, newLatitude, newLongitude);
+        float newToOldHeading = FloatUtil.getLatLongPairHeading(
+            newLatitude, newLongitude, old.latitude, old.longitude);
 
         // For both old and new, calculate a unit vector for the
-        // travel direction.  Then average them to approximate the
-        // average travel direction.
-        Vector3f oldTravel = oldEast.rotate(headingDegrees, old.up);
-        Vector3f newTravel = newEast.rotate(headingDegrees, newUp);
+        // travel direction.  Both headings are negated due to the
+        // right hand rule for rotation.  The new to old heading is
+        // then flipped 180 since I want both to indicate the local
+        // direction from old to new.
+        Vector3f oldTravel = old.north.rotate(-oldToNewHeading, old.up);
+        Vector3f newTravel = newNorth.rotate(-newToOldHeading + 180, newUp);
 
         // Calculate the new square's center by going half the distance
         // according to the old orientation and then half the distance
