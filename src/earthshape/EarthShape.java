@@ -1304,6 +1304,9 @@ public class EarthShape
             sb.append("Active square:\n");
             sb.append("  lat: "+this.activeSquare.latitude+"\n");
             sb.append("  lng: "+this.activeSquare.longitude+"\n");
+            sb.append("  x: "+this.activeSquare.center.x()+"\n");
+            sb.append("  y: "+this.activeSquare.center.y()+"\n");
+            sb.append("  z: "+this.activeSquare.center.z()+"\n");
             sb.append("  rotx: "+this.activeSquare.rotationFromNominal.x()+"\n");
             sb.append("  roty: "+this.activeSquare.rotationFromNominal.y()+"\n");
             sb.append("  rotz: "+this.activeSquare.rotationFromNominal.z()+"\n");
