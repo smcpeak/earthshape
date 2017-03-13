@@ -272,6 +272,36 @@ public class FloatUtil {
         testOneGetLatLongPairHeading(37f, -122f,  -33.5f, 151f,  -119.28679f, 56.648434f);
     }
 
+    /** Return the smallest value in 'arr', or 0 if it is empty. */
+    public static float minimumOfArray(float[] arr)
+    {
+        float ret = 0;
+        if (arr.length > 0) {
+            ret = arr[0];
+            for (int i=1; i < arr.length; i++) {
+                if (arr[i] < ret) {
+                    ret = arr[i];
+                }
+            }
+        }
+        return ret;
+    }
+
+    /** Return the largest value in 'arr', or 0 if it is empty. */
+    public static float maximumOfArray(float[] arr)
+    {
+        float ret = 0;
+        if (arr.length > 0) {
+            ret = arr[0];
+            for (int i=1; i < arr.length; i++) {
+                if (arr[i] > ret) {
+                    ret = arr[i];
+                }
+            }
+        }
+        return ret;
+    }
+
     public static void main(String args[])
     {
         testGetLatLongPairHeadings();

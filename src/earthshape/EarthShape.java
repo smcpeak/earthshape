@@ -213,6 +213,7 @@ public class EarthShape
         //   y
         //   z - Move camera down
         //   ; - One recommended rotation adjustment
+        //   ' - Analyze solution space
         //   , - Select previous square
         //   . - Select next square
         //   / - Automatically orient active square
@@ -388,6 +389,13 @@ public class EarthShape
                 }
             });
         editMenu.addSeparator();
+        addMenuItem(editMenu, "Analyze solution space",
+            KeyStroke.getKeyStroke('\''),
+            new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    EarthShape.this.analyzeSolutionSpace();
+                }
+            });
         addMenuItem(editMenu, "Do one recommended rotation adjustment",
             KeyStroke.getKeyStroke(';'),
             new ActionListener() {
@@ -1392,6 +1400,10 @@ public class EarthShape
         SurfaceSquare newSquare =
             EarthShape.createRotatedAdjacentSquare(base,
                 derived.latitude, derived.longitude, angleAxis);
+        if (newSquare == null) {
+            // If we do not move, use the original square's data.
+            return EarthShape.varianceOfObservations(derived);
+        }
 
         // Copy the observation data since that is needed to calculate
         // the deviation.
@@ -1503,6 +1515,62 @@ public class EarthShape
         this.addMatchingData(this.activeSquare, this.manualStarObservations);
 
         this.automaticallyOrientActiveSquare();
+    }
+
+    /** Show the user what the local rotation space looks like. */
+    private void analyzeSolutionSpace()
+    {
+        if (this.activeSquare == null) {
+            ModalDialog.errorBox(this, "No active square");
+            return;
+        }
+        SurfaceSquare s = this.activeSquare;
+
+        ObservationStats ostats = EarthShape.varianceOfObservations(s);
+        if (ostats == null) {
+            System.out.println("No obs stats");
+            return;
+        }
+
+        System.out.println("var: "+ostats.variance);
+
+        // Consider the effect of rotating various amounts on each axis.
+        Vector3f axis = new Vector3f(0, 0, -1);    // Start with roll.
+        float[] rollData = new float[21];
+        System.out.println("Axis: "+axis);
+        for (int m=-10; m <= 10; m++) {
+            ObservationStats newStats = EarthShape.varianceOfAdjustedSquare(s, axis,
+                this.adjustOrientationDegrees * m);
+            if (newStats == null) {
+                continue;             // Skip areas we can't evaluate.
+            }
+            System.out.println("  "+m+": "+newStats.variance);
+            rollData[m+10] = newStats.variance;
+        }
+
+        axis = new Vector3f(1, 0, 0);    // Then pitch.
+        System.out.println("Axis: "+axis);
+        for (int m=-10; m <= 10; m++) {
+            ObservationStats newStats = EarthShape.varianceOfAdjustedSquare(s, axis,
+                this.adjustOrientationDegrees * m);
+            if (newStats == null) {
+                continue;             // Skip areas we can't evaluate.
+            }
+            System.out.println("  "+m+": "+newStats.variance);
+        }
+
+        axis = new Vector3f(0, -1, 0);    // Then yaw.
+        System.out.println("Axis: "+axis);
+        for (int m=-10; m <= 10; m++) {
+            ObservationStats newStats = EarthShape.varianceOfAdjustedSquare(s, axis,
+                this.adjustOrientationDegrees * m);
+            if (newStats == null) {
+                continue;             // Skip areas we can't evaluate.
+            }
+            System.out.println("  "+m+": "+newStats.variance);
+        }
+
+        (new RotationCubeDialog(this, rollData)).exec();
     }
 
     /** Make this window visible. */
