@@ -964,7 +964,7 @@ public class EarthShape
                 // surface was rotated since its creation so that when
                 // we compute the final required rotation, it can be
                 // applied to the start surface in its existing orientation,
-                // not the norminal orientation that the star vectors have
+                // not the nominal orientation that the star vectors have
                 // before I do this.
                 startVector = startVector.rotateAA(startSquare.rotationFromNominal);
                 endVector = endVector.rotateAA(startSquare.rotationFromNominal);
