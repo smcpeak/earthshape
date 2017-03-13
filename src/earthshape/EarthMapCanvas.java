@@ -446,10 +446,12 @@ public class EarthMapCanvas
     /** Draw 'worldLabels'. */
     private void drawLabels(GLAutoDrawable drawable, GL2 gl)
     {
-        // Get a matrix that projects from world coordinates to
-        // abstract screen coordinates in [-1,1] x [-1,1].  This
+        // Get a matrix that projects from 3D world coordinates to
+        // abstract 2D screen coordinates in [-1,1] x [-1,1].  This
         // must be done before we start drawing text because the
-        // GL matrices are changed by the text renderer.
+        // GL matrices are changed by the text renderer.  We need
+        // this to place labels properly, since they are associated
+        // with 3D coordinates.
         Matrix4f worldToAbstractScreen;
         {
             Matrix4f view = getGlMatrix(gl, GL2.GL_MODELVIEW_MATRIX);
