@@ -909,38 +909,45 @@ public class EarthMapCanvas
 
         // Also draw rays to the stars observed here.
         if (s.drawStarRays) {
-            for (StarObservation so : s.starObs) {
-                // Bright line for rays at active square.
-                float rayBrightness = (s.showAsActive? 1.0f : 0.4f);
+            this.drawStarRays(gl, s);
+        }
+    }
 
-                // Ray to star in nominal, -Z facing, coordinates.
-                Vector3f nominalRay =
-                    EarthShape.azimuthElevationToVector(so.azimuth, so.elevation);
+    /** Draw rays from the center of 's' to each of its associated
+      * star observations. */
+    private void drawStarRays(GL2 gl, SurfaceSquare s)
+    {
+        for (StarObservation so : s.starObs) {
+            // Bright line for rays at active square.
+            float rayBrightness = (s.showAsActive? 1.0f : 0.4f);
 
-                // Ray to star in map coordinates, taking into account
-                // how the current surface is rotated.
-                Vector3f localRay = nominalRay.rotateAA(s.rotationFromNominal);
+            // Ray to star in nominal, -Z facing, coordinates.
+            Vector3f nominalRay =
+                EarthShape.azimuthElevationToVector(so.azimuth, so.elevation);
 
-                gl.glBegin(GL.GL_LINES);
-                glMaterialColor3f(gl, rayBrightness, rayBrightness, rayBrightness);
+            // Ray to star in map coordinates, taking into account
+            // how the current surface is rotated.
+            Vector3f localRay = nominalRay.rotateAA(s.rotationFromNominal);
 
-                glVertex3(gl, s.center);
+            gl.glBegin(GL.GL_LINES);
+            glMaterialColor3f(gl, rayBrightness, rayBrightness, rayBrightness);
 
-                // The observation is just a direction, so we draw
-                // the ray as infinitely long (except it will be
-                // clipped by the far clipping plane).  This does
-                // not mean we are assuming the star is actually
-                // infinitely far, just that it must be somewhere
-                // along this line.
-                Vector4f localRayDirection = new Vector4f(
-                    localRay.x(), localRay.y(), localRay.z(), 0);
-                gl.glVertex4fv(localRayDirection.getArray(), 0);
+            glVertex3(gl, s.center);
 
-                // Also label this direction.
-                this.worldLabels.add(new CoordinateLabel(localRayDirection, so.name));
+            // The observation is just a direction, so we draw
+            // the ray as infinitely long (except it will be
+            // clipped by the far clipping plane).  This does
+            // not mean we are assuming the star is actually
+            // infinitely far, just that it must be somewhere
+            // along this line.
+            Vector4f localRayDirection = new Vector4f(
+                localRay.x(), localRay.y(), localRay.z(), 0);
+            gl.glVertex4fv(localRayDirection.getArray(), 0);
 
-                gl.glEnd();
-            }
+            // Also label this direction.
+            this.worldLabels.add(new CoordinateLabel(localRayDirection, so.name));
+
+            gl.glEnd();
         }
     }
 
