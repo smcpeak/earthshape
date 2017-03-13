@@ -50,6 +50,15 @@ public class EarthShape
       * is normally 1 unit per 1000 km. */
     private static final float INITIAL_SQUARE_SIZE_KM = 1000;
 
+    /** Initial value of 'adjustOrientationDegrees', and the value to
+      * which it is reset when a new square is created. */
+    private static final float DEFAULT_ADJUST_ORIENTATION_DEGREES = 1.0f;
+
+    /** Do not let 'adjustOrientationDegrees' go below this value.  Below
+      * this value is pointless because the precision of the variance is
+      * not high enough to discriminate among the choices. */
+    private static final float MINIMUM_ADJUST_ORIENTATION_DEGREES = 1e-7f;
+
     // ---------- Class variables ----------
     /** The thread that last issued a 'log' command.  This is used to
       * only log thread names when there is interleaving. */
@@ -74,7 +83,12 @@ public class EarthShape
 
     /** When adjusting the orientation of the active square, this
       * is how many degrees to rotate at once. */
-    private float adjustOrientationDegrees = 1.0f;
+    private float adjustOrientationDegrees = DEFAULT_ADJUST_ORIENTATION_DEGREES;
+
+    /** The calculated recommended rotation command, or null if the
+      * recommendation was to zoom in or deviation is zero.  This is
+      * only valid after a call to 'setInfoPanel'. */
+    private RotationCommand recommendedRotationCommand = null;
 
     // ---- Widgets ----
     /** Canvas showing the Earth surface built so far. */
@@ -198,6 +212,7 @@ public class EarthShape
         //   x
         //   y
         //   z - Move camera down
+        //   ; - One recommended rotation adjustment
         //   , - Select previous square
         //   . - Select next square
         //   / - Automatically orient active square
@@ -351,6 +366,13 @@ public class EarthShape
                 }
             });
         editMenu.addSeparator();
+        addMenuItem(editMenu, "Do one recommended rotation adjustment",
+            KeyStroke.getKeyStroke(';'),
+            new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    EarthShape.this.applyRecommendedRotationCommand();
+                }
+            });
         addMenuItem(editMenu, "Automatically orient active square",
             KeyStroke.getKeyStroke('/'),
             new ActionListener() {
@@ -1257,6 +1279,9 @@ public class EarthShape
                     d.finalLatitude, d.finalLongitude, new Vector3f(0,0,0)));
             this.activeSquare.drawStarRays = drawStarRays;
 
+            // Reset the rotation angle after adding a square.
+            this.adjustOrientationDegrees = DEFAULT_ADJUST_ORIENTATION_DEGREES;
+
             this.addMatchingData(this.activeSquare, this.manualStarObservations);
             this.emCanvas.redrawCanvas();
         }
@@ -1348,6 +1373,47 @@ public class EarthShape
     private void changeAdjustOrientationDegrees(float multiplier)
     {
         this.adjustOrientationDegrees *= multiplier;
+        if (this.adjustOrientationDegrees < MINIMUM_ADJUST_ORIENTATION_DEGREES) {
+            this.adjustOrientationDegrees = MINIMUM_ADJUST_ORIENTATION_DEGREES;
+        }
+        this.updateUIState();
+    }
+
+    /** Compute and apply a single step rotation command to improve
+      * the variance of the active square. */
+    private void applyRecommendedRotationCommand()
+    {
+        SurfaceSquare s = this.activeSquare;
+        if (s == null) {
+            ModalDialog.errorBox(this, "No active square.");
+            return;
+        }
+        ObservationStats ostats = EarthShape.varianceOfObservations(s);
+        if (ostats == null) {
+            ModalDialog.errorBox(this, "Not enough observational data available.");
+            return;
+        }
+        if (ostats.variance == 0) {
+            ModalDialog.errorBox(this, "Orientation is already optimal.");
+            return;
+        }
+
+        // Hack: Call into the info routine to get the recommendation.
+        this.setInfoPanel();
+        if (this.recommendedRotationCommand == null) {
+            if (this.adjustOrientationDegrees <= MINIMUM_ADJUST_ORIENTATION_DEGREES) {
+                ModalDialog.errorBox(this, "Cannot further improve orientation.");
+                return;
+            }
+            else {
+                this.changeAdjustOrientationDegrees(0.5f);
+            }
+        }
+        else {
+            this.adjustActiveSquareOrientation(this.recommendedRotationCommand.axis);
+        }
+
+        this.emCanvas.redrawCanvas();
         this.updateUIState();
     }
 
@@ -1363,6 +1429,7 @@ public class EarthShape
         this.setActiveSquare(null);
     }
 
+    /** Calculate and apply the optimal orientation for the active square. */
     private void automaticallyOrientActiveSquare()
     {
         SurfaceSquare derived = this.activeSquare;
@@ -1557,6 +1624,7 @@ public class EarthShape
                 }
 
                 // Make a final recommendation.
+                this.recommendedRotationCommand = bestRC;
                 if (bestRC != null) {
                     recommendation = bestRC.key;
                 }

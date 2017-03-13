@@ -918,6 +918,9 @@ public class EarthMapCanvas
       * star observations. */
     private void drawStarRays(GL2 gl, SurfaceSquare s)
     {
+        gl.glDisable(GL.GL_TEXTURE_2D);
+        gl.glNormal3f(0,1,0);
+
         for (Map.Entry<String, StarObservation> entry : s.starObs.entrySet()) {
             StarObservation so = entry.getValue();
 
