@@ -323,18 +323,10 @@ public class EarthShape
         menuBar.add(selectMenu);
 
         JMenu editMenu = new JMenu("Edit");
-        this.addAdjustOrientationMenuItem(editMenu,
-            "Roll active square right", 'o', new Vector3f(0, 0, -1));
-        this.addAdjustOrientationMenuItem(editMenu,
-            "Roll active square left", 'u', new Vector3f(0, 0, +1));
-        this.addAdjustOrientationMenuItem(editMenu,
-            "Pitch active square forward", 'i', new Vector3f(-1, 0, 0));
-        this.addAdjustOrientationMenuItem(editMenu,
-            "Pitch active square backward", 'k', new Vector3f(+1, 0, 0));
-        this.addAdjustOrientationMenuItem(editMenu,
-            "Yaw active square right", 'l', new Vector3f(0, -1, 0));
-        this.addAdjustOrientationMenuItem(editMenu,
-            "Yaw active square left", 'j', new Vector3f(0, +1, 0));
+        for (RotationCommand rc : RotationCommand.values()) {
+            this.addAdjustOrientationMenuItem(editMenu,
+                rc.description, rc.key, rc.axis);
+        }
         editMenu.addSeparator();
         addMenuItem(editMenu, "Double active square adjustment angle",
             KeyStroke.getKeyStroke('='),
@@ -348,6 +340,14 @@ public class EarthShape
             new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
                     EarthShape.this.changeAdjustOrientationDegrees(0.5f);
+                }
+            });
+        addMenuItem(editMenu, "Reset active square adjustment angle to 1 degree",
+            KeyStroke.getKeyStroke('1'),
+            new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    EarthShape.this.adjustOrientationDegrees = 1;
+                    EarthShape.this.updateUIState();
                 }
             });
         editMenu.addSeparator();
@@ -816,9 +816,11 @@ public class EarthShape
         }
     }
 
-    /** Add a square adjacent to 'old', positioned at the given latitude
-      * and longitude, with orientation changed by 'rotation'. */
-    private SurfaceSquare addRotatedAdjacentSquare(
+    /** Create a square adjacent to 'old', positioned at the given latitude
+      * and longitude, with orientation changed by 'rotation'.  If there is
+      * no change, return null.  Even if not, do not add the square yet,
+      * just return it. */
+    private static SurfaceSquare createRotatedAdjacentSquare(
         SurfaceSquare old,
         float newLatitude,
         float newLongitude,
@@ -844,9 +846,9 @@ public class EarthShape
         float deltaLongitude = FloatUtil.modulus2(
             newLongitude - old.longitude, -180, 180);
 
-        // If we didn't move, just return the old square.
+        // If we didn't move, return null.
         if (deltaLongitude == 0 && deltaLatitude == 0) {
-            return old;
+            return null;
         }
 
         // Compute the new orientation vectors by rotating
@@ -884,9 +886,28 @@ public class EarthShape
             newLongitude,
             old /*base*/,
             midPoint,
-            Vector3f.composeRotations(old.rotationFromNominal, rotation));
-        this.emCanvas.addSurfaceSquare(ret);
+            rotation);
 
+        return ret;
+    }
+
+    /** Add a square adjacent to 'old', positioned at the given latitude
+      * and longitude, with orientation changed by 'rotation'.  If we
+      * did not move, this returns the old square. */
+    private SurfaceSquare addRotatedAdjacentSquare(
+        SurfaceSquare old,
+        float newLatitude,
+        float newLongitude,
+        Vector3f rotation)
+    {
+        SurfaceSquare ret = EarthShape.createRotatedAdjacentSquare(
+            old, newLatitude, newLongitude, rotation);
+        if (ret == null) {
+            return old;        // Did not move.
+        }
+        else {
+            this.emCanvas.addSurfaceSquare(ret);
+        }
         return ret;
     }
 
@@ -1100,7 +1121,7 @@ public class EarthShape
         return worldRay;
     }
 
-    /** Compute the total deviation in star observation locations from the
+    /** Compute the total variance in star observation locations from the
       * indicated square to the observations of its base square as the
       * average square of the deviation angles.  The result will be 0 if there
       * is no base square.
@@ -1109,11 +1130,18 @@ public class EarthShape
       * deviations and to ensure there is a unique "least deviated" point
       * (which need not exist when using a simple sum).  The reason for using
       * the average is to make it easier to judge "good" or "bad" fits,
-      * regardless of the number of star observations in common. */
-    private static float deviationOfObservations(SurfaceSquare square)
+      * regardless of the number of star observations in common.
+      *
+      * I use the term "variance" here because it is similar to the idea in
+      * statistics, except here we are measuring differences between pairs of
+      * observations, rather than between individual observations and the mean
+      * of the set.  I'll then reserve "deviation", if I use it, to refer to
+      * the square root of the variance, by analogy with "standard deviation".
+      * */
+    private static float varianceOfObservations(SurfaceSquare square)
     {
         float sumOfSquares = 0;
-        int numDeviations = 0;
+        int numSamples = 0;
 
         for (Map.Entry<String, StarObservation> entry : square.starObs.entrySet()) {
             StarObservation so = entry.getValue();
@@ -1135,16 +1163,16 @@ public class EarthShape
 
                     // Accumulate its square.
                     sumOfSquares += sep * sep;
-                    numDeviations++;
+                    numSamples++;
                 }
             }
         }
 
-        if (numDeviations == 0) {
+        if (numSamples == 0) {
             return 0;
         }
         else {
-            return sumOfSquares / numDeviations;
+            return sumOfSquares / numSamples;
         }
     }
 
@@ -1231,16 +1259,18 @@ public class EarthShape
         SurfaceSquare base = derived.baseSquare;
         if (base == null) {
             ModalDialog.errorBox(this, "The active square has no base square.");
+            return;
         }
 
-        // Always 10 degrees for now.
+        // Rotate by 'adjustOrientationDegrees'.
         Vector3f angleAxis = axis.times(this.adjustOrientationDegrees);
 
         // Rotate the axis to align it with the square.
         angleAxis = angleAxis.rotateAA(derived.rotationFromNominal);
 
-        // Now add that to the square's existing rotation.
-        angleAxis = Vector3f.composeRotations(derived.rotationFromNominal, angleAxis);
+        // Now add that to the square's existing rotation relative
+        // to its base square.
+        angleAxis = Vector3f.composeRotations(derived.rotationFromBase, angleAxis);
 
         // Now, replace the active square.
         this.replaceWithNewRotation(base, derived, angleAxis);
@@ -1265,6 +1295,35 @@ public class EarthShape
         this.activeSquare.starObs = derived.starObs;
 
         this.emCanvas.redrawCanvas();
+    }
+
+    /** Calculate what the variation of observations would be for
+      * 'derived' if its orientation were adjusted by
+      * 'angleDegrees' around 'axis'.  Returns null if
+      * the calculation cannot be done because of missing information. */
+    private static Float varianceOfAdjustedSquare(
+        SurfaceSquare derived, Vector3f axis, float angleDegrees)
+    {
+        // This part mirrors 'adjustActiveSquareOrientation'.
+        SurfaceSquare base = derived.baseSquare;
+        if (base == null) {
+            return null;
+        }
+        Vector3f angleAxis = axis.times(angleDegrees);
+        angleAxis = angleAxis.rotateAA(derived.rotationFromNominal);
+        angleAxis = Vector3f.composeRotations(derived.rotationFromBase, angleAxis);
+
+        // Now, create a new square with this new rotation.
+        SurfaceSquare newSquare =
+            EarthShape.createRotatedAdjacentSquare(base,
+                derived.latitude, derived.longitude, angleAxis);
+
+        // Copy the observation data since that is needed to calculate
+        // the deviation.
+        newSquare.starObs = derived.starObs;
+
+        // Now calculate the new variance.
+        return EarthShape.varianceOfObservations(newSquare);
     }
 
     /** Change 'adjustOrientationDegrees' by the given multiplier. */
@@ -1439,9 +1498,39 @@ public class EarthShape
             sb.append("  rotx: "+s.rotationFromNominal.x()+"\n");
             sb.append("  roty: "+s.rotationFromNominal.y()+"\n");
             sb.append("  rotz: "+s.rotationFromNominal.z()+"\n");
-            float deviation = EarthShape.deviationOfObservations(s);
-            sb.append("  dev: "+deviation+"\n");
-            sb.append("  sqrtDev: "+(float)Math.sqrt(deviation)+"\n");
+            float variance = EarthShape.varianceOfObservations(s);
+            sb.append("  sqrtVar: "+(float)Math.sqrt(variance)+"\n");
+            sb.append("  var: "+variance+"\n");
+
+            // What do we recommend to improve the variance?  If it is
+            // already zero, nothing.  Otherwise, start by thinking we
+            // should decrease the rotation angle.
+            char recommendation = (variance == 0? ' ' : '-');
+
+            // What is the best rotation command, and what does it achieve?
+            RotationCommand bestRC = null;
+            float bestNewVariance = 0;
+
+            // Print the effects of all the available rotations.
+            sb.append("\n");
+            for (RotationCommand rc : RotationCommand.values()) {
+                Float newVariance = EarthShape.varianceOfAdjustedSquare(s, rc.axis,
+                    this.adjustOrientationDegrees);
+                sb.append("  adj("+rc.key+"): "+newVariance+"\n");
+                if (newVariance != null &&
+                    newVariance < variance &&
+                    (bestRC == null || newVariance < bestNewVariance))
+                {
+                    bestRC = rc;
+                    bestNewVariance = newVariance;
+                }
+            }
+
+            // Make a final recommendation.
+            if (bestRC != null) {
+                recommendation = bestRC.key;
+            }
+            sb.append("  recommend: "+recommendation+"\n");
         }
 
         sb.append("\n");

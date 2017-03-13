@@ -54,6 +54,11 @@ public class SurfaceSquare {
       * angle in degrees. */
     public Vector3f rotationFromNominal;
 
+    /** Another band-aid: this is the rotation that was applied to
+      * the base square's orientation to get here.  It is the same
+      * as 'rotationFromNominal' if 'base' is null. */
+    public Vector3f rotationFromBase;
+
     /** Star observations taken from this point at some
       * point in time. */
     public HashMap<String, StarObservation> starObs = new HashMap<String, StarObservation>();
@@ -75,7 +80,7 @@ public class SurfaceSquare {
         float longitude_,
         SurfaceSquare baseSquare_,
         Vector3f baseMidpoint_,
-        Vector3f rotationFromNominal_)
+        Vector3f rotationFromBase_)
     {
         this.center = center_;
         this.north = north_;
@@ -85,7 +90,15 @@ public class SurfaceSquare {
         this.longitude = longitude_;
         this.baseSquare = baseSquare_;
         this.baseMidpoint = baseMidpoint_;
-        this.rotationFromNominal = rotationFromNominal_;
+        this.rotationFromBase = rotationFromBase_;
+
+        if (this.baseSquare == null) {
+            this.rotationFromNominal = rotationFromBase_;
+        }
+        else {
+            this.rotationFromNominal =
+                Vector3f.composeRotations(this.baseSquare.rotationFromNominal, rotationFromBase_);
+        }
     }
 
     /** Add 'so' to this star's set of observations. */
