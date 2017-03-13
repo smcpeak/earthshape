@@ -101,6 +101,7 @@ public class EarthShape
     public EarthShape()
     {
         super("Earth Shape");
+        this.setName("EarthShape (JFrame)");
 
         this.setLayout(new BorderLayout());
 
@@ -127,6 +128,7 @@ public class EarthShape
 
         // Status bar on bottom.
         this.statusLabel = new JLabel();
+        this.statusLabel.setName("statusLabel");
         this.add(this.statusLabel, BorderLayout.SOUTH);
 
         // Info panel on right.
@@ -355,6 +357,23 @@ public class EarthShape
                 }
             });
         menuBar.add(editMenu);
+
+        JMenu navigateMenu = new JMenu("Navigate");
+        addMenuItem(navigateMenu, "Control camera like a first-person shooter",
+            KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0),
+            new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    EarthShape.this.emCanvas.enterFPSMode();
+                }
+            });
+        addMenuItem(navigateMenu, "Leave first-person shooter mode",
+            KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
+            new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    EarthShape.this.emCanvas.exitFPSMode();
+                }
+            });
+        menuBar.add(navigateMenu);
     }
 
     /** Add a menu item to adjust the orientation of the active square. */
@@ -1218,9 +1237,21 @@ public class EarthShape
         this.automaticallyOrientActiveSquare();
     }
 
+    /** Make this window visible. */
+    public void makeVisible()
+    {
+        this.setVisible(true);
+
+        // It seems I can only set the focus once the window is
+        // visible.  There is an example in the focus tutorial of
+        // calling pack() first, but that resizes the window and
+        // I don't want that.
+        this.emCanvas.setFocusOnCanvas();
+    }
+
     public static void main(String[] args)
     {
-        (new EarthShape()).setVisible(true);
+        (new EarthShape()).makeVisible();
     }
 
     /** Toggle the 'drawCompasses' flag, then update state and redraw. */

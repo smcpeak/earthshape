@@ -185,6 +185,7 @@ public class EarthMapCanvas
     // ---------- Methods ----------
     public EarthMapCanvas(EarthShape earthShapeFrame_, GLCapabilities caps)
     {
+        this.setName("EarthMapCanvas (JPanel)");
         this.earthShapeFrame = earthShapeFrame_;
 
         try {
@@ -198,6 +199,7 @@ public class EarthMapCanvas
         // Make the GL canvas and specify that 'this' object will
         // handle its draw-related events.
         this.glCanvas = new GLCanvas(caps);
+        this.glCanvas.setName("GLCanvas");
         this.glCanvas.addGLEventListener(this);
 
         // I intend this panel to be entirely occupied by the GL canvas,
@@ -219,6 +221,17 @@ public class EarthMapCanvas
             this.blankCursor = Toolkit.getDefaultToolkit().createCustomCursor(
                 cursorImg, new Point(0, 0), "blank cursor");
         }
+    }
+
+    /** Put the focus on the GLCanvas inside this panel.  It is a
+      * little weird to put the focus there, since the panel is what
+      * responds to the key events, but this is what I came up with
+      * after some trial and error.  I might be doing something wrong
+      * somewhere.  (This is called by EarthShape right after the
+      * window becomes visible.) */
+    public void setFocusOnCanvas()
+    {
+        this.glCanvas.requestFocusInWindow();
     }
 
     /** Print a message to the console with a timestamp. */
@@ -1073,7 +1086,41 @@ public class EarthMapCanvas
         MoveDirection md = EarthMapCanvas.keyCodeToMoveDirection(ev.getKeyCode());
         if (md != null) {
             this.moveKeys[md.ordinal()] = true;
+            return;
         }
+    }
+
+    /** Begin controlling camera like a first person shooter. */
+    public void enterFPSMode()
+    {
+        this.fpsCameraMode = true;
+
+        // When transition into FPS mode, move the mouse
+        // to the center and hide it.
+        this.centerMouse();
+        this.setCursor(this.blankCursor);
+
+        // Only run the animator thread in FPS mode.
+        this.animator.start();
+
+        this.earthShapeFrame.updateUIState();
+    }
+
+    /** Leave the first-person-shooter camera movement mode. */
+    public void exitFPSMode()
+    {
+        this.fpsCameraMode = false;
+
+        // Un-hide the mouse cursor.
+        this.setCursor(null);
+
+        // And stop the animator.
+        this.animator.stop();
+
+        // Also kill any latent camera motion.
+        this.cameraVelocity = new Vector3f(0,0,0);
+
+        this.earthShapeFrame.updateUIState();
     }
 
     @Override
@@ -1109,28 +1156,8 @@ public class EarthMapCanvas
     public void mousePressed(MouseEvent ev) {
         log("mouse pressed: ev="+ev);
         if (ev.getButton() == MouseEvent.BUTTON1) {
-            this.fpsCameraMode = !this.fpsCameraMode;
-
-            this.earthShapeFrame.updateUIState();
-
-            if (this.fpsCameraMode) {
-                // When transition into FPS mode, move the mouse
-                // to the center and hide it.
-                this.centerMouse(ev);
-                ev.getComponent().setCursor(this.blankCursor);
-
-                // Only run the animator thread in FPS mode.
-                this.animator.start();
-            }
-            else {
-                // Un-hide the mouse cursor.
-                ev.getComponent().setCursor(null);
-
-                // And stop the animator.
-                this.animator.stop();
-
-                // Also kill any latent camera motion.
-                this.cameraVelocity = new Vector3f(0,0,0);
+            if (!this.fpsCameraMode) {
+                this.enterFPSMode();
             }
         }
     }
@@ -1138,12 +1165,12 @@ public class EarthMapCanvas
     /** Move the mouse to the center of the component where the given
       * event originated, and also return that center point in screen
       * coordinates. */
-    private Point centerMouse(MouseEvent ev)
+    private Point centerMouse()
     {
         // Calculate the screen coordinates of the center of the
         // clicked component.
-        Point absComponentLoc = ev.getComponent().getLocationOnScreen();
-        Dimension comDim = ev.getComponent().getSize();
+        Point absComponentLoc = this.getLocationOnScreen();
+        Dimension comDim = this.getSize();
         int cx = absComponentLoc.x + comDim.width/2;
         int cy = absComponentLoc.y + comDim.height/2;
 
@@ -1168,7 +1195,7 @@ public class EarthMapCanvas
 
             // Move the mouse to the center of the clicked component,
             // and get that location.
-            Point c = this.centerMouse(ev);
+            Point c = this.centerMouse();
 
             if (this.ignoreOneMouseMove) {
                 // The movement here is due to coming from another
@@ -1213,7 +1240,7 @@ public class EarthMapCanvas
         sb.append(", pch="+this.cameraPitchDegrees);
         sb.append(", tex="+(this.drawCompasses? "compass" : "earth"));
         if (this.fpsCameraMode) {
-            sb.append(", FPS mode (click to exit)");
+            sb.append(", FPS mode (ESC to exit)");
         }
         return sb.toString();
     }

@@ -23,6 +23,8 @@ public class InfoPanel extends JPanel {
     public InfoPanel()
     {
         super();
+        this.setName("InfoPanel");
+
         this.setPreferredSize(new Dimension(150, 500));
 
         HBox outer = new HBox();
