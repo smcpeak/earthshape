@@ -1121,27 +1121,41 @@ public class EarthShape
         return worldRay;
     }
 
-    /** Compute the total variance in star observation locations from the
-      * indicated square to the observations of its base square as the
-      * average square of the deviation angles.  The result will be 0 if there
-      * is no base square.
-      *
-      * The reason for using a sum of squares approach is to penalize large
-      * deviations and to ensure there is a unique "least deviated" point
-      * (which need not exist when using a simple sum).  The reason for using
-      * the average is to make it easier to judge "good" or "bad" fits,
-      * regardless of the number of star observations in common.
-      *
-      * I use the term "variance" here because it is similar to the idea in
-      * statistics, except here we are measuring differences between pairs of
-      * observations, rather than between individual observations and the mean
-      * of the set.  I'll then reserve "deviation", if I use it, to refer to
-      * the square root of the variance, by analogy with "standard deviation".
-      * */
-    private static float varianceOfObservations(SurfaceSquare square)
+    /** Hold results of call to 'varianceOfObservations'. */
+    private static class ObservationStats {
+        /** The total variance in star observation locations from the
+          * indicated square to the observations of its base square as the
+          * average square of the deviation angles.
+          *
+          * The reason for using a sum of squares approach is to penalize large
+          * deviations and to ensure there is a unique "least deviated" point
+          * (which need not exist when using a simple sum).  The reason for using
+          * the average is to make it easier to judge "good" or "bad" fits,
+          * regardless of the number of star observations in common.
+          *
+          * I use the term "variance" here because it is similar to the idea in
+          * statistics, except here we are measuring differences between pairs of
+          * observations, rather than between individual observations and the mean
+          * of the set.  I'll then reserve "deviation", if I use it, to refer to
+          * the square root of the variance, by analogy with "standard deviation".
+          * */
+        public float variance;
+
+        /** Maximum separation between observations, in degrees. */
+        public float maxSeparation;
+    }
+
+    /** Calculate variance and maximum separation for 'square'.  Returns
+      * null if there is no base or there are no observations in common. */
+    private static ObservationStats varianceOfObservations(SurfaceSquare square)
     {
+        if (square.baseSquare == null) {
+            return null;
+        }
+
         float sumOfSquares = 0;
         int numSamples = 0;
+        float maxSeparation = 0;
 
         for (Map.Entry<String, StarObservation> entry : square.starObs.entrySet()) {
             StarObservation so = entry.getValue();
@@ -1151,28 +1165,32 @@ public class EarthShape
 
             // Calculate the deviation of this observation from that of
             // the base square.
-            if (square.baseSquare != null) {
-                StarObservation baseObservation = square.baseSquare.findObservation(so.name);
-                if (baseObservation != null) {
-                    // Get ray from base square to the base observation star
-                    // in world coordinates.
-                    Vector3f baseStarRay = EarthShape.rayToStar(square.baseSquare, baseObservation);
+            StarObservation baseObservation = square.baseSquare.findObservation(so.name);
+            if (baseObservation != null) {
+                // Get ray from base square to the base observation star
+                // in world coordinates.
+                Vector3f baseStarRay = EarthShape.rayToStar(square.baseSquare, baseObservation);
 
-                    // Visual separation angle between these rays.
-                    float sep = FloatUtil.acosDegf(starRay.dot(baseStarRay));
-
-                    // Accumulate its square.
-                    sumOfSquares += sep * sep;
-                    numSamples++;
+                // Visual separation angle between these rays.
+                float sep = FloatUtil.acosDegf(starRay.dot(baseStarRay));
+                if (sep > maxSeparation) {
+                    maxSeparation = sep;
                 }
+
+                // Accumulate its square.
+                sumOfSquares += sep * sep;
+                numSamples++;
             }
         }
 
         if (numSamples == 0) {
-            return 0;
+            return null;
         }
         else {
-            return sumOfSquares / numSamples;
+            ObservationStats ret = new ObservationStats();
+            ret.variance = sumOfSquares / numSamples;
+            ret.maxSeparation = maxSeparation;
+            return ret;
         }
     }
 
@@ -1301,7 +1319,7 @@ public class EarthShape
       * 'derived' if its orientation were adjusted by
       * 'angleDegrees' around 'axis'.  Returns null if
       * the calculation cannot be done because of missing information. */
-    private static Float varianceOfAdjustedSquare(
+    private static ObservationStats varianceOfAdjustedSquare(
         SurfaceSquare derived, Vector3f axis, float angleDegrees)
     {
         // This part mirrors 'adjustActiveSquareOrientation'.
@@ -1498,39 +1516,52 @@ public class EarthShape
             sb.append("  rotx: "+s.rotationFromNominal.x()+"\n");
             sb.append("  roty: "+s.rotationFromNominal.y()+"\n");
             sb.append("  rotz: "+s.rotationFromNominal.z()+"\n");
-            float variance = EarthShape.varianceOfObservations(s);
-            sb.append("  sqrtVar: "+(float)Math.sqrt(variance)+"\n");
-            sb.append("  var: "+variance+"\n");
 
-            // What do we recommend to improve the variance?  If it is
-            // already zero, nothing.  Otherwise, start by thinking we
-            // should decrease the rotation angle.
-            char recommendation = (variance == 0? ' ' : '-');
+            ObservationStats ostats = EarthShape.varianceOfObservations(s);
+            if (ostats == null) {
+                sb.append("  No obs stats\n");
+            }
+            else {
+                sb.append("  maxSep: "+ostats.maxSeparation+"\n");
+                sb.append("  sqrtVar: "+(float)Math.sqrt(ostats.variance)+"\n");
+                sb.append("  var: "+ostats.variance+"\n");
 
-            // What is the best rotation command, and what does it achieve?
-            RotationCommand bestRC = null;
-            float bestNewVariance = 0;
+                // What do we recommend to improve the variance?  If it is
+                // already zero, nothing.  Otherwise, start by thinking we
+                // should decrease the rotation angle.
+                char recommendation = (ostats.variance == 0? ' ' : '-');
 
-            // Print the effects of all the available rotations.
-            sb.append("\n");
-            for (RotationCommand rc : RotationCommand.values()) {
-                Float newVariance = EarthShape.varianceOfAdjustedSquare(s, rc.axis,
-                    this.adjustOrientationDegrees);
-                sb.append("  adj("+rc.key+"): "+newVariance+"\n");
-                if (newVariance != null &&
-                    newVariance < variance &&
-                    (bestRC == null || newVariance < bestNewVariance))
-                {
-                    bestRC = rc;
-                    bestNewVariance = newVariance;
+                // What is the best rotation command, and what does it achieve?
+                RotationCommand bestRC = null;
+                float bestNewVariance = 0;
+
+                // Print the effects of all the available rotations.
+                sb.append("\n");
+                for (RotationCommand rc : RotationCommand.values()) {
+                    sb.append("  adj("+rc.key+"): ");
+                    ObservationStats newStats = EarthShape.varianceOfAdjustedSquare(s, rc.axis,
+                        this.adjustOrientationDegrees);
+                    if (newStats == null) {
+                        sb.append("(none)\n");
+                    }
+                    else {
+                        float newVariance = newStats.variance;
+                        sb.append(""+newVariance+"\n");
+                        if (newVariance < ostats.variance &&
+                            (bestRC == null || newVariance < bestNewVariance))
+                        {
+                            bestRC = rc;
+                            bestNewVariance = newVariance;
+                        }
+                    }
                 }
-            }
 
-            // Make a final recommendation.
-            if (bestRC != null) {
-                recommendation = bestRC.key;
+                // Make a final recommendation.
+                if (bestRC != null) {
+                    recommendation = bestRC.key;
+                }
+                sb.append("  recommend: "+recommendation+"\n");
             }
-            sb.append("  recommend: "+recommendation+"\n");
         }
 
         sb.append("\n");
