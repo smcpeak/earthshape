@@ -902,7 +902,7 @@ public class EarthShape
                 this.qualifyingStarObservation(so))
             {
                 manualStars.add(so.name);
-                square.starObs.add(so);
+                square.addObservation(so);
             }
         }
 
@@ -912,7 +912,7 @@ public class EarthShape
                 StarObservation so = sc.makeObservation(StarObservation.unixTimeOfManualData,
                     square.latitude, square.longitude);
                 if (this.qualifyingStarObservation(so)) {
-                    square.starObs.add(so);
+                    square.addObservation(so);
                 }
             }
         }

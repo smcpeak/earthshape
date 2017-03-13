@@ -20,6 +20,7 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Map;
 
 import javax.swing.JPanel;
 
@@ -917,7 +918,9 @@ public class EarthMapCanvas
       * star observations. */
     private void drawStarRays(GL2 gl, SurfaceSquare s)
     {
-        for (StarObservation so : s.starObs) {
+        for (Map.Entry<String, StarObservation> entry : s.starObs.entrySet()) {
+            StarObservation so = entry.getValue();
+
             // Bright line for rays at active square.
             float rayBrightness = (s.showAsActive? 1.0f : 0.4f);
 

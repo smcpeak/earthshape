@@ -3,7 +3,7 @@
 
 package earthshape;
 
-import java.util.ArrayList;
+import java.util.HashMap;
 
 import util.Vector3f;
 
@@ -56,7 +56,7 @@ public class SurfaceSquare {
 
     /** Star observations taken from this point at some
       * point in time. */
-    public ArrayList<StarObservation> starObs = new ArrayList<StarObservation>();
+    public HashMap<String, StarObservation> starObs = new HashMap<String, StarObservation>();
 
     /** If true, draw a special marker to indicate the square is
       * "active", meaning it is the square upon which we will
@@ -88,16 +88,16 @@ public class SurfaceSquare {
         this.rotationFromNominal = rotationFromNominal_;
     }
 
+    /** Add 'so' to this star's set of observations. */
+    public void addObservation(StarObservation so)
+    {
+        this.starObs.put(so.name, so);
+    }
+
     /** If this star has an observation for 'starName', return it. */
     public StarObservation findObservation(String starName)
     {
-        // TODO: This is inefficient.  Fix it.
-        for (StarObservation so : this.starObs) {
-            if (so.name.equals(starName)) {
-                return so;
-            }
-        }
-        return null;
+        return this.starObs.get(starName);
     }
 
     public String toString()
