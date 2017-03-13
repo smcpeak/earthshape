@@ -1219,8 +1219,8 @@ public class EarthShape
     /** If there is an active square, assume we just built it, and now
       * we want to adjust its orientation.  'axis' indicates the axis
       * about which to rotate, relative to the square's current orientation,
-      * where -Z is North, +Y is up, and +X is east, and (for the moment)
-      * the angle is fixed. */
+      * where -Z is North, +Y is up, and +X is east, and the angle is given
+      * by 'this.adjustOrientationDegrees'. */
     private void adjustActiveSquareOrientation(Vector3f axis)
     {
         SurfaceSquare derived = this.activeSquare;
