@@ -82,6 +82,10 @@ public class EarthMapCanvas
     /** Desired distance between camera and front clipping plane. */
     private static final float FRONT_CLIP_DISTANCE = 0.01f;
 
+    /** Crosshair radius, as a fraction of the vertical height
+      * of the window. */
+    private static final float CROSSHAIR_RADIUS = 0.05f;
+
     // --------- Public constants ----------
     /** Units in 3D space coordinates per km in surface being mapped. */
     public static final float SPACE_UNITS_PER_KM = 0.001f;
@@ -395,7 +399,39 @@ public class EarthMapCanvas
 
         this.drawLabels(drawable, gl);
 
+        if (this.fpsCameraMode) {
+            this.drawCrosshair(gl);
+        }
+
         gl.glFlush();
+    }
+
+    /** Draw a crosshair in the middle of the canvas. */
+    private void drawCrosshair(GL2 gl)
+    {
+        gl.glPushAttrib(GL2.GL_ALL_ATTRIB_BITS);
+        gl.glMatrixMode(GL2.GL_PROJECTION);
+        gl.glPushMatrix();
+
+        gl.glLoadIdentity();
+        gl.glOrtho(-this.aspectRatio, this.aspectRatio, -1, 1, -1, 1);
+
+        gl.glLineWidth(1);
+        gl.glDisable(GL.GL_TEXTURE_2D);
+        gl.glNormal3f(0,1,0);
+        glMaterialColor3f(gl, 1,0,0);       // Red
+
+        gl.glBegin(GL.GL_LINES);
+
+        gl.glVertex2f(-CROSSHAIR_RADIUS, 0);
+        gl.glVertex2f(+CROSSHAIR_RADIUS, 0);
+        gl.glVertex2f(0, -CROSSHAIR_RADIUS);
+        gl.glVertex2f(0, +CROSSHAIR_RADIUS);
+
+        gl.glEnd();
+
+        gl.glPopMatrix();
+        gl.glPopAttrib();
     }
 
     /** Draw 'worldLabels'. */
