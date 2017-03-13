@@ -921,13 +921,8 @@ public class EarthMapCanvas
             // Bright line for rays at active square.
             float rayBrightness = (s.showAsActive? 1.0f : 0.4f);
 
-            // Ray to star in nominal, -Z facing, coordinates.
-            Vector3f nominalRay =
-                EarthShape.azimuthElevationToVector(so.azimuth, so.elevation);
-
-            // Ray to star in map coordinates, taking into account
-            // how the current surface is rotated.
-            Vector3f localRay = nominalRay.rotateAA(s.rotationFromNominal);
+            // Ray to star in world coordinates.
+            Vector3f starRay = EarthShape.rayToStar(s, so);
 
             gl.glBegin(GL.GL_LINES);
             glMaterialColor3f(gl, rayBrightness, rayBrightness, rayBrightness);
@@ -940,14 +935,33 @@ public class EarthMapCanvas
             // not mean we are assuming the star is actually
             // infinitely far, just that it must be somewhere
             // along this line.
-            Vector4f localRayDirection = new Vector4f(
-                localRay.x(), localRay.y(), localRay.z(), 0);
-            gl.glVertex4fv(localRayDirection.getArray(), 0);
-
-            // Also label this direction.
-            this.worldLabels.add(new CoordinateLabel(localRayDirection, so.name));
+            Vector4f starRayDirection = new Vector4f(
+                starRay.x(), starRay.y(), starRay.z(), 0);
+            gl.glVertex4fv(starRayDirection.getArray(), 0);
 
             gl.glEnd();
+
+            String starLabel = so.name;
+
+            // Calculate the deviation of this observation from that of
+            // the base square.
+            if (s.showAsActive && s.baseSquare != null) {
+                StarObservation baseObservation = s.baseSquare.findObservation(so.name);
+                if (baseObservation != null) {
+                    // Get ray from base square to the base observation star
+                    // in world coordinates.
+                    Vector3f baseStarRay = EarthShape.rayToStar(s.baseSquare, baseObservation);
+
+                    // Calculate the visual separation angle between these rays.
+                    float sep = FloatUtil.acosDegf(starRay.dot(baseStarRay));
+
+                    // Add that to the label.
+                    starLabel += " ("+sep+")";
+                }
+            }
+
+            // Label the star.
+            this.worldLabels.add(new CoordinateLabel(starRayDirection, starLabel));
         }
     }
 

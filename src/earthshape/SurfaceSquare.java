@@ -88,6 +88,18 @@ public class SurfaceSquare {
         this.rotationFromNominal = rotationFromNominal_;
     }
 
+    /** If this star has an observation for 'starName', return it. */
+    public StarObservation findObservation(String starName)
+    {
+        // TODO: This is inefficient.  Fix it.
+        for (StarObservation so : this.starObs) {
+            if (so.name.equals(starName)) {
+                return so;
+            }
+        }
+        return null;
+    }
+
     public String toString()
     {
         Vector3f east = this.north.cross(this.up);

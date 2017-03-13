@@ -1084,6 +1084,21 @@ public class EarthShape
         return v;
     }
 
+    /** Get the unit ray, in world coordinates, from the center of 'square' to
+      * the star recorded in 'so', which was observed at this square. */
+    public static Vector3f rayToStar(SurfaceSquare square, StarObservation so)
+    {
+        // Ray to star in nominal, -Z facing, coordinates.
+        Vector3f nominalRay =
+            azimuthElevationToVector(so.azimuth, so.elevation);
+
+        // Ray to star in world coordinates, taking into account
+        // how the surface is rotated.
+        Vector3f worldRay = nominalRay.rotateAA(square.rotationFromNominal);
+
+        return worldRay;
+    }
+
     /** Begin constructing a new surface using star data.  This just
       * places down the initial square to represent a user-specified
       * latitude and longitude.  The square is placed into 3D space
