@@ -221,6 +221,16 @@ public class EarthShape
         //   Enter  - enter FPS mode
         //   Esc    - leave FPS mode
 
+        menuBar.add(this.buildFileMenu());
+        menuBar.add(this.buildDrawMenu());
+        menuBar.add(this.buildBuildMenu());
+        menuBar.add(this.buildSelectMenu());
+        menuBar.add(this.buildEditMenu());
+        menuBar.add(this.buildNavigateMenu());
+    }
+
+    private JMenu buildFileMenu()
+    {
         JMenu fileMenu = new JMenu("File");
         addMenuItem(fileMenu, "Choose enabled stars", null, new ActionListener() {
             public void actionPerformed(ActionEvent e) {
@@ -233,8 +243,11 @@ public class EarthShape
                 EarthShape.this.dispose();
             }
         });
-        menuBar.add(fileMenu);
+        return fileMenu;
+    }
 
+    private JMenu buildDrawMenu()
+    {
         JMenu drawMenu = new JMenu("Draw");
         this.drawCompassesCBItem =
             addCBMenuItem(drawMenu, "Draw squares with compasses", KeyStroke.getKeyStroke('c'),
@@ -273,8 +286,11 @@ public class EarthShape
                     EarthShape.this.turnOffAllStarRays();
                 }
             });
-        menuBar.add(drawMenu);
+        return drawMenu;
+    }
 
+    private JMenu buildBuildMenu()
+    {
         JMenu buildMenu = new JMenu("Build");
         addMenuItem(buildMenu, "Build Earth using star data and no assumed shape",
             KeyStroke.getKeyStroke('t'),
@@ -318,8 +334,11 @@ public class EarthShape
                     EarthShape.this.createAndAutomaticallyOrientSquare();
                 }
             });
-        menuBar.add(buildMenu);
+        return buildMenu;
+    }
 
+    private JMenu buildSelectMenu()
+    {
         JMenu selectMenu = new JMenu("Select");
         addMenuItem(selectMenu, "Select previous square",
             KeyStroke.getKeyStroke(','),
@@ -335,8 +354,11 @@ public class EarthShape
                     EarthShape.this.selectNextSquare(true /*forward*/);
                 }
             });
-        menuBar.add(selectMenu);
+        return selectMenu;
+    }
 
+    private JMenu buildEditMenu()
+    {
         JMenu editMenu = new JMenu("Edit");
         for (RotationCommand rc : RotationCommand.values()) {
             this.addAdjustOrientationMenuItem(editMenu,
@@ -387,8 +409,11 @@ public class EarthShape
                     EarthShape.this.deleteActiveSquare();
                 }
             });
-        menuBar.add(editMenu);
+        return editMenu;
+    }
 
+    private JMenu buildNavigateMenu()
+    {
         JMenu navigateMenu = new JMenu("Navigate");
         addMenuItem(navigateMenu, "Control camera like a first-person shooter",
             KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0),
@@ -424,7 +449,7 @@ public class EarthShape
                         EarthShape.this.updateUIState();
                     }
                 });
-        menuBar.add(navigateMenu);
+        return navigateMenu;
     }
 
     /** Add a menu item to adjust the orientation of the active square. */
