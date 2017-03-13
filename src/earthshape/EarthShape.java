@@ -1111,7 +1111,7 @@ public class EarthShape
     }
 
     /** Change which square is active. */
-    private void setActiveSquare(SurfaceSquare sq)
+    public void setActiveSquare(SurfaceSquare sq)
     {
         if (this.activeSquare != null) {
             this.activeSquare.showAsActive = false;

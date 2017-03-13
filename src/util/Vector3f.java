@@ -135,6 +135,13 @@ public class Vector3f {
         return this.under.dot(v.under);
     }
 
+    /** Return 'this' projected onto 'u', which is assumed to be a
+      * unit vector. */
+    public Vector3f projectOntoUnitVector(Vector3f u)
+    {
+        return u.times(this.dot(u));
+    }
+
     /** Return 'this' cross 'v'. */
     public Vector3f cross(Vector3f v)
     {

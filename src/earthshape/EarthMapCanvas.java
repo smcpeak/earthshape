@@ -884,6 +884,15 @@ public class EarthMapCanvas
 
             gl.glEnd();
 
+            // Draw another square below it so I can see when it is
+            // selected and the camera is below the square.
+            gl.glBegin(GL.GL_LINE_LOOP);
+            gl.glVertex3fv(nw.minus(upShort).getArray(), 0);
+            gl.glVertex3fv(sw.minus(upShort).getArray(), 0);
+            gl.glVertex3fv(se.minus(upShort).getArray(), 0);
+            gl.glVertex3fv(ne.minus(upShort).getArray(), 0);
+            gl.glEnd();
+
             // Also draw two line segments showing the translational
             // path from the base square.
             if (s.baseSquare != null && s.baseMidpoint != null) {
@@ -1203,8 +1212,96 @@ public class EarthMapCanvas
         if (ev.getButton() == MouseEvent.BUTTON1) {
             if (!this.fpsCameraMode) {
                 this.enterFPSMode();
+                return;
+            }
+
+            this.earthShapeFrame.setActiveSquare(this.rayCastToSquare());
+        }
+    }
+
+    /** Return the surface square that the camera is looking at. */
+    private SurfaceSquare rayCastToSquare()
+    {
+        Vector3f look = this.cameraLookVector();
+
+        // Closest intersecting square so far, and its distance.
+        SurfaceSquare bestSquare = null;
+        float bestDistance = 0;
+
+        // Check all squares to see which ones intersect the look
+        // vector, and of those, which is closest.
+        for (SurfaceSquare s : this.surfaceSquares) {
+            // Camera to that surface's center.  (For calculating 'toPlane',
+            // any point on the plane will do, since they will all yield
+            // the same projection onto the surface normal.)
+            Vector3f toCenter = s.center.minus(this.cameraPosition);
+
+            // Camera to closest point on surface plane.
+            Vector3f toPlane = toCenter.projectOntoUnitVector(s.up);
+
+            // Camera to closest point, but only as far as one unit
+            // as look vector goes.
+            Vector3f unitLookToPlane = look.projectOntoUnitVector(s.up);
+            if (unitLookToPlane.dot(toPlane) < 1e-10f) {
+                // Surface is close to parallel, or is behind camera.
+                continue;
+            }
+
+            // Number of look vectors needed to reach the plane.
+            float lookMultiple = (float)(toPlane.length() / unitLookToPlane.length());
+            if (lookMultiple < FRONT_CLIP_DISTANCE) {
+                // Square is behind the clipping plane.
+                continue;
+            }
+
+            // Camera to intersection point along look vector.
+            Vector3f cameraToIntersection = look.times(lookMultiple);
+
+            // Intersection point of look vector and plane.
+            Vector3f intersection = this.cameraPosition.plus(cameraToIntersection);
+
+            // From square center to that intersection.
+            Vector3f c2i = intersection.minus(s.center);
+
+            // Square radius in world units.
+            float radius = s.sizeKm * SPACE_UNITS_PER_KM / 2.0f;
+
+            // Check if distance along square's North or East exceeds the
+            // square's radius.
+            if (Math.abs(c2i.dot(s.north)) > radius) {
+                continue;
+            }
+            Vector3f east = s.north.cross(s.up);
+            if (Math.abs(c2i.dot(east)) > radius) {
+                continue;
+            }
+
+            // New best?
+            float distance = (float)cameraToIntersection.length();
+            if (bestSquare == null || distance < bestDistance) {
+                bestSquare = s;
+                bestDistance = distance;
             }
         }
+
+        return bestSquare;
+    }
+
+    /** Get the camera's look direction as a unit vector. */
+    private Vector3f cameraLookVector()
+    {
+        // Start looking down the -Z axis.
+        Vector3f look = new Vector3f(0, 0, -1);
+
+        // Yaw.
+        Vector3f up = new Vector3f(0, 1, 0);
+        look = look.rotate(this.cameraAzimuthDegrees, up);
+
+        // Pitch around a vector pointing to the right from the camera.
+        Vector3f right = look.cross(up);
+        look = look.rotate(this.cameraPitchDegrees, right);
+
+        return look;
     }
 
     /** Move the mouse to the center of the component where the given
