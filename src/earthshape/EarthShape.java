@@ -13,6 +13,7 @@ import java.awt.event.WindowEvent;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.Map;
 
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JFrame;
@@ -1090,13 +1091,61 @@ public class EarthShape
     {
         // Ray to star in nominal, -Z facing, coordinates.
         Vector3f nominalRay =
-            azimuthElevationToVector(so.azimuth, so.elevation);
+            EarthShape.azimuthElevationToVector(so.azimuth, so.elevation);
 
         // Ray to star in world coordinates, taking into account
         // how the surface is rotated.
         Vector3f worldRay = nominalRay.rotateAA(square.rotationFromNominal);
 
         return worldRay;
+    }
+
+    /** Compute the total deviation in star observation locations from the
+      * indicated square to the observations of its base square as the
+      * average square of the deviation angles.  The result will be 0 if there
+      * is no base square.
+      *
+      * The reason for using a sum of squares approach is to penalize large
+      * deviations and to ensure there is a unique "least deviated" point
+      * (which need not exist when using a simple sum).  The reason for using
+      * the average is to make it easier to judge "good" or "bad" fits,
+      * regardless of the number of star observations in common. */
+    private static float deviationOfObservations(SurfaceSquare square)
+    {
+        float sumOfSquares = 0;
+        int numDeviations = 0;
+
+        for (Map.Entry<String, StarObservation> entry : square.starObs.entrySet()) {
+            StarObservation so = entry.getValue();
+
+            // Ray to star in world coordinates.
+            Vector3f starRay = EarthShape.rayToStar(square, so);
+
+            // Calculate the deviation of this observation from that of
+            // the base square.
+            if (square.baseSquare != null) {
+                StarObservation baseObservation = square.baseSquare.findObservation(so.name);
+                if (baseObservation != null) {
+                    // Get ray from base square to the base observation star
+                    // in world coordinates.
+                    Vector3f baseStarRay = EarthShape.rayToStar(square.baseSquare, baseObservation);
+
+                    // Visual separation angle between these rays.
+                    float sep = FloatUtil.acosDegf(starRay.dot(baseStarRay));
+
+                    // Accumulate its square.
+                    sumOfSquares += sep * sep;
+                    numDeviations++;
+                }
+            }
+        }
+
+        if (numDeviations == 0) {
+            return 0;
+        }
+        else {
+            return sumOfSquares / numDeviations;
+        }
     }
 
     /** Begin constructing a new surface using star data.  This just
@@ -1381,16 +1430,21 @@ public class EarthShape
         }
         else {
             sb.append("Active square:\n");
-            sb.append("  lat: "+this.activeSquare.latitude+"\n");
-            sb.append("  lng: "+this.activeSquare.longitude+"\n");
-            sb.append("  x: "+this.activeSquare.center.x()+"\n");
-            sb.append("  y: "+this.activeSquare.center.y()+"\n");
-            sb.append("  z: "+this.activeSquare.center.z()+"\n");
-            sb.append("  rotx: "+this.activeSquare.rotationFromNominal.x()+"\n");
-            sb.append("  roty: "+this.activeSquare.rotationFromNominal.y()+"\n");
-            sb.append("  rotz: "+this.activeSquare.rotationFromNominal.z()+"\n");
+            SurfaceSquare s = this.activeSquare;
+            sb.append("  lat: "+s.latitude+"\n");
+            sb.append("  lng: "+s.longitude+"\n");
+            sb.append("  x: "+s.center.x()+"\n");
+            sb.append("  y: "+s.center.y()+"\n");
+            sb.append("  z: "+s.center.z()+"\n");
+            sb.append("  rotx: "+s.rotationFromNominal.x()+"\n");
+            sb.append("  roty: "+s.rotationFromNominal.y()+"\n");
+            sb.append("  rotz: "+s.rotationFromNominal.z()+"\n");
+            float deviation = EarthShape.deviationOfObservations(s);
+            sb.append("  dev: "+deviation+"\n");
+            sb.append("  sqrtDev: "+(float)Math.sqrt(deviation)+"\n");
         }
 
+        sb.append("\n");
         sb.append("adjDeg: "+this.adjustOrientationDegrees+"\n");
 
         this.infoPanel.text.setText(sb.toString());
