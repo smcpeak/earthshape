@@ -113,7 +113,7 @@ public class EarthMapCanvas
 
     // ---- Camera position and motion ----
     /** Camera position in space. */
-    private Vector3f cameraPosition = new Vector3f(1,1,2);
+    public Vector3f cameraPosition = new Vector3f(1,1,2);
 
     /** Azimuth angle in which the camera is looking, in degrees
       * to the left of the -Z axis.  It is kept in [0,360), wrapping

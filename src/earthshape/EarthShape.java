@@ -192,7 +192,7 @@ public class EarthShape
         //   d - Move camera right
         //   e
         //   f
-        //   g
+        //   g - Go to selected square's center
         //   h - Build spherical Earth
         //   i - Pitch active square down
         //   j - Yaw active square left
@@ -427,6 +427,13 @@ public class EarthShape
             new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
                     EarthShape.this.emCanvas.exitFPSMode();
+                }
+            });
+        addMenuItem(navigateMenu, "Go to active square's center",
+            KeyStroke.getKeyStroke('g'),
+            new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    EarthShape.this.goToActiveSquareCenter();
                 }
             });
         this.invertHorizontalCameraMovementCBItem =
@@ -1556,6 +1563,19 @@ public class EarthShape
     {
         this.emCanvas.turnOffAllStarRays();
         this.emCanvas.redrawCanvas();
+    }
+
+    /** Move the camera to the center of the active square. */
+    private void goToActiveSquareCenter()
+    {
+        if (this.activeSquare == null) {
+            ModalDialog.errorBox(this, "No active square.");
+        }
+        else {
+            this.emCanvas.cameraPosition = this.activeSquare.center;
+            this.emCanvas.redrawCanvas();
+            this.updateUIState();
+        }
     }
 
     /** Update all stateful UI elements. */
