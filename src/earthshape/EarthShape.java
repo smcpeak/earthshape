@@ -97,6 +97,12 @@ public class EarthShape
     /** Menu item to toggle 'drawStarRays'. */
     private JCheckBoxMenuItem drawStarRaysCBItem;
 
+    /** Menu item to toggle 'EarthMapCanvas.invertHorizontalCameraMovement. */
+    private JCheckBoxMenuItem invertHorizontalCameraMovementCBItem;
+
+    /** Menu item to toggle 'EarthMapCanvas.invertVerticalCameraMovement. */
+    private JCheckBoxMenuItem invertVerticalCameraMovementCBItem;
+
     // ---------- Methods ----------
     public EarthShape()
     {
@@ -194,8 +200,10 @@ public class EarthShape
         //   , - Select previous square
         //   . - Select next square
         //   / - Automatically orient active square
-        //   Space - Move camera up
+        //   Space  - Move camera up
         //   Delete - Delete active square
+        //   Enter  - enter FPS mode
+        //   Esc    - leave FPS mode
 
         JMenu fileMenu = new JMenu("File");
         addMenuItem(fileMenu, "Choose enabled stars", null, new ActionListener() {
@@ -373,6 +381,26 @@ public class EarthShape
                     EarthShape.this.emCanvas.exitFPSMode();
                 }
             });
+        this.invertHorizontalCameraMovementCBItem =
+            addCBMenuItem(navigateMenu, "Invert horizontal camera movement", null,
+                this.emCanvas.invertHorizontalCameraMovement,
+                new ActionListener() {
+                    public void actionPerformed(ActionEvent e) {
+                        EarthShape.this.emCanvas.invertHorizontalCameraMovement =
+                            !EarthShape.this.emCanvas.invertHorizontalCameraMovement;
+                        EarthShape.this.updateUIState();
+                    }
+                });
+        this.invertVerticalCameraMovementCBItem =
+            addCBMenuItem(navigateMenu, "Invert vertical camera movement", null,
+                this.emCanvas.invertVerticalCameraMovement,
+                new ActionListener() {
+                    public void actionPerformed(ActionEvent e) {
+                        EarthShape.this.emCanvas.invertVerticalCameraMovement =
+                            !EarthShape.this.emCanvas.invertVerticalCameraMovement;
+                        EarthShape.this.updateUIState();
+                    }
+                });
         menuBar.add(navigateMenu);
     }
 
@@ -1321,6 +1349,11 @@ public class EarthShape
         this.drawSurfaceNormalsCBItem.setSelected(this.emCanvas.drawSurfaceNormals);
         this.drawCelestialNorthCBItem.setSelected(this.emCanvas.drawCelestialNorth);
         this.drawStarRaysCBItem.setSelected(this.activeSquareDrawsStarRays());
+
+        this.invertHorizontalCameraMovementCBItem.setSelected(
+            this.emCanvas.invertHorizontalCameraMovement);
+        this.invertVerticalCameraMovementCBItem.setSelected(
+            this.emCanvas.invertVerticalCameraMovement);
     }
 
     /** Update the contents of the info panel. */
