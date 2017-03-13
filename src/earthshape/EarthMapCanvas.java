@@ -280,9 +280,8 @@ public class EarthMapCanvas
         // Create the text renderer too.
         this.textRenderer = new TextRenderer(new Font("SansSerif", Font.BOLD, 16));
 
-        // Use a dark background, like the night sky.
-        gl.glClearColor(0, 0, 0.04f, 0);
-        //gl.glClearColor(0,0,0,0);
+        // Use a dark gray background.
+        gl.glClearColor(0.2f, 0.2f, 0.2f, 0);
 
         // Enable lighting generally.
         gl.glEnable(GL2.GL_LIGHTING);
