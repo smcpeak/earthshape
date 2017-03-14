@@ -19,6 +19,7 @@ public class RotationCubeDialog extends ModalDialog {
     private static final long serialVersionUID = 4473449078815404630L;
 
     public RotationCubeDialog(JFrame parent,
+        float currentVariance,
         PlotData1D rollPlotData,
         PlotData1D pitchPlotData,
         PlotData1D yawPlotData)
@@ -26,6 +27,14 @@ public class RotationCubeDialog extends ModalDialog {
         super(parent, "Rotation Cube");
 
         VBox vb = new VBox();
+        vb.strut();
+
+        {
+            HBox hb = new HBox();
+            hb.add(new JLabel("Current variance: "+currentVariance));
+            hb.glue();
+            vb.add(hb);
+        }
         vb.strut();
 
         this.addPlot1D(vb, "roll", rollPlotData);

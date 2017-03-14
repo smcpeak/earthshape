@@ -1537,7 +1537,13 @@ public class EarthShape
         PlotData1D pitchPlotData = this.getRotationAxisPlotData(s, new Vector3f(1, 0, 0));
         PlotData1D yawPlotData = this.getRotationAxisPlotData(s, new Vector3f(0, -1, 0));
 
-        (new RotationCubeDialog(this, rollPlotData, pitchPlotData, yawPlotData)).exec();
+        // Plot them.
+        RotationCubeDialog d = new RotationCubeDialog(this,
+            ostats.variance,
+            rollPlotData,
+            pitchPlotData,
+            yawPlotData);
+        d.exec();
     }
 
     private PlotData1D getRotationAxisPlotData(SurfaceSquare s, Vector3f axis)
