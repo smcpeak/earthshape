@@ -2005,34 +2005,25 @@ public class EarthShape
                 char recommendation = (ostats.variance == 0? ' ' : '-');
 
                 // What is the best rotation command, and what does it achieve?
-                RotationCommand bestRC = null;
-                float bestNewVariance = 0;
+                VarianceAfterRotations var = this.getVarianceAfterRotations(s);
 
                 // Print the effects of all the available rotations.
                 sb.append("\n");
                 for (RotationCommand rc : RotationCommand.values()) {
                     sb.append("  adj("+rc.key+"): ");
-                    ObservationStats newStats = EarthShape.fitOfAdjustedSquare(s,
-                        rc.axis.times(this.adjustOrientationDegrees));
-                    if (newStats == null) {
+                    Float newVariance = var.rcToVariance.get(rc);
+                    if (newVariance == null) {
                         sb.append("(none)\n");
                     }
                     else {
-                        float newVariance = newStats.variance;
                         sb.append(""+newVariance+"\n");
-                        if (newVariance < ostats.variance &&
-                            (bestRC == null || newVariance < bestNewVariance))
-                        {
-                            bestRC = rc;
-                            bestNewVariance = newVariance;
-                        }
                     }
                 }
 
                 // Make a final recommendation.
-                this.recommendedRotationCommand = bestRC;
-                if (bestRC != null) {
-                    recommendation = bestRC.key;
+                this.recommendedRotationCommand = var.bestRC;
+                if (var.bestRC != null) {
+                    recommendation = var.bestRC.key;
                 }
                 sb.append("  recommend: "+recommendation+"\n");
             }
@@ -2042,6 +2033,58 @@ public class EarthShape
         sb.append("adjDeg: "+this.adjustOrientationDegrees+"\n");
 
         this.infoPanel.text.setText(sb.toString());
+    }
+
+    /** Result of call to 'getVarianceAfterRotations'. */
+    private static class VarianceAfterRotations {
+        /** Variance produced by each rotation.  The value can be null,
+          * meaning the rotation produces a situation where we can't
+          * measure the variance (e.g., because not enough stars are
+          * above the horizon). */
+        HashMap<RotationCommand, Float> rcToVariance = new HashMap<RotationCommand, Float>();
+
+        /** Which rotation command produces the greatest improvement
+          * in variance, if any. */
+        RotationCommand bestRC = null;
+    }
+
+    /** Perform a trial rotation in each direction and record the
+      * resulting variance, plus a decision about which is best, if any. */
+    private VarianceAfterRotations getVarianceAfterRotations(SurfaceSquare s)
+    {
+        // Get variance if no rotation is performed.  We only recommend
+        // a rotation if it improves on this.
+        ObservationStats ostats = EarthShape.fitOfObservations(s);
+        if (ostats == null) {
+            return null;
+        }
+
+        VarianceAfterRotations ret = new VarianceAfterRotations();
+
+        // Variance achieved by the best rotation command, if there is one.
+        float bestNewVariance = 0;
+
+        // Print the effects of all the available rotations.
+        for (RotationCommand rc : RotationCommand.values()) {
+            ObservationStats newStats = EarthShape.fitOfAdjustedSquare(s,
+                rc.axis.times(this.adjustOrientationDegrees));
+            if (newStats == null) {
+                ret.rcToVariance.put(rc, null);
+            }
+            else {
+                float newVariance = newStats.variance;
+                ret.rcToVariance.put(rc, newVariance);
+
+                if (newVariance < ostats.variance &&
+                    (ret.bestRC == null || newVariance < bestNewVariance))
+                {
+                    ret.bestRC = rc;
+                    bestNewVariance = newVariance;
+                }
+            }
+        }
+
+        return ret;
     }
 
     /** True if there is an active square and it is drawing star rays. */
