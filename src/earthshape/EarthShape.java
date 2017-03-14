@@ -1521,58 +1521,39 @@ public class EarthShape
     private void analyzeSolutionSpace()
     {
         if (this.activeSquare == null) {
-            ModalDialog.errorBox(this, "No active square");
+            ModalDialog.errorBox(this, "No active square.");
             return;
         }
         SurfaceSquare s = this.activeSquare;
 
         ObservationStats ostats = EarthShape.varianceOfObservations(s);
         if (ostats == null) {
-            System.out.println("No obs stats");
+            ModalDialog.errorBox(this, "No observation stats for the active square.");
             return;
         }
 
-        System.out.println("var: "+ostats.variance);
-
         // Consider the effect of rotating various amounts on each axis.
-        Vector3f axis = new Vector3f(0, 0, -1);    // Start with roll.
-        float[] rollData = new float[21];
-        float firstRoll = -10 * this.adjustOrientationDegrees;
-        float lastRoll = 10 * this.adjustOrientationDegrees;
-        System.out.println("Axis: "+axis);
+        PlotData1D rollPlotData = this.getRotationAxisPlotData(s, new Vector3f(0, 0, -1));
+        PlotData1D pitchPlotData = this.getRotationAxisPlotData(s, new Vector3f(1, 0, 0));
+        PlotData1D yawPlotData = this.getRotationAxisPlotData(s, new Vector3f(0, -1, 0));
+
+        (new RotationCubeDialog(this, rollPlotData, pitchPlotData, yawPlotData)).exec();
+    }
+
+    private PlotData1D getRotationAxisPlotData(SurfaceSquare s, Vector3f axis)
+    {
+        float[] yData = new float[21];
+        float xFirst = -10 * this.adjustOrientationDegrees;
+        float xLast = 10 * this.adjustOrientationDegrees;
         for (int m=-10; m <= 10; m++) {
             ObservationStats newStats = EarthShape.varianceOfAdjustedSquare(s, axis,
                 this.adjustOrientationDegrees * m);
             if (newStats == null) {
                 continue;             // Skip areas we can't evaluate.
             }
-            System.out.println("  "+m+": "+newStats.variance);
-            rollData[m+10] = newStats.variance;
+            yData[m+10] = newStats.variance;
         }
-
-        axis = new Vector3f(1, 0, 0);    // Then pitch.
-        System.out.println("Axis: "+axis);
-        for (int m=-10; m <= 10; m++) {
-            ObservationStats newStats = EarthShape.varianceOfAdjustedSquare(s, axis,
-                this.adjustOrientationDegrees * m);
-            if (newStats == null) {
-                continue;             // Skip areas we can't evaluate.
-            }
-            System.out.println("  "+m+": "+newStats.variance);
-        }
-
-        axis = new Vector3f(0, -1, 0);    // Then yaw.
-        System.out.println("Axis: "+axis);
-        for (int m=-10; m <= 10; m++) {
-            ObservationStats newStats = EarthShape.varianceOfAdjustedSquare(s, axis,
-                this.adjustOrientationDegrees * m);
-            if (newStats == null) {
-                continue;             // Skip areas we can't evaluate.
-            }
-            System.out.println("  "+m+": "+newStats.variance);
-        }
-
-        (new RotationCubeDialog(this, firstRoll, lastRoll, rollData)).exec();
+        return new PlotData1D(xFirst, xLast, yData);
     }
 
     /** Make this window visible. */

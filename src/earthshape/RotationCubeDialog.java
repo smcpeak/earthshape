@@ -18,24 +18,19 @@ public class RotationCubeDialog extends ModalDialog {
     /** AWT boilerplate generated ID. */
     private static final long serialVersionUID = 4473449078815404630L;
 
-    public RotationCubeDialog(JFrame parent, float xFirst, float xLast, float[] yData)
+    public RotationCubeDialog(JFrame parent,
+        PlotData1D rollPlotData,
+        PlotData1D pitchPlotData,
+        PlotData1D yawPlotData)
     {
         super(parent, "Rotation Cube");
 
         VBox vb = new VBox();
         vb.strut();
 
-        {
-            HBox hb = new HBox();
-            hb.add(new JLabel("Roll angle degrees:"));
-            hb.glue();
-            vb.add(hb);
-        }
-        vb.strut();
-
-        vb.add(new PlotPanel1D(new PlotData1D(xFirst, xLast, yData)));
-
-        vb.strut();
+        this.addPlot1D(vb, "roll", rollPlotData);
+        this.addPlot1D(vb, "pitch", pitchPlotData);
+        this.addPlot1D(vb, "yaw", yawPlotData);
 
         HBox hb3 = new HBox();
         {
@@ -55,6 +50,20 @@ public class RotationCubeDialog extends ModalDialog {
 
         this.pack();
         this.setLocationByPlatform(true);
+    }
+
+    /** Construct widgets to show 'plotData'. */
+    private void addPlot1D(VBox vb, String axisDescription, PlotData1D plotData)
+    {
+        {
+            HBox hb = new HBox();
+            hb.add(new JLabel("Variance versus "+axisDescription+" angle degrees:"));
+            hb.glue();
+            vb.add(hb);
+        }
+
+        vb.add(new PlotPanel1D(plotData));
+        vb.strut();
     }
 }
 

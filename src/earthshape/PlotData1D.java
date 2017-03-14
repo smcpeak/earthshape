@@ -109,18 +109,44 @@ public class PlotData1D {
         this.computeYTickSpacing();
     }
 
+    /** Compute a good major tick space for the given range of values. */
+    private static double majorTickSpace(float max, float min)
+    {
+        double range = max - min;
+        double space = Math.pow(10.0, Math.floor(Math.log10(range)));
+        if (range / space < 2.0) {
+            // The range we would choose might only have one label
+            // in it, so go cut it in half.
+            space = space / 2.0;
+        }
+        return space;
+    }
+
+    /** Compute a good minor tick space for the given range and major
+      * tick spacing. */
+    private static double minorTickSpace(float max, float min, double major)
+    {
+        double range = max - min;
+        double minor = major / 10.0;
+        if (range / minor > 70.0) {
+            // That's too many ticks; reduce by a factor of 5.
+            minor = major / 2.0;
+        }
+        return minor;
+    }
+
     public void computeXTickSpacing()
     {
-        double xRange = (this.xMax - this.xMin);
-        this.xMajorTickSpace = Math.pow(10, Math.floor(Math.log10(xRange)));
-        this.xMinorTickSpace = this.xMajorTickSpace / 10.0f;
+        this.xMajorTickSpace = PlotData1D.majorTickSpace(this.xMax, this.xMin);
+        this.xMinorTickSpace = PlotData1D.minorTickSpace(this.xMax, this.xMin,
+            this.xMajorTickSpace);
     }
 
     public void computeYTickSpacing()
     {
-        double yRange = (this.yMax - this.yMin);
-        this.yMajorTickSpace = Math.pow(10, Math.floor(Math.log10(yRange)));
-        this.yMinorTickSpace = this.yMajorTickSpace / 10.0f;
+        this.yMajorTickSpace = PlotData1D.majorTickSpace(this.yMax, this.yMin);
+        this.yMinorTickSpace = PlotData1D.minorTickSpace(this.yMax, this.yMin,
+            this.yMajorTickSpace);
     }
 }
 
