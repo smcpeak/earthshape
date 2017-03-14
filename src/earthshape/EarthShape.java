@@ -4,6 +4,7 @@
 package earthshape;
 
 import java.awt.BorderLayout;
+import java.awt.Cursor;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.InputEvent;
@@ -1548,8 +1549,15 @@ public class EarthShape
             return;
         }
 
+        // The computation can take a while, so show a wait cursor.
+        Cursor prevCursor = this.emCanvas.getCursor();
+        this.emCanvas.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+
         // Consider the effect of rotating various amounts on each axis.
         PlotData3D rollPitchYawPlotData = this.getThreeRotationAxisPlotData(s);
+
+        // Restore the cursor.
+        this.emCanvas.setCursor(prevCursor);
 
         // Plot them.
         RotationCubeDialog d = new RotationCubeDialog(this,
@@ -1561,31 +1569,43 @@ public class EarthShape
     /** Get data for various rotation angles of all three axes. */
     private PlotData3D getThreeRotationAxisPlotData(SurfaceSquare s)
     {
-        float[] wData = new float[21 * 21 * 21];
+        // Number of data points on each side of 0.
+        int pointsPerSide = 10;
+
+        // Total number of data points per axis, including 0.
+        int pointsPerAxis = pointsPerSide * 2 + 1;
+
+        float[] wData = new float[pointsPerAxis * pointsPerAxis * pointsPerAxis];
 
         Vector3f xAxis = new Vector3f(0, 0, -1);    // Roll
         Vector3f yAxis = new Vector3f(1, 0, 0);     // Pitch
         Vector3f zAxis = new Vector3f(0, -1, 0);    // Yaw
 
-        float xFirst = -10 * this.adjustOrientationDegrees;
-        float xLast = 10 * this.adjustOrientationDegrees;
-        float yFirst = -10 * this.adjustOrientationDegrees;
-        float yLast = 10 * this.adjustOrientationDegrees;
-        float zFirst = -10 * this.adjustOrientationDegrees;
-        float zLast = 10 * this.adjustOrientationDegrees;
+        float xFirst = -pointsPerSide * this.adjustOrientationDegrees;
+        float xLast = pointsPerSide * this.adjustOrientationDegrees;
+        float yFirst = -pointsPerSide * this.adjustOrientationDegrees;
+        float yLast = pointsPerSide * this.adjustOrientationDegrees;
+        float zFirst = -pointsPerSide * this.adjustOrientationDegrees;
+        float zLast = pointsPerSide * this.adjustOrientationDegrees;
 
-        for (int zIndex=0; zIndex <= 20; zIndex++) {
-            for (int yIndex=0; yIndex <= 20; yIndex++) {
-                for (int xIndex=0; xIndex <= 20; xIndex++) {
+        for (int zIndex=0; zIndex < pointsPerAxis; zIndex++) {
+            for (int yIndex=0; yIndex < pointsPerAxis; yIndex++) {
+                for (int xIndex=0; xIndex < pointsPerAxis; xIndex++) {
                     // Compose rotations about each axis: X then Y then Z.
-                    Vector3f rotX = xAxis.times(this.adjustOrientationDegrees * (xIndex - 10));
-                    Vector3f rotY = yAxis.times(this.adjustOrientationDegrees * (yIndex - 10));
-                    Vector3f rotZ = zAxis.times(this.adjustOrientationDegrees * (zIndex - 10));
+                    //
+                    // Note: Rotations don't commute, so the axes are not
+                    // being treated perfectly symmetrically here, but this
+                    // is still good for showing overall shape, and when
+                    // we zoom in to small angles, the non-commutativity
+                    // becomes insignificant.
+                    Vector3f rotX = xAxis.times(this.adjustOrientationDegrees * (xIndex - pointsPerSide));
+                    Vector3f rotY = yAxis.times(this.adjustOrientationDegrees * (yIndex - pointsPerSide));
+                    Vector3f rotZ = zAxis.times(this.adjustOrientationDegrees * (zIndex - pointsPerSide));
                     Vector3f rot = Vector3f.composeRotations(
                         Vector3f.composeRotations(rotX, rotY), rotZ);
 
                     // Get variance after that adjustment.
-                    wData[xIndex + 21 * yIndex + 21 * 21 * zIndex] =
+                    wData[xIndex + pointsPerAxis * yIndex + pointsPerAxis * pointsPerAxis * zIndex] =
                         EarthShape.varianceOfAdjustedSquare(s, rot);
                 }
             }
@@ -1595,8 +1615,8 @@ public class EarthShape
             xFirst, xLast,
             yFirst, yLast,
             zFirst, zLast,
-            21 /*xValuesPerRow*/,
-            21 /*yValuesPerColumn*/,
+            pointsPerAxis /*xValuesPerRow*/,
+            pointsPerAxis /*yValuesPerColumn*/,
             wData);
     }
 
