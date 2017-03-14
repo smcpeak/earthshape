@@ -87,6 +87,7 @@ public class RotationCubeDialog extends ModalDialog implements ItemListener {
                 VBox col = new VBox();
 
                 this.rollPlotPanel = this.addPlot1D(col, "roll", this.rollPlotData);
+                this.rollPlotPanel.setSelectedXIndex(this.currentXIndex);
                 this.rollPlotPanel.addItemListener(this);
 
                 this.pitchPlotPanel = this.addPlot1D(col, "pitch", this.pitchPlotData);
@@ -101,7 +102,8 @@ public class RotationCubeDialog extends ModalDialog implements ItemListener {
             {
                 VBox col = new VBox();
                 this.pitchYawPlotPanel =
-                    this.addPlot2D(col, "pitch and yaw", this.pitchYawPlotData);
+                    this.addPlot2D(col, "pitch (horizontal) and yaw (vertical)",
+                        this.pitchYawPlotData);
                 innerHB.add(col);
             }
 
