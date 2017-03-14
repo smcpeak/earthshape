@@ -186,6 +186,53 @@ public class EarthShape
         this.add(this.emCanvas, BorderLayout.CENTER);
     }
 
+    private void showAboutBox()
+    {
+        String about =
+            "Earth Shape\n"+
+            "Copyright 2017 Scott McPeak\n"+
+            "\n"+
+            "Published under the 2-clause BSD license.\n"+
+            "See copyright.txt for details.\n";
+
+        JOptionPane.showMessageDialog(this, about, "About", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private void showKeyBindings()
+    {
+        String bindings =
+            "Left click in 3D view to enter FPS controls mode.\n"+
+            "Esc - Leave FPS mode.\n"+
+            "W/A/S/D - Move camera horizontally when in FPS mode.\n"+
+            "Space/Z - Move camera up or down in FPS mode.\n"+
+            "Left click on square in FPS mode to make it active.\n"+
+            "\n"+
+            "T - Reconstruct Earth from star data.\n"+
+            "\n"+
+            "C - Toggle compass or Earth texture.\n"+
+            "P - Toggle star rays for active square.\n"+
+            "G - Move camera to active square's center.\n"+
+            "H - Build complete Earth using assumed sphere.\n"+
+            "R - Build Earth using assumed sphere and random walk.\n"+
+            "\n"+
+            "U/O - Roll active square left or right.\n"+
+            "I/K - Pitch active square down or up.\n"+
+            "J/L - Yaw active square left or right.\n"+
+            "-/= - Decrease or increase adjustment amount.\n"+
+            "; (semicolon) - Make recommended active square adjustment.\n"+
+            "/ (slash) - Automatically orient active square.\n"+
+            "\' (apostrophe) - Analyze rotation solution space for active square.\n"+
+            "\n"+
+            "N - Start a new surface.\n"+
+            "M - Add a square adjacent to the active square.\n"+
+            "Ctrl+M - Add a square to the East and automatically adjust it.\n"+
+            ", (comma) - Move to previous active square.\n"+
+            ". (period) - Move to next active square.\n"+
+            "Delete - Delete active square.\n"+
+            "";
+        JOptionPane.showMessageDialog(this, bindings, "Bindings", JOptionPane.INFORMATION_MESSAGE);
+    }
+
     /** Build the menu bar and attach it to 'this'. */
     private void buildMenuBar()
     {
@@ -219,6 +266,8 @@ public class EarthShape
         //   x
         //   y
         //   z - Move camera down
+        //   - - Decrease adjustment amount
+        //   = - Increase adjustment amount
         //   ; - One recommended rotation adjustment
         //   ' - Analyze solution space
         //   , - Select previous square
@@ -235,6 +284,7 @@ public class EarthShape
         menuBar.add(this.buildSelectMenu());
         menuBar.add(this.buildEditMenu());
         menuBar.add(this.buildNavigateMenu());
+        menuBar.add(this.buildHelpMenu());
     }
 
     private JMenu buildFileMenu()
@@ -480,6 +530,24 @@ public class EarthShape
                     }
                 });
         return navigateMenu;
+    }
+
+    private JMenu buildHelpMenu()
+    {
+        JMenu helpMenu = new JMenu("Help");
+        addMenuItem(helpMenu, "Show all key bindings...", null,
+            new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    EarthShape.this.showKeyBindings();
+                }
+            });
+        addMenuItem(helpMenu, "About...", null,
+            new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    EarthShape.this.showAboutBox();
+                }
+            });
+        return helpMenu;
     }
 
     /** Add a menu item to adjust the orientation of the active square. */
