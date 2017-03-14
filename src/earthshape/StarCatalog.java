@@ -103,6 +103,13 @@ public class StarCatalog {
         };
     }
 
+    /** Return the Sun's position in the sky at
+      * 2017-03-05 20:00 -08:00. */
+    public static StarCatalog sunPosition()
+    {
+        return parse("Sun", "23h06m00s", "-06°00'00\"");
+    }
+
     /** Construct a star observation for a given observer time and location.
       *
       * @param unixTime is seconds since 1970-01-01 00:00 GMT.

@@ -79,6 +79,9 @@ public class EarthShape
       * synthetic star observations. */
     private StarCatalog[] starCatalog = StarCatalog.makeCatalog();
 
+    /** Position of the sun on StarObservation.unixTimeOfManualData. */
+    private StarCatalog sunPosition = StarCatalog.sunPosition();
+
     /** Set of stars that are enabled. */
     private LinkedHashMap<String, Boolean> enabledStars = new LinkedHashMap<String, Boolean>();
 
@@ -96,10 +99,15 @@ public class EarthShape
       * only valid after a call to 'setInfoPanel'. */
     private RotationCommand recommendedRotationCommand = null;
 
+    // ---- Options ----
     /** When analyzing the solution space, use this many points of
       * rotation on each side of 0, for each axis.  Note that the
       * algorithm is cubic in this parameter. */
     private int solutionAnalysisPointsPerSide = 20;
+
+    /** If the Sun's elevation is higher than this value, then
+      * we cannot see any stars. */
+    private float maximumSunElevation = -5;
 
     // ---- Widgets ----
     /** Canvas showing the Earth surface built so far. */
@@ -299,6 +307,13 @@ public class EarthShape
                 EarthShape.this.chooseEnabledStars();
             }
         });
+        addMenuItem(fileMenu, "Set maximum Sun elevation...",
+            null,
+            new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    EarthShape.this.setMaximumSunElevation();
+                }
+            });
         addMenuItem(fileMenu, "Exit", null, new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 EarthShape.log("exit menu item invoked");
@@ -1209,6 +1224,15 @@ public class EarthShape
     {
         HashMap<String, Vector3f> ret = new HashMap<String, Vector3f>();
 
+        // Check the position of the Sun.
+        {
+            StarObservation so = this.sunPosition.makeObservation(
+                StarObservation.unixTimeOfManualData, latitude, longitude);
+            if (so.elevation > this.maximumSunElevation) {
+                return ret;
+            }
+        }
+
         // First use any manual data I have.
         for (StarObservation so : starObs) {
             if (so.latitude == latitude &&
@@ -1817,6 +1841,23 @@ public class EarthShape
             }
             catch (NumberFormatException e) {
                 ModalDialog.errorBox(this, "Invalid integer syntax: "+e.getMessage());
+            }
+        }
+    }
+
+    /** Let the user specify a new maximum Sun elevation. */
+    private void setMaximumSunElevation()
+    {
+        String choice = JOptionPane.showInputDialog(this,
+            "Specify maximum elevation of the Sun in degrees "+
+                "above the horizon (otherwise, stars are not visible)",
+            (Float)this.maximumSunElevation);
+        if (choice != null) {
+            try {
+                this.maximumSunElevation = Float.valueOf(choice);
+            }
+            catch (NumberFormatException e) {
+                ModalDialog.errorBox(this, "Invalid float syntax: "+e.getMessage());
             }
         }
     }
