@@ -4,7 +4,8 @@
 package earthshape;
 
 import java.awt.BorderLayout;
-import java.awt.Cursor;
+import java.awt.SecondaryLoop;
+import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.InputEvent;
@@ -24,6 +25,9 @@ import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.KeyStroke;
+import javax.swing.ProgressMonitor;
+import javax.swing.SwingUtilities;
+import javax.swing.SwingWorker;
 
 import com.jogamp.opengl.GLCapabilities;
 
@@ -1616,7 +1620,8 @@ public class EarthShape
         this.automaticallyOrientActiveSquare();
     }
 
-    /** Show the user what the local rotation space looks like. */
+    /** Show the user what the local rotation space looks like by.
+      * considering the effect of rotating various amounts on each axis. */
     private void analyzeSolutionSpace()
     {
         if (this.activeSquare == null) {
@@ -1631,15 +1636,43 @@ public class EarthShape
             return;
         }
 
-        // The computation can take a while, so show a wait cursor.
-        Cursor prevCursor = this.emCanvas.getCursor();
-        this.emCanvas.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+        // Show a progress dialog while this run.  (Unfortunately,
+        // this dialog is *not* modal, so there is currently nothing
+        // stopping the user from messing with the UI while this is
+        // up, which can lead to strange results.)
+        ProgressMonitor progressMonitor = new ProgressMonitor(this,
+            "Analyzing rotations of active square...", "Starting...", 0, 100);
+        progressMonitor.setProgress(0);
+        progressMonitor.setMillisToDecideToPopup(0);
+        progressMonitor.setMillisToPopup(0);
 
-        // Consider the effect of rotating various amounts on each axis.
-        PlotData3D rollPitchYawPlotData = this.getThreeRotationAxisPlotData(s);
+        // Prepare to pump the event queue.
+        SecondaryLoop secondaryLoop =
+            Toolkit.getDefaultToolkit().getSystemEventQueue().createSecondaryLoop();
 
-        // Restore the cursor.
-        this.emCanvas.setCursor(prevCursor);
+        // Start this in a task thread.
+        AnalysisTask task = new AnalysisTask(this, s, progressMonitor, secondaryLoop);
+        task.execute();
+
+        // Wait for it to complete, but pump the event queue while waiting.
+        if (!secondaryLoop.enter() ||
+            task.isCancelled() ||
+            progressMonitor.isCanceled())
+        {
+            return;
+        }
+        task.progressMonitor.close();
+
+        // Retrieve the computed data.
+        PlotData3D rollPitchYawPlotData;
+        try {
+            rollPitchYawPlotData = task.get();
+        }
+        catch (Exception e) {
+            // No exceptions should not be possible here since I
+            // already waited for completion.
+            return;
+        }
 
         // Plot them.
         RotationCubeDialog d = new RotationCubeDialog(this,
@@ -1648,14 +1681,56 @@ public class EarthShape
         d.exec();
     }
 
-    /** Get data for various rotation angles of all three axes. */
-    private PlotData3D getThreeRotationAxisPlotData(SurfaceSquare s)
+    /** Task to analyze the solution space near a square, which can take a
+      * while if 'solutionAnalysisPointsPerSide' is high. */
+    private static class AnalysisTask extends SwingWorker<PlotData3D, Void> {
+        /** Enclosing EarthShape instance. */
+        private EarthShape earthShape;
+
+        /** Square whose solution will be analyzed. */
+        private SurfaceSquare square;
+
+        /** Progress dialog. */
+        public ProgressMonitor progressMonitor;
+
+        /** Secondary event loop, so we can signal it to stop waiting. */
+        public SecondaryLoop secondaryLoop;
+
+        public AnalysisTask(
+            EarthShape earthShape_,
+            SurfaceSquare square_,
+            ProgressMonitor progressMonitor_,
+            SecondaryLoop secondaryLoop_)
+        {
+            this.earthShape = earthShape_;
+            this.square = square_;
+            this.progressMonitor = progressMonitor_;
+            this.secondaryLoop = secondaryLoop_;
+        }
+
+        @Override
+        protected PlotData3D doInBackground() throws Exception
+        {
+            return this.earthShape.getThreeRotationAxisPlotData(this.square, this);
+        }
+    }
+
+    /** Get data for various rotation angles of all three axes.
+     *
+      * This runs in a worker thread.  However, I haven't bothered
+      * to synchronize access since the user shouldn't be able to
+      * do anything while this is happening (although they can...),
+      * and most of the shared data is immutable. */
+    private PlotData3D getThreeRotationAxisPlotData(SurfaceSquare s, AnalysisTask task)
     {
         // Number of data points on each side of 0.
         int pointsPerSide = this.solutionAnalysisPointsPerSide;
 
         // Total number of data points per axis, including 0.
         int pointsPerAxis = pointsPerSide * 2 + 1;
+
+        // Now we know how to set the progress range.
+        task.progressMonitor.setMaximum(pointsPerAxis+1);
 
         float[] wData = new float[pointsPerAxis * pointsPerAxis * pointsPerAxis];
 
@@ -1671,6 +1746,12 @@ public class EarthShape
         float zLast = pointsPerSide * this.adjustOrientationDegrees;
 
         for (int zIndex=0; zIndex < pointsPerAxis; zIndex++) {
+            if (task.progressMonitor.isCanceled()) {
+                return null;     // Bail out.
+            }
+            task.progressMonitor.setProgress(zIndex);
+            task.progressMonitor.setNote("Analyzing plane "+(zIndex+1)+" of "+pointsPerAxis);
+
             for (int yIndex=0; yIndex < pointsPerAxis; yIndex++) {
                 for (int xIndex=0; xIndex < pointsPerAxis; xIndex++) {
                     // Compose rotations about each axis: X then Y then Z.
@@ -1692,6 +1773,8 @@ public class EarthShape
                 }
             }
         }
+
+        task.secondaryLoop.exit();
 
         return new PlotData3D(
             xFirst, xLast,
@@ -1717,7 +1800,7 @@ public class EarthShape
                     ModalDialog.errorBox(this, "The minimum number of points is 1.");
                 }
                 else if (c > 100) {
-                    // At 100, it will take several minutes to complete.
+                    // At 100, it will take about a minute to complete.
                     ModalDialog.errorBox(this, "The maximum number of points is 100.");
                 }
                 else {
@@ -1744,7 +1827,11 @@ public class EarthShape
 
     public static void main(String[] args)
     {
-        (new EarthShape()).makeVisible();
+        SwingUtilities.invokeLater(new Runnable() {
+            public void run() {
+                (new EarthShape()).makeVisible();
+            }
+        });
     }
 
     /** Toggle the 'drawCompasses' flag, then update state and redraw. */
