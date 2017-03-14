@@ -18,7 +18,7 @@ public class RotationCubeDialog extends ModalDialog {
     /** AWT boilerplate generated ID. */
     private static final long serialVersionUID = 4473449078815404630L;
 
-    public RotationCubeDialog(JFrame parent, float[] data)
+    public RotationCubeDialog(JFrame parent, float xFirst, float xLast, float[] yData)
     {
         super(parent, "Rotation Cube");
 
@@ -33,7 +33,7 @@ public class RotationCubeDialog extends ModalDialog {
         }
         vb.strut();
 
-        vb.add(new PlotPanel1D(new PlotData1D(data)));
+        vb.add(new PlotPanel1D(new PlotData1D(xFirst, xLast, yData)));
 
         vb.strut();
 

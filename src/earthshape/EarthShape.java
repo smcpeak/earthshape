@@ -1537,6 +1537,8 @@ public class EarthShape
         // Consider the effect of rotating various amounts on each axis.
         Vector3f axis = new Vector3f(0, 0, -1);    // Start with roll.
         float[] rollData = new float[21];
+        float firstRoll = -10 * this.adjustOrientationDegrees;
+        float lastRoll = 10 * this.adjustOrientationDegrees;
         System.out.println("Axis: "+axis);
         for (int m=-10; m <= 10; m++) {
             ObservationStats newStats = EarthShape.varianceOfAdjustedSquare(s, axis,
@@ -1570,7 +1572,7 @@ public class EarthShape
             System.out.println("  "+m+": "+newStats.variance);
         }
 
-        (new RotationCubeDialog(this, rollData)).exec();
+        (new RotationCubeDialog(this, firstRoll, lastRoll, rollData)).exec();
     }
 
     /** Make this window visible. */
