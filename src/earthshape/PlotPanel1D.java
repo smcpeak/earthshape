@@ -17,7 +17,7 @@ public class PlotPanel1D extends JPanel {
     private static final long serialVersionUID = -6657389271092560523L;
 
     /** Pixels between left edge of panel and left edge of main plot area. */
-    private static final int LEFT_MARGIN = 50;
+    private static final int LEFT_MARGIN = 70;
 
     /** Pixels between right edge of panel and right edge of main plot area. */
     private static final int RIGHT_MARGIN = 20;
@@ -126,7 +126,11 @@ public class PlotPanel1D extends JPanel {
                 g.drawLine(px, this.plotBottom(),
                            px, this.plotBottom() + tickLength);
                 if (labels) {
-                    String label = ""+x;
+                    String label = String.format("%.3g", x);
+                    if (Math.abs(x) < tickSpace/5) {
+                        // This is really 0.
+                        label = "0";
+                    }
                     Rectangle2D rect = g.getFontMetrics().getStringBounds(label, g);
 
                     int dx = (int)(px - rect.getWidth()/2 - rect.getX());
@@ -151,7 +155,11 @@ public class PlotPanel1D extends JPanel {
                 g.drawLine(this.plotLeft() - tickLength, py,
                            this.plotLeft(), py);
                 if (labels) {
-                    String label = ""+y;
+                    String label = String.format("%.3g", y);
+                    if (Math.abs(y) < tickSpace/5) {
+                        // This is really 0.
+                        label = "0";
+                    }
                     Rectangle2D rect = g.getFontMetrics().getStringBounds(label, g);
 
                     int dx = (int)(this.plotLeft() - tickLength - Y_AXIS_LABEL_PADDING

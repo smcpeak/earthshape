@@ -1544,7 +1544,7 @@ public class EarthShape
 
         ObservationStats ostats = EarthShape.fitOfObservations(s);
         if (ostats == null) {
-            ModalDialog.errorBox(this, "No observation stats for the active square.");
+            ModalDialog.errorBox(this, "No observation fitness stats for the active square.");
             return;
         }
 

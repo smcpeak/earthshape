@@ -27,7 +27,7 @@ public class PlotPanel2D extends PlotPanel1D {
     {
         super(plotData_);
 
-        this.setPreferredSize(new Dimension(400, 400));
+        this.setPreferredSize(new Dimension(600, 600));
         this.setBackground(Color.WHITE);
 
         this.plotData = plotData_;
