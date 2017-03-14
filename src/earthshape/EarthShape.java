@@ -99,7 +99,7 @@ public class EarthShape
     /** When analyzing the solution space, use this many points of
       * rotation on each side of 0, for each axis.  Note that the
       * algorithm is cubic in this parameter. */
-    private int solutionAnalysisPointsPerSide = 10;
+    private int solutionAnalysisPointsPerSide = 20;
 
     // ---- Widgets ----
     /** Canvas showing the Earth surface built so far. */

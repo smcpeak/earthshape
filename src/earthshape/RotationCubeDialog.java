@@ -74,7 +74,7 @@ public class RotationCubeDialog extends ModalDialog implements ItemListener {
 
         {
             HBox hb = new HBox();
-            hb.add(new JLabel("Current variance: "+currentVariance));
+            hb.add(new JLabel("Current variance: "+currentVariance+" degrees^2"));
             hb.glue();
             vb.add(hb);
         }
