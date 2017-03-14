@@ -22,7 +22,8 @@ public class RotationCubeDialog extends ModalDialog {
         float currentVariance,
         PlotData1D rollPlotData,
         PlotData1D pitchPlotData,
-        PlotData1D yawPlotData)
+        PlotData1D yawPlotData,
+        PlotData2D pitchYawPlotData)
     {
         super(parent, "Rotation Cube");
 
@@ -37,9 +38,27 @@ public class RotationCubeDialog extends ModalDialog {
         }
         vb.strut();
 
-        this.addPlot1D(vb, "roll", rollPlotData);
-        this.addPlot1D(vb, "pitch", pitchPlotData);
-        this.addPlot1D(vb, "yaw", yawPlotData);
+        {
+            HBox innerHB = new HBox();
+
+            {
+                VBox col = new VBox();
+                this.addPlot1D(col, "roll", rollPlotData);
+                this.addPlot1D(col, "pitch", pitchPlotData);
+                this.addPlot1D(col, "yaw", yawPlotData);
+                innerHB.add(col);
+            }
+
+            innerHB.strut();
+
+            {
+                VBox col = new VBox();
+                this.addPlot2D(col, "pitch and yaw", pitchYawPlotData);
+                innerHB.add(col);
+            }
+
+            vb.add(innerHB);
+        }
 
         HBox hb3 = new HBox();
         {
@@ -61,7 +80,7 @@ public class RotationCubeDialog extends ModalDialog {
         this.setLocationByPlatform(true);
     }
 
-    /** Construct widgets to show 'plotData'. */
+    /** Construct widgets to show 1D 'plotData'. */
     private void addPlot1D(VBox vb, String axisDescription, PlotData1D plotData)
     {
         {
@@ -72,6 +91,20 @@ public class RotationCubeDialog extends ModalDialog {
         }
 
         vb.add(new PlotPanel1D(plotData));
+        vb.strut();
+    }
+
+    /** Construct widgets to show 2D 'plotData'. */
+    private void addPlot2D(VBox vb, String axesDescription, PlotData2D plotData)
+    {
+        {
+            HBox hb = new HBox();
+            hb.add(new JLabel("Variance versus "+axesDescription+" angle degrees:"));
+            hb.glue();
+            vb.add(hb);
+        }
+
+        vb.add(new PlotPanel2D(plotData));
         vb.strut();
     }
 }

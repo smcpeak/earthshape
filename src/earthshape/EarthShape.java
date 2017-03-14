@@ -1183,7 +1183,7 @@ public class EarthShape
         return worldRay;
     }
 
-    /** Hold results of call to 'varianceOfObservations'. */
+    /** Hold results of call to 'fitOfObservations'. */
     private static class ObservationStats {
         /** The total variance in star observation locations from the
           * indicated square to the observations of its base square as the
@@ -1209,7 +1209,7 @@ public class EarthShape
 
     /** Calculate variance and maximum separation for 'square'.  Returns
       * null if there is no base or there are no observations in common. */
-    private static ObservationStats varianceOfObservations(SurfaceSquare square)
+    private static ObservationStats fitOfObservations(SurfaceSquare square)
     {
         if (square.baseSquare == null) {
             return null;
@@ -1382,17 +1382,16 @@ public class EarthShape
 
     /** Calculate what the variation of observations would be for
       * 'derived' if its orientation were adjusted by
-      * 'angleDegrees' around 'axis'.  Returns null if
+      * 'angleAxis.degrees()' around 'angleAxis'.  Returns null if
       * the calculation cannot be done because of missing information. */
-    private static ObservationStats varianceOfAdjustedSquare(
-        SurfaceSquare derived, Vector3f axis, float angleDegrees)
+    private static ObservationStats fitOfAdjustedSquare(
+        SurfaceSquare derived, Vector3f angleAxis)
     {
         // This part mirrors 'adjustActiveSquareOrientation'.
         SurfaceSquare base = derived.baseSquare;
         if (base == null) {
             return null;
         }
-        Vector3f angleAxis = axis.times(angleDegrees);
         angleAxis = angleAxis.rotateAA(derived.rotationFromNominal);
         angleAxis = Vector3f.composeRotations(derived.rotationFromBase, angleAxis);
 
@@ -1402,7 +1401,7 @@ public class EarthShape
                 derived.latitude, derived.longitude, angleAxis);
         if (newSquare == null) {
             // If we do not move, use the original square's data.
-            return EarthShape.varianceOfObservations(derived);
+            return EarthShape.fitOfObservations(derived);
         }
 
         // Copy the observation data since that is needed to calculate
@@ -1410,8 +1409,25 @@ public class EarthShape
         newSquare.starObs = derived.starObs;
 
         // Now calculate the new variance.
-        return EarthShape.varianceOfObservations(newSquare);
+        return EarthShape.fitOfObservations(newSquare);
     }
+
+    /** Like 'fitOfAdjustedSquare' except only retrieves the
+      * variance.  This returns 40000 if the data is unavailable. */
+    private static float varianceOfAdjustedSquare(
+        SurfaceSquare derived, Vector3f angleAxis)
+    {
+        ObservationStats os = EarthShape.fitOfAdjustedSquare(derived, angleAxis);
+        if (os == null) {
+            // The variance should never be greater than 180 squared,
+            // since that would be the worst possible fit for a star.
+            return 40000;
+        }
+        else {
+            return os.variance;
+        }
+    }
+
 
     /** Change 'adjustOrientationDegrees' by the given multiplier. */
     private void changeAdjustOrientationDegrees(float multiplier)
@@ -1432,7 +1448,7 @@ public class EarthShape
             ModalDialog.errorBox(this, "No active square.");
             return;
         }
-        ObservationStats ostats = EarthShape.varianceOfObservations(s);
+        ObservationStats ostats = EarthShape.fitOfObservations(s);
         if (ostats == null) {
             ModalDialog.errorBox(this, "Not enough observational data available.");
             return;
@@ -1526,7 +1542,7 @@ public class EarthShape
         }
         SurfaceSquare s = this.activeSquare;
 
-        ObservationStats ostats = EarthShape.varianceOfObservations(s);
+        ObservationStats ostats = EarthShape.fitOfObservations(s);
         if (ostats == null) {
             ModalDialog.errorBox(this, "No observation stats for the active square.");
             return;
@@ -1536,30 +1552,59 @@ public class EarthShape
         PlotData1D rollPlotData = this.getRotationAxisPlotData(s, new Vector3f(0, 0, -1));
         PlotData1D pitchPlotData = this.getRotationAxisPlotData(s, new Vector3f(1, 0, 0));
         PlotData1D yawPlotData = this.getRotationAxisPlotData(s, new Vector3f(0, -1, 0));
+        PlotData2D pitchYawPlotData = this.getTwoRotationAxisPlotData(s,
+            new Vector3f(1, 0, 0), new Vector3f(0, -1, 0));
 
         // Plot them.
         RotationCubeDialog d = new RotationCubeDialog(this,
             ostats.variance,
             rollPlotData,
             pitchPlotData,
-            yawPlotData);
+            yawPlotData,
+            pitchYawPlotData);
         d.exec();
     }
 
+    /** Get plottable data for various rotation angles of one axis. */
     private PlotData1D getRotationAxisPlotData(SurfaceSquare s, Vector3f axis)
     {
         float[] yData = new float[21];
         float xFirst = -10 * this.adjustOrientationDegrees;
         float xLast = 10 * this.adjustOrientationDegrees;
         for (int m=-10; m <= 10; m++) {
-            ObservationStats newStats = EarthShape.varianceOfAdjustedSquare(s, axis,
-                this.adjustOrientationDegrees * m);
+            ObservationStats newStats = EarthShape.fitOfAdjustedSquare(s,
+                axis.times(this.adjustOrientationDegrees * m));
             if (newStats == null) {
                 continue;             // Skip areas we can't evaluate.
             }
             yData[m+10] = newStats.variance;
         }
         return new PlotData1D(xFirst, xLast, yData);
+    }
+
+    /** Get plottable data for various rotation angles of two axes. */
+    private PlotData2D getTwoRotationAxisPlotData(SurfaceSquare s, Vector3f axis1, Vector3f axis2)
+    {
+        float[] zData = new float[21 * 21];
+
+        float xFirst = -10 * this.adjustOrientationDegrees;
+        float xLast = 10 * this.adjustOrientationDegrees;
+        float yFirst = -10 * this.adjustOrientationDegrees;
+        float yLast = 10 * this.adjustOrientationDegrees;
+
+        for (int yIndex=0; yIndex <= 20; yIndex++) {
+            for (int xIndex=0; xIndex <= 20; xIndex++) {
+                // Compose rotations about each axis, X then Y.
+                Vector3f rotX = axis1.times(this.adjustOrientationDegrees * (xIndex - 10));
+                Vector3f rotY = axis2.times(this.adjustOrientationDegrees * (yIndex - 10));
+                Vector3f rot = Vector3f.composeRotations(rotX, rotY);
+
+                // Get variance after that adjustment
+                zData[xIndex + 21 * yIndex] = EarthShape.varianceOfAdjustedSquare(s, rot);
+            }
+        }
+
+        return new PlotData2D(xFirst, xLast, yFirst, yLast, 21 /*xValuesPerRow*/, zData);
     }
 
     /** Make this window visible. */
@@ -1686,7 +1731,7 @@ public class EarthShape
             sb.append("  roty: "+s.rotationFromNominal.y()+"\n");
             sb.append("  rotz: "+s.rotationFromNominal.z()+"\n");
 
-            ObservationStats ostats = EarthShape.varianceOfObservations(s);
+            ObservationStats ostats = EarthShape.fitOfObservations(s);
             if (ostats == null) {
                 sb.append("  No obs stats\n");
             }
@@ -1708,8 +1753,8 @@ public class EarthShape
                 sb.append("\n");
                 for (RotationCommand rc : RotationCommand.values()) {
                     sb.append("  adj("+rc.key+"): ");
-                    ObservationStats newStats = EarthShape.varianceOfAdjustedSquare(s, rc.axis,
-                        this.adjustOrientationDegrees);
+                    ObservationStats newStats = EarthShape.fitOfAdjustedSquare(s,
+                        rc.axis.times(this.adjustOrientationDegrees));
                     if (newStats == null) {
                         sb.append("(none)\n");
                     }

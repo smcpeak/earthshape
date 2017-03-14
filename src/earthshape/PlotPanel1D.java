@@ -56,44 +56,44 @@ public class PlotPanel1D extends JPanel {
     }
 
     /** X pixel coordinate of the left of the main plot area. */
-    private int plotLeft()
+    protected int plotLeft()
     {
         return LEFT_MARGIN;
     }
 
     /** X pixel coordinate of the right of the main plot area. */
-    private int plotRight()
+    protected int plotRight()
     {
         return this.getWidth()-1 - RIGHT_MARGIN;
     }
 
     /** Main plot area width. */
-    private int plotWidth()
+    protected int plotWidth()
     {
         return plotRight() - plotLeft();
     }
 
     /** Y pixel coordinate of the top of the main plot area. */
-    private int plotTop()
+    protected int plotTop()
     {
         return TOP_MARGIN;
     }
 
     /** Y pixel coordinate of the bottom of the main plot area. */
-    private int plotBottom()
+    protected int plotBottom()
     {
         return this.getHeight()-1 - BOTTOM_MARGIN;
     }
 
     /** Main plot area height. */
-    private int plotHeight()
+    protected int plotHeight()
     {
         return plotBottom() - plotTop();
     }
 
     /** The X coordinate, in pixels from the top of the panel,
       * at which to draw data value 'x'. */
-    private int plotX(double x)
+    protected int plotX(double x)
     {
         // Distance from left of plot area as a fraction of
         // the total plot width.
@@ -105,7 +105,7 @@ public class PlotPanel1D extends JPanel {
 
     /** The Y coordinate, in pixels from the top of the panel,
       * at which to draw data value 'y'. */
-    private int plotY(double y)
+    protected int plotY(double y)
     {
         // Distance from bottom of plot area as a fraction of
         // the total plot height.
@@ -117,7 +117,7 @@ public class PlotPanel1D extends JPanel {
 
     /** Draw tick marks and labels along the X axis every 'tickSpace'
       * units.  Only draw labels if 'labels' is true. */
-    private void drawXAxisLabels(Graphics g, double tickSpace, int tickLength, boolean labels)
+    protected void drawXAxisLabels(Graphics g, double tickSpace, int tickLength, boolean labels)
     {
         if (tickSpace > 0) {
             double x = Math.floor(this.plotData.xMax / tickSpace) * tickSpace;
@@ -142,19 +142,19 @@ public class PlotPanel1D extends JPanel {
 
     /** Draw tick marks and labels along the Y axis every 'tickSpace'
       * units.  Only draw labels if 'labels' is true. */
-    private void drawYAxisLabels(Graphics g, double tickSpace, int tickLength, boolean labels)
+    protected void drawYAxisLabels(Graphics g, double tickSpace, int tickLength, boolean labels)
     {
         if (tickSpace > 0) {
             double y = Math.floor(this.plotData.yMax / tickSpace) * tickSpace;
             while (y >= this.plotData.yMin) {
                 int py = plotY(y);
-                g.drawLine(LEFT_MARGIN - tickLength, py,
-                           LEFT_MARGIN, py);
+                g.drawLine(this.plotLeft() - tickLength, py,
+                           this.plotLeft(), py);
                 if (labels) {
                     String label = ""+y;
                     Rectangle2D rect = g.getFontMetrics().getStringBounds(label, g);
 
-                    int dx = (int)(LEFT_MARGIN - tickLength - Y_AXIS_LABEL_PADDING
+                    int dx = (int)(this.plotLeft() - tickLength - Y_AXIS_LABEL_PADDING
                                      - rect.getWidth() - rect.getX());
                     int dy = (int)(py - rect.getHeight()/2 - rect.getY());
 
@@ -163,6 +163,35 @@ public class PlotPanel1D extends JPanel {
                 y -= tickSpace;
             }
         }
+    }
+
+    /** Check that the data value ranges in 'plotData' are
+      * acceptable.  If not, draw a message and return false. */
+    protected boolean checkDataRanges(Graphics g)
+    {
+        if (this.plotData.xMax <= this.plotData.xMin) {
+            g.drawString("X axis range is degenerate.", 20, 20);
+            return false;
+        }
+
+        if (this.plotData.yMax <= this.plotData.yMin) {
+            g.drawString("Y axis range is degenerate.", 20, 20);
+            return false;
+        }
+
+        return true;
+    }
+
+    protected void drawBorderAndAxes(Graphics g)
+    {
+        // Draw axis ticks and labels.
+        this.drawXAxisLabels(g, this.plotData.xMajorTickSpace, MAJOR_TICK_LENGTH, true /*labels*/);
+        this.drawXAxisLabels(g, this.plotData.xMinorTickSpace, MINOR_TICK_LENGTH, false /*labels*/);
+        this.drawYAxisLabels(g, this.plotData.yMajorTickSpace, MAJOR_TICK_LENGTH, true /*labels*/);
+        this.drawYAxisLabels(g, this.plotData.yMinorTickSpace, MINOR_TICK_LENGTH, false /*labels*/);
+
+        // Border around main plot area.
+        g.drawRect(this.plotLeft(), this.plotTop(), this.plotWidth(), this.plotHeight());
     }
 
     @Override
@@ -175,19 +204,11 @@ public class PlotPanel1D extends JPanel {
             return;
         }
 
-        if (this.plotData.yMax <= this.plotData.yMin) {
-            g.drawString("Y axis range is degenerate.", 20, 20);
+        if (!this.checkDataRanges(g)) {
             return;
         }
 
-        // Draw axis ticks and labels.
-        this.drawXAxisLabels(g, this.plotData.xMajorTickSpace, MAJOR_TICK_LENGTH, true /*labels*/);
-        this.drawXAxisLabels(g, this.plotData.xMinorTickSpace, MINOR_TICK_LENGTH, false /*labels*/);
-        this.drawYAxisLabels(g, this.plotData.yMajorTickSpace, MAJOR_TICK_LENGTH, true /*labels*/);
-        this.drawYAxisLabels(g, this.plotData.yMinorTickSpace, MINOR_TICK_LENGTH, false /*labels*/);
-
-        // Border around main plot area.
-        g.drawRect(this.plotLeft(), this.plotTop(), this.plotWidth(), this.plotHeight());
+        this.drawBorderAndAxes(g);
 
         // Line segments connecting adjacent pairs of points.
         int prevX = 0;

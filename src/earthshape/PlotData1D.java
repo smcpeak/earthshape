@@ -55,6 +55,10 @@ public class PlotData1D {
     public double yMinorTickSpace;
 
     // ---------- Methods ----------
+    /** This is for use by PlotData2D.  It leaves everything unset. */
+    protected PlotData1D()
+    {}
+
     public PlotData1D(float xFirst_, float xLast_, float[] yValues_)
     {
         this.xFirst = xFirst_;
