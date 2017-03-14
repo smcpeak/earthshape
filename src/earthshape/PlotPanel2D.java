@@ -33,6 +33,13 @@ public class PlotPanel2D extends PlotPanel1D {
         this.plotData = plotData_;
     }
 
+    /** Update the plot data and redraw. */
+    public void setPlotData(PlotData2D plotData_)
+    {
+        this.plotData = plotData_;
+        this.repaint();
+    }
+
     /** The pixel rectangle corresponding to (x,y). */
     private Rectangle plotXY(double x, double y)
     {

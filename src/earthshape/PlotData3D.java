@@ -44,6 +44,14 @@ public class PlotData3D extends PlotData2D {
       * marks are shorter and are not labeled. */
     public double zMinorTickSpace;
 
+    /** Spacing between major tick marks on the W axis.  Major tick
+      * marks are longer and have numeric labels. */
+    public double wMajorTickSpace;
+
+    /** Spacing between minor tick marks on the W axis.  Minor tick
+      * marks are shorter and are not labeled. */
+    public double wMinorTickSpace;
+
     // ---- Logical data hypercube to plot ----
     /** W value that will be mapped to the maximum color brightness,
       * along with all larger W values. */
@@ -115,6 +123,7 @@ public class PlotData3D extends PlotData2D {
         this.computeXTickSpacing();
         this.computeYTickSpacing();
         this.computeZTickSpacing();
+        this.computeWTickSpacing();
     }
 
     public void computeZTickSpacing()
@@ -122,6 +131,13 @@ public class PlotData3D extends PlotData2D {
         this.zMajorTickSpace = PlotData1D.majorTickSpace(this.zMax, this.zMin);
         this.zMinorTickSpace = PlotData1D.minorTickSpace(this.zMax, this.zMin,
             this.zMajorTickSpace);
+    }
+
+    public void computeWTickSpacing()
+    {
+        this.wMajorTickSpace = PlotData1D.majorTickSpace(this.wMax, this.wMin);
+        this.wMinorTickSpace = PlotData1D.minorTickSpace(this.wMax, this.wMin,
+            this.wMajorTickSpace);
     }
 
     /** Compute the Y value for row 'i' of 'zValues'. */
@@ -167,12 +183,16 @@ public class PlotData3D extends PlotData2D {
             slice[xIndex] = wValueForXYZIndex(xIndex, yIndex, zIndex);
         }
 
-        // My X is ret's X.
+        // My X is ret's X, my W is ret's Y.
         PlotData1D ret = new PlotData1D(this.xFirst, this.xLast, slice);
         ret.xMin = this.xMin;
         ret.xMax = this.xMax;
         ret.xMajorTickSpace = this.xMajorTickSpace;
         ret.xMinorTickSpace = this.xMinorTickSpace;
+        ret.yMin = this.wMin;
+        ret.yMax = this.wMax;
+        ret.yMajorTickSpace = this.wMajorTickSpace;
+        ret.yMinorTickSpace = this.wMinorTickSpace;
         return ret;
     }
 
@@ -183,12 +203,16 @@ public class PlotData3D extends PlotData2D {
             slice[yIndex] = wValueForXYZIndex(xIndex, yIndex, zIndex);
         }
 
-        // My Y is ret's X.
+        // My Y is ret's X, my W is ret's Y.
         PlotData1D ret = new PlotData1D(this.yFirst, this.yLast, slice);
         ret.xMin = this.yMin;
         ret.xMax = this.yMax;
         ret.xMajorTickSpace = this.yMajorTickSpace;
         ret.xMinorTickSpace = this.yMinorTickSpace;
+        ret.yMin = this.wMin;
+        ret.yMax = this.wMax;
+        ret.yMajorTickSpace = this.wMajorTickSpace;
+        ret.yMinorTickSpace = this.wMinorTickSpace;
         return ret;
     }
 
@@ -199,12 +223,16 @@ public class PlotData3D extends PlotData2D {
             slice[zIndex] = wValueForXYZIndex(xIndex, yIndex, zIndex);
         }
 
-        // My Z is ret's X.
+        // My Z is ret's X, my W is ret's Y..
         PlotData1D ret = new PlotData1D(this.zFirst, this.zLast, slice);
         ret.xMin = this.zMin;
         ret.xMax = this.zMax;
         ret.xMajorTickSpace = this.zMajorTickSpace;
         ret.xMinorTickSpace = this.zMinorTickSpace;
+        ret.yMin = this.wMin;
+        ret.yMax = this.wMax;
+        ret.yMajorTickSpace = this.wMajorTickSpace;
+        ret.yMinorTickSpace = this.wMinorTickSpace;
         return ret;
     }
 
@@ -218,7 +246,7 @@ public class PlotData3D extends PlotData2D {
             }
         }
 
-        // My Y is ret's X, my Z is ret's Y.
+        // My Y is ret's X, my Z is ret's Y, my W is ret's Z.
         PlotData2D ret = new PlotData2D(
             this.yFirst, this.yLast,
             this.zFirst, this.zLast,
@@ -232,6 +260,9 @@ public class PlotData3D extends PlotData2D {
         ret.yMax = this.zMax;
         ret.yMajorTickSpace = this.zMajorTickSpace;
         ret.yMinorTickSpace = this.zMinorTickSpace;
+        ret.zMin = this.wMin;
+        ret.zMax = this.wMax;
+        // Z does not have ticks in PlotData2D since it uses colors.
         return ret;
     }
 }

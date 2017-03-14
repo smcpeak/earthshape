@@ -18,15 +18,18 @@ import util.swing.VBox;
   * yaw rotation are applied.  That is, this visualizes a function
   * from 3 real inputs to one real output. */
 public class RotationCubeDialog extends ModalDialog implements ItemListener {
+    // ---- Constants ----
     /** AWT boilerplate generated ID. */
     private static final long serialVersionUID = 4473449078815404630L;
 
+    // ---- Core plot data ----
     /** Original 3D cube of data to visualize. */
     private PlotData3D rollPitchYawPlotData;
 
     /** The current X index, from which the slices are derived. */
     private int currentXIndex;
 
+    // ---- Derived slice data ----
     /** Derived 1D slice of roll data. */
     private PlotData1D rollPlotData;
 
@@ -38,6 +41,19 @@ public class RotationCubeDialog extends ModalDialog implements ItemListener {
 
     /** Derived 2D slice of pitch+yaw data. */
     private PlotData2D pitchYawPlotData;
+
+    // ---- Widgets ----
+    /** Panel holding the plot of the roll data. */
+    private PlotPanel1D rollPlotPanel;
+
+    /** Panel holding the plot of the pitch data. */
+    private PlotPanel1D pitchPlotPanel;
+
+    /** Panel holding the plot of the yaw data. */
+    private PlotPanel1D yawPlotPanel;
+
+    /** Panel holding the plot of the pitch+yaw data. */
+    private PlotPanel2D pitchYawPlotPanel;
 
     public RotationCubeDialog(JFrame parent,
         float currentVariance,
@@ -70,11 +86,13 @@ public class RotationCubeDialog extends ModalDialog implements ItemListener {
             {
                 VBox col = new VBox();
 
-                PlotPanel1D rollPanel = this.addPlot1D(col, "roll", this.rollPlotData);
-                rollPanel.addItemListener(this);
+                this.rollPlotPanel = this.addPlot1D(col, "roll", this.rollPlotData);
+                this.rollPlotPanel.addItemListener(this);
 
-                this.addPlot1D(col, "pitch", this.pitchPlotData);
-                this.addPlot1D(col, "yaw", this.yawPlotData);
+                this.pitchPlotPanel = this.addPlot1D(col, "pitch", this.pitchPlotData);
+
+                this.yawPlotPanel = this.addPlot1D(col, "yaw", this.yawPlotData);
+
                 innerHB.add(col);
             }
 
@@ -82,7 +100,8 @@ public class RotationCubeDialog extends ModalDialog implements ItemListener {
 
             {
                 VBox col = new VBox();
-                this.addPlot2D(col, "pitch and yaw", this.pitchYawPlotData);
+                this.pitchYawPlotPanel =
+                    this.addPlot2D(col, "pitch and yaw", this.pitchYawPlotData);
                 innerHB.add(col);
             }
 
@@ -127,7 +146,7 @@ public class RotationCubeDialog extends ModalDialog implements ItemListener {
     }
 
     /** Construct widgets to show 2D 'plotData'. */
-    private void addPlot2D(VBox vb, String axesDescription, PlotData2D plotData)
+    private PlotPanel2D addPlot2D(VBox vb, String axesDescription, PlotData2D plotData)
     {
         {
             HBox hb = new HBox();
@@ -136,8 +155,11 @@ public class RotationCubeDialog extends ModalDialog implements ItemListener {
             vb.add(hb);
         }
 
-        vb.add(new PlotPanel2D(plotData));
+        PlotPanel2D plotPanel = new PlotPanel2D(plotData);
+        vb.add(plotPanel);
         vb.strut();
+
+        return plotPanel;
     }
 
     /** Given the 3D data and the current X index, compute the
@@ -154,12 +176,25 @@ public class RotationCubeDialog extends ModalDialog implements ItemListener {
         this.pitchYawPlotData = this.rollPitchYawPlotData.getYZSlice(this.currentXIndex);
     }
 
+    private void updatePanelData()
+    {
+        // The roll panel's data should never change, even though I
+        // recompute it when I recompute the others.
+
+        this.pitchPlotPanel.setPlotData(this.pitchPlotData);
+        this.yawPlotPanel.setPlotData(this.yawPlotData);
+
+        this.pitchYawPlotPanel.setPlotData(this.pitchYawPlotData);
+    }
+
     @Override
     public void itemStateChanged(ItemEvent e)
     {
         if (e.getStateChange() == ItemEvent.SELECTED) {
-            // TODO: temporary
-            System.out.println("Roll X index changed to: "+e.getItem());
+            this.currentXIndex = this.rollPlotPanel.selectedXIndex.intValue();
+            this.computeSlices();
+            this.updatePanelData();
+            this.repaint();
         }
     }
 }

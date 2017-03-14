@@ -60,7 +60,7 @@ public class PlotPanel1D extends JPanel implements
 
     // ---- Instance data ----
     /** Data and plot options. */
-    private PlotData1D plotData;
+    public PlotData1D plotData;
 
     /** If not null, the user has selected the X value at this
       * index (for some purpose; this panel does not know). */
@@ -82,6 +82,13 @@ public class PlotPanel1D extends JPanel implements
 
         this.addMouseListener(this);
         this.addMouseMotionListener(this);
+    }
+
+    /** Update the data to be plotted and redraw. */
+    public void setPlotData(PlotData1D plotData_)
+    {
+        this.plotData = plotData_;
+        this.repaint();
     }
 
     /** X pixel coordinate of the left of the main plot area. */
