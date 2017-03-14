@@ -13,27 +13,27 @@ import util.FloatUtil;
 public class PlotData1D {
     // ---- Instance data ----
     /** Data points.  The independent variable is the array index. */
-    public float[] data;
+    public float[] yValues;
 
     /** Minimum Y value to plot.  By default, this is a little smaller
       * than the smallest value in 'data'. */
-    public float dataMin;
+    public float yMin;
 
     /** Maximum Y value to plot. */
-    public float dataMax;
+    public float yMax;
 
     /** Spacing between major tick marks on the Y axis.  Major tick
       * marks are longer and have numeric labels. */
-    public double majorYTickSpace;
+    public double yMajorTickSpace;
 
     /** Spacing between minor tick marks on the Y axis.  Minor tick
       * marks are shorter and are not labeled. */
-    public double minorYTickSpace;
+    public double yMinorTickSpace;
 
     // ---- Methods ----
     public PlotData1D(float[] data_)
     {
-        this.data = data_;
+        this.yValues = data_;
         this.computeLimits();
         this.computeTickSpacing();
     }
@@ -43,25 +43,25 @@ public class PlotData1D {
       * invoke this method as well to recompute reasonable limits. */
     public void computeLimits()
     {
-        this.dataMin = FloatUtil.minimumOfArray(this.data);
-        this.dataMax = FloatUtil.maximumOfArray(this.data);
+        this.yMin = FloatUtil.minimumOfArray(this.yValues);
+        this.yMax = FloatUtil.maximumOfArray(this.yValues);
 
         // Expand the ranges to avoid hitting the plot edges.
-        double yRange = this.dataMax - this.dataMin;
+        double yRange = this.yMax - this.yMin;
         if (yRange == 0) {
             yRange = 1;    // Just use something non-zero.
         }
-        this.dataMax += yRange * 0.05f;
-        this.dataMin -= yRange * 0.05f;
+        this.yMax += yRange * 0.05f;
+        this.yMin -= yRange * 0.05f;
     }
 
     /** Compute good tick spacing based on the current limits. */
     public void computeTickSpacing()
     {
         // Decide on a good label spacing.
-        double yRange = (this.dataMax - this.dataMin);
-        this.majorYTickSpace = Math.pow(10, Math.floor(Math.log10(yRange)));
-        this.minorYTickSpace = this.majorYTickSpace / 10.0f;
+        double yRange = (this.yMax - this.yMin);
+        this.yMajorTickSpace = Math.pow(10, Math.floor(Math.log10(yRange)));
+        this.yMinorTickSpace = this.yMajorTickSpace / 10.0f;
     }
 }
 

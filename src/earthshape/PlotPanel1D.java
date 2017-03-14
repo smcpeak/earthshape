@@ -53,7 +53,7 @@ public class PlotPanel1D extends JPanel {
     {
         // Distance from left of plot area as a fraction of
         // the total plot width.
-        double xFraction = (double)x / (double)(this.plotData.data.length - 1);
+        double xFraction = (double)x / (double)(this.plotData.yValues.length - 1);
 
         return LEFT_MARGIN + (int)((this.getWidth() - LEFT_MARGIN) * xFraction);
     }
@@ -64,8 +64,8 @@ public class PlotPanel1D extends JPanel {
     {
         // Distance from bottom of plot area as a fraction of
         // the total plot height.
-        double yFraction = (y - this.plotData.dataMin) /
-                           (this.plotData.dataMax - this.plotData.dataMin);
+        double yFraction = (y - this.plotData.yMin) /
+                           (this.plotData.yMax - this.plotData.yMin);
 
         return (int)((this.getHeight() - 1 - BOTTOM_MARGIN) * (1.0 - yFraction));
     }
@@ -75,8 +75,8 @@ public class PlotPanel1D extends JPanel {
     private void drawYAxisLabels(Graphics g, double tickSpace, int tickLength, boolean labels)
     {
         if (tickSpace > 0) {
-            double y = Math.floor(this.plotData.dataMax / tickSpace) * tickSpace;
-            while (y > this.plotData.dataMin) {
+            double y = Math.floor(this.plotData.yMax / tickSpace) * tickSpace;
+            while (y > this.plotData.yMin) {
                 int py = plotY(y);
                 g.drawLine(LEFT_MARGIN - tickLength, py,
                            LEFT_MARGIN, py);
@@ -100,12 +100,12 @@ public class PlotPanel1D extends JPanel {
     {
         super.paint(g);
 
-        if (this.plotData.data.length < 1) {
+        if (this.plotData.yValues.length < 1) {
             g.drawString("Insufficient data", 20, 20);
             return;
         }
 
-        if (this.plotData.dataMax <= this.plotData.dataMin) {
+        if (this.plotData.yMax <= this.plotData.yMin) {
             g.drawString("Y axis range is degenerate.", 20, 20);
             return;
         }
@@ -117,8 +117,8 @@ public class PlotPanel1D extends JPanel {
         int plotRight = this.getWidth()-1;
 
         // Draw Y axis ticks and labels.
-        this.drawYAxisLabels(g, this.plotData.majorYTickSpace, MAJOR_TICK_LENGTH, true /*labels*/);
-        this.drawYAxisLabels(g, this.plotData.minorYTickSpace, MINOR_TICK_LENGTH, false /*labels*/);
+        this.drawYAxisLabels(g, this.plotData.yMajorTickSpace, MAJOR_TICK_LENGTH, true /*labels*/);
+        this.drawYAxisLabels(g, this.plotData.yMinorTickSpace, MINOR_TICK_LENGTH, false /*labels*/);
 
         // Border.
         g.drawRect(plotLeft, plotTop, plotRight - plotLeft, plotBottom - plotTop);
@@ -126,8 +126,8 @@ public class PlotPanel1D extends JPanel {
         // Line segments connecting adjacent pairs of points.
         int prevX = 0;
         int prevY = 0;
-        for (int x=0; x < this.plotData.data.length; x++) {
-            float y = this.plotData.data[x];
+        for (int x=0; x < this.plotData.yValues.length; x++) {
+            float y = this.plotData.yValues[x];
 
             int px = plotX(x);
             int py = plotY(y);
