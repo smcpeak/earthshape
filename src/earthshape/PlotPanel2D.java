@@ -101,7 +101,24 @@ public class PlotPanel2D extends PlotPanel1D {
             return;
         }
 
-        // Draw a grid of gray boxes of varying intensity.
+        // Draw the boxes first, then the highlights on top of them.
+        this.drawGrid(g, true /*drawBoxes*/, false /*drawHighlights*/);
+        this.drawGrid(g, false /*drawBoxes*/, true /*drawHighlights*/);
+
+        // Draw the border after the grid so it covers the edge pixels.
+        g.setColor(Color.BLACK);
+        this.drawBorderAndAxes(g);
+
+        // Explain the range of Z values.
+        g.drawString("White is "+this.plotData.zMax+
+                     ", black is "+this.plotData.zMin+
+                     ", green is under "+this.plotData.zThreshold+".",
+            5, this.getHeight() - 10);
+    }
+
+    /** Draw a grid of gray boxes of varying intensity, per Z value. */
+    private void drawGrid(Graphics g, boolean drawBoxes, boolean drawHighlights)
+    {
         for (int yIndex=0; yIndex < this.plotData.yValuesPerColumn(); yIndex++) {
             float y = this.plotData.yValueForIndex(yIndex);
             for (int xIndex=0; xIndex < this.plotData.xValuesPerRow; xIndex++) {
@@ -110,23 +127,25 @@ public class PlotPanel2D extends PlotPanel1D {
                 // Location of the grid square.
                 Rectangle r = this.plotXY(x, y);
 
-                // Brightness of its color.
+                // Z value at that location.
                 float z = this.plotData.zValueForXYIndex(xIndex, yIndex);
-                float brightness = this.plotData.zScaledClamped(z);
 
-                // Draw it.
-                g.setColor(new Color(brightness, brightness, brightness));;
-                g.fillRect(r.x, r.y, r.width, r.height);
+                if (drawBoxes) {
+                    // Brightness of its color.
+                    float brightness = this.plotData.zScaledClamped(z);
+
+                    // Draw it.
+                    g.setColor(new Color(brightness, brightness, brightness));;
+                    g.fillRect(r.x, r.y, r.width, r.height);
+                }
+
+                // Possibly highlight it.
+                if (drawHighlights && z < this.plotData.zThreshold) {
+                    g.setColor(Color.GREEN);
+                    g.drawRect(r.x, r.y, r.width, r.height);
+                }
             }
         }
-
-        // Draw the border after the grid so it covers the edge pixels.
-        g.setColor(Color.BLACK);
-        this.drawBorderAndAxes(g);
-
-        // Explain the range of Z values.
-        g.drawString("White is "+this.plotData.zMax+", black is "+this.plotData.zMin+".",
-            5, this.getHeight() - 10);
     }
 }
 

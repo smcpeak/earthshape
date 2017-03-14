@@ -61,6 +61,9 @@ public class PlotData3D extends PlotData2D {
       * along with all smaller W values. */
     public float wMin;
 
+    /** Grid values smaller than this threshold will be highlighted. */
+    public float wThreshold;
+
     // ---------- Methods ----------
     public PlotData3D(
         float xFirst_, float xLast_,
@@ -115,6 +118,9 @@ public class PlotData3D extends PlotData2D {
             this.wMin -= 0.5;
             this.wMax += 0.5;
         }
+
+        // Let's try setting it at 1% of the range.
+        this.wThreshold = this.wMin + (this.wMax - this.wMin) / 100.0f;
     }
 
     @Override
@@ -263,6 +269,7 @@ public class PlotData3D extends PlotData2D {
         ret.zMin = this.wMin;
         ret.zMax = this.wMax;
         // Z does not have ticks in PlotData2D since it uses colors.
+        ret.zThreshold = this.wThreshold;
         return ret;
     }
 }

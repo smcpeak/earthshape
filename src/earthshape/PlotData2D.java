@@ -37,6 +37,9 @@ public class PlotData2D extends PlotData1D {
       * along with all smaller Z values. */
     public float zMin;
 
+    /** Highlight values below this threshold. */
+    public float zThreshold;
+
     // ---------- Methods ----------
     /** This is for use by PlotData3D. */
     protected PlotData2D()
@@ -87,6 +90,8 @@ public class PlotData2D extends PlotData1D {
             this.zMin -= 0.5;
             this.zMax += 0.5;
         }
+
+        this.zThreshold = this.zMin + (this.zMax - this.zMin) / 100.0f;
     }
 
     public int yValuesPerColumn()
