@@ -38,6 +38,10 @@ public class PlotData2D extends PlotData1D {
     public float zMin;
 
     // ---------- Methods ----------
+    /** This is for use by PlotData3D. */
+    protected PlotData2D()
+    {}
+
     public PlotData2D(
         float xFirst_, float xLast_,
         float yFirst_, float yLast_,

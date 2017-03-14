@@ -18,14 +18,37 @@ public class RotationCubeDialog extends ModalDialog {
     /** AWT boilerplate generated ID. */
     private static final long serialVersionUID = 4473449078815404630L;
 
+    /** Original 3D cube of data to visualize. */
+    private PlotData3D rollPitchYawPlotData;
+
+    /** The current X index, from which the slices are derived. */
+    private int currentXIndex;
+
+    /** Derived 1D slice of roll data. */
+    private PlotData1D rollPlotData;
+
+    /** Derived 1D slice of pitch data. */
+    private PlotData1D pitchPlotData;
+
+    /** Derived 1D slice of yaw data. */
+    private PlotData1D yawPlotData;
+
+    /** Derived 2D slice of pitch+yaw data. */
+    private PlotData2D pitchYawPlotData;
+
     public RotationCubeDialog(JFrame parent,
         float currentVariance,
-        PlotData1D rollPlotData,
-        PlotData1D pitchPlotData,
-        PlotData1D yawPlotData,
-        PlotData2D pitchYawPlotData)
+        PlotData3D rollPitchYawPlotData_)
     {
         super(parent, "Rotation Cube");
+
+        this.rollPitchYawPlotData = rollPitchYawPlotData_;
+
+        // The middle index should correspond to 0 rotation, and that is
+        // the slice I want to start with.
+        this.currentXIndex = this.rollPitchYawPlotData.xValuesPerRow / 2;
+
+        this.computeSlices();
 
         VBox vb = new VBox();
         vb.strut();
@@ -43,9 +66,9 @@ public class RotationCubeDialog extends ModalDialog {
 
             {
                 VBox col = new VBox();
-                this.addPlot1D(col, "roll", rollPlotData);
-                this.addPlot1D(col, "pitch", pitchPlotData);
-                this.addPlot1D(col, "yaw", yawPlotData);
+                this.addPlot1D(col, "roll", this.rollPlotData);
+                this.addPlot1D(col, "pitch", this.pitchPlotData);
+                this.addPlot1D(col, "yaw", this.yawPlotData);
                 innerHB.add(col);
             }
 
@@ -53,7 +76,7 @@ public class RotationCubeDialog extends ModalDialog {
 
             {
                 VBox col = new VBox();
-                this.addPlot2D(col, "pitch and yaw", pitchYawPlotData);
+                this.addPlot2D(col, "pitch and yaw", this.pitchYawPlotData);
                 innerHB.add(col);
             }
 
@@ -106,6 +129,20 @@ public class RotationCubeDialog extends ModalDialog {
 
         vb.add(new PlotPanel2D(plotData));
         vb.strut();
+    }
+
+    /** Given the 3D data and the current X index, compute the
+      * various slices of data that the widgets can display. */
+    private void computeSlices()
+    {
+        int midY = this.rollPitchYawPlotData.yValuesPerColumn / 2;
+        int midZ = this.rollPitchYawPlotData.zValuesPerTower() / 2;
+
+        this.rollPlotData = this.rollPitchYawPlotData.getXSlice(midY, midZ);
+        this.pitchPlotData = this.rollPitchYawPlotData.getYSlice(this.currentXIndex, midZ);
+        this.yawPlotData = this.rollPitchYawPlotData.getZSlice(this.currentXIndex, midY);
+
+        this.pitchYawPlotData = this.rollPitchYawPlotData.getYZSlice(this.currentXIndex);
     }
 }
 

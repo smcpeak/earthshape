@@ -114,7 +114,7 @@ public class PlotData1D {
     }
 
     /** Compute a good major tick space for the given range of values. */
-    private static double majorTickSpace(float max, float min)
+    public static double majorTickSpace(float max, float min)
     {
         double range = max - min;
         double space = Math.pow(10.0, Math.floor(Math.log10(range)));
@@ -128,7 +128,7 @@ public class PlotData1D {
 
     /** Compute a good minor tick space for the given range and major
       * tick spacing. */
-    private static double minorTickSpace(float max, float min, double major)
+    public static double minorTickSpace(float max, float min, double major)
     {
         double range = max - min;
         double minor = major / 10.0;

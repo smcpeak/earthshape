@@ -1549,62 +1549,55 @@ public class EarthShape
         }
 
         // Consider the effect of rotating various amounts on each axis.
-        PlotData1D rollPlotData = this.getRotationAxisPlotData(s, new Vector3f(0, 0, -1));
-        PlotData1D pitchPlotData = this.getRotationAxisPlotData(s, new Vector3f(1, 0, 0));
-        PlotData1D yawPlotData = this.getRotationAxisPlotData(s, new Vector3f(0, -1, 0));
-        PlotData2D pitchYawPlotData = this.getTwoRotationAxisPlotData(s,
-            new Vector3f(1, 0, 0), new Vector3f(0, -1, 0));
+        PlotData3D rollPitchYawPlotData = this.getThreeRotationAxisPlotData(s);
 
         // Plot them.
         RotationCubeDialog d = new RotationCubeDialog(this,
             ostats.variance,
-            rollPlotData,
-            pitchPlotData,
-            yawPlotData,
-            pitchYawPlotData);
+            rollPitchYawPlotData);
         d.exec();
     }
 
-    /** Get plottable data for various rotation angles of one axis. */
-    private PlotData1D getRotationAxisPlotData(SurfaceSquare s, Vector3f axis)
+    /** Get data for various rotation angles of all three axes. */
+    private PlotData3D getThreeRotationAxisPlotData(SurfaceSquare s)
     {
-        float[] yData = new float[21];
-        float xFirst = -10 * this.adjustOrientationDegrees;
-        float xLast = 10 * this.adjustOrientationDegrees;
-        for (int m=-10; m <= 10; m++) {
-            ObservationStats newStats = EarthShape.fitOfAdjustedSquare(s,
-                axis.times(this.adjustOrientationDegrees * m));
-            if (newStats == null) {
-                continue;             // Skip areas we can't evaluate.
-            }
-            yData[m+10] = newStats.variance;
-        }
-        return new PlotData1D(xFirst, xLast, yData);
-    }
+        float[] wData = new float[21 * 21 * 21];
 
-    /** Get plottable data for various rotation angles of two axes. */
-    private PlotData2D getTwoRotationAxisPlotData(SurfaceSquare s, Vector3f axis1, Vector3f axis2)
-    {
-        float[] zData = new float[21 * 21];
+        Vector3f xAxis = new Vector3f(0, 0, -1);    // Roll
+        Vector3f yAxis = new Vector3f(1, 0, 0);     // Pitch
+        Vector3f zAxis = new Vector3f(0, -1, 0);    // Yaw
 
         float xFirst = -10 * this.adjustOrientationDegrees;
         float xLast = 10 * this.adjustOrientationDegrees;
         float yFirst = -10 * this.adjustOrientationDegrees;
         float yLast = 10 * this.adjustOrientationDegrees;
+        float zFirst = -10 * this.adjustOrientationDegrees;
+        float zLast = 10 * this.adjustOrientationDegrees;
 
-        for (int yIndex=0; yIndex <= 20; yIndex++) {
-            for (int xIndex=0; xIndex <= 20; xIndex++) {
-                // Compose rotations about each axis, X then Y.
-                Vector3f rotX = axis1.times(this.adjustOrientationDegrees * (xIndex - 10));
-                Vector3f rotY = axis2.times(this.adjustOrientationDegrees * (yIndex - 10));
-                Vector3f rot = Vector3f.composeRotations(rotX, rotY);
+        for (int zIndex=0; zIndex <= 20; zIndex++) {
+            for (int yIndex=0; yIndex <= 20; yIndex++) {
+                for (int xIndex=0; xIndex <= 20; xIndex++) {
+                    // Compose rotations about each axis: X then Y then Z.
+                    Vector3f rotX = xAxis.times(this.adjustOrientationDegrees * (xIndex - 10));
+                    Vector3f rotY = yAxis.times(this.adjustOrientationDegrees * (yIndex - 10));
+                    Vector3f rotZ = zAxis.times(this.adjustOrientationDegrees * (zIndex - 10));
+                    Vector3f rot = Vector3f.composeRotations(
+                        Vector3f.composeRotations(rotX, rotY), rotZ);
 
-                // Get variance after that adjustment
-                zData[xIndex + 21 * yIndex] = EarthShape.varianceOfAdjustedSquare(s, rot);
+                    // Get variance after that adjustment.
+                    wData[xIndex + 21 * yIndex + 21 * 21 * zIndex] =
+                        EarthShape.varianceOfAdjustedSquare(s, rot);
+                }
             }
         }
 
-        return new PlotData2D(xFirst, xLast, yFirst, yLast, 21 /*xValuesPerRow*/, zData);
+        return new PlotData3D(
+            xFirst, xLast,
+            yFirst, yLast,
+            zFirst, zLast,
+            21 /*xValuesPerRow*/,
+            21 /*yValuesPerColumn*/,
+            wData);
     }
 
     /** Make this window visible. */
