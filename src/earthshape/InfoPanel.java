@@ -25,7 +25,7 @@ public class InfoPanel extends JPanel {
         super();
         this.setName("InfoPanel");
 
-        this.setPreferredSize(new Dimension(150, 500));
+        this.setPreferredSize(new Dimension(250, 500));
 
         HBox outer = new HBox();
         this.add(outer);
@@ -37,6 +37,7 @@ public class InfoPanel extends JPanel {
 
         this.text = new JTextArea("No info set");
         this.text.setFocusable(false);
+        this.text.setFont(this.text.getFont().deriveFont(20.0f));
         vb.add(this.text);
 
         outer.strut();

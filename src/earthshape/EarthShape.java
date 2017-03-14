@@ -149,7 +149,7 @@ public class EarthShape
             this.enabledStars.put(sc.name, true);
         }
 
-        this.setSize(950, 800);
+        this.setSize(1050, 800);
         this.setLocationByPlatform(true);
 
         this.setupJOGL();
