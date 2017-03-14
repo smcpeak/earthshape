@@ -33,7 +33,7 @@ public class RotationCubeDialog extends ModalDialog {
         }
         vb.strut();
 
-        vb.add(new PlotPanel1D(data));
+        vb.add(new PlotPanel1D(new PlotData1D(data)));
 
         vb.strut();
 

@@ -10,10 +10,7 @@ import java.awt.geom.Rectangle2D;
 
 import javax.swing.JPanel;
 
-import util.FloatUtil;
-
-/** Visualize a function from int to real (one dimension) as a
-  * line plot. */
+/** Draw the data in a PlotData1D object as a JPanel. */
 public class PlotPanel1D extends JPanel {
     /** AWT boilerplate. */
     private static final long serialVersionUID = -6657389271092560523L;
@@ -36,31 +33,15 @@ public class PlotPanel1D extends JPanel {
       * associated tick mark. */
     private static final int Y_AXIS_LABEL_PADDING = 3;
 
-    /** Data points.  The independent variable is the array index. */
-    private float[] data;
+    /** Data and plot options. */
+    private PlotData1D plotData;
 
-    /** Minimum value in 'data'. */
-    private float dataMin;
-
-    /** Maximum value in 'data'. */
-    private float dataMax;
-
-    public PlotPanel1D(float[] data_)
+    public PlotPanel1D(PlotData1D plotData_)
     {
         this.setPreferredSize(new Dimension(400, 200));
         this.setBackground(Color.WHITE);
 
-        this.data = data_;
-        this.dataMin = FloatUtil.minimumOfArray(this.data);
-        this.dataMax = FloatUtil.maximumOfArray(this.data);
-
-        // Expand the ranges to avoid hitting the plot edges.
-        double yRange = this.dataMax - this.dataMin;
-        if (yRange == 0) {
-            yRange = 1;    // Just use something non-zero.
-        }
-        this.dataMax += yRange * 0.05f;
-        this.dataMin -= yRange * 0.05f;
+        this.plotData = plotData_;
     }
 
     /** The X coordinate, in pixels from the top of the panel,
@@ -69,7 +50,7 @@ public class PlotPanel1D extends JPanel {
     {
         // Distance from left of plot area as a fraction of
         // the total plot width.
-        double xFraction = (double)x / (double)(data.length - 1);
+        double xFraction = (double)x / (double)(this.plotData.data.length - 1);
 
         return LEFT_MARGIN + (int)((this.getWidth() - LEFT_MARGIN) * xFraction);
     }
@@ -80,7 +61,8 @@ public class PlotPanel1D extends JPanel {
     {
         // Distance from bottom of plot area as a fraction of
         // the total plot height.
-        double yFraction = (y - this.dataMin) / (this.dataMax - this.dataMin);
+        double yFraction = (y - this.plotData.dataMin) /
+                           (this.plotData.dataMax - this.plotData.dataMin);
 
         return (int)((this.getHeight() - 1 - BOTTOM_MARGIN) * (1.0 - yFraction));
     }
@@ -90,8 +72,8 @@ public class PlotPanel1D extends JPanel {
     private void drawYAxisLabels(Graphics g, double tickSpace, int tickLength, boolean labels)
     {
         if (tickSpace > 0) {
-            double y = Math.floor(this.dataMax / tickSpace) * tickSpace;
-            while (y > this.dataMin) {
+            double y = Math.floor(this.plotData.dataMax / tickSpace) * tickSpace;
+            while (y > this.plotData.dataMin) {
                 int py = plotY(y);
                 g.drawLine(LEFT_MARGIN - tickLength, py,
                            LEFT_MARGIN, py);
@@ -115,13 +97,13 @@ public class PlotPanel1D extends JPanel {
     {
         super.paint(g);
 
-        if (data.length < 1) {
+        if (this.plotData.data.length < 1) {
             g.drawString("Insufficient data", 20, 20);
             return;
         }
 
-        if (this.dataMax == this.dataMin) {
-            g.drawString("All values are: "+this.dataMax, 20, 20);
+        if (this.plotData.dataMax <= this.plotData.dataMin) {
+            g.drawString("Y axis range is degenerate.", 20, 20);
             return;
         }
 
@@ -132,7 +114,7 @@ public class PlotPanel1D extends JPanel {
         int plotRight = this.getWidth()-1;
 
         // Decide on a good label spacing.
-        double yRange = (this.dataMax - this.dataMin);
+        double yRange = (this.plotData.dataMax - this.plotData.dataMin);
         double majorTickSpace = Math.pow(10, Math.floor(Math.log10(yRange)));
         double minorTickSpace = majorTickSpace / 10.0f;
 
@@ -146,8 +128,8 @@ public class PlotPanel1D extends JPanel {
         // Line segments connecting adjacent pairs of points.
         int prevX = 0;
         int prevY = 0;
-        for (int x=0; x < data.length; x++) {
-            float y = this.data[x];
+        for (int x=0; x < this.plotData.data.length; x++) {
+            float y = this.plotData.data[x];
 
             int px = plotX(x);
             int py = plotY(y);
