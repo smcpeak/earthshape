@@ -94,11 +94,6 @@ public class EarthShape
       * is how many degrees to rotate at once. */
     private float adjustOrientationDegrees = DEFAULT_ADJUST_ORIENTATION_DEGREES;
 
-    /** The calculated recommended rotation command, or null if the
-      * recommendation was to zoom in or deviation is zero.  This is
-      * only valid after a call to 'setInfoPanel'. */
-    private RotationCommand recommendedRotationCommand = null;
-
     // ---- Options ----
     /** When analyzing the solution space, use this many points of
       * rotation on each side of 0, for each axis.  Note that the
@@ -1569,9 +1564,9 @@ public class EarthShape
             return;
         }
 
-        // Hack: Call into the info routine to get the recommendation.
-        this.setInfoPanel();
-        if (this.recommendedRotationCommand == null) {
+        // Get the recommended rotation.
+        VarianceAfterRotations var = this.getVarianceAfterRotations(s);
+        if (var.bestRC == null) {
             if (this.adjustOrientationDegrees <= MINIMUM_ADJUST_ORIENTATION_DEGREES) {
                 ModalDialog.errorBox(this, "Cannot further improve orientation.");
                 return;
@@ -1581,7 +1576,7 @@ public class EarthShape
             }
         }
         else {
-            this.adjustActiveSquareOrientation(this.recommendedRotationCommand.axis);
+            this.adjustActiveSquareOrientation(var.bestRC.axis);
         }
 
         this.emCanvas.redrawCanvas();
@@ -2021,7 +2016,6 @@ public class EarthShape
                 }
 
                 // Make a final recommendation.
-                this.recommendedRotationCommand = var.bestRC;
                 if (var.bestRC != null) {
                     recommendation = var.bestRC.key;
                 }
