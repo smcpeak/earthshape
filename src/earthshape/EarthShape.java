@@ -1636,10 +1636,16 @@ public class EarthShape
             return;
         }
 
-        // Show a progress dialog while this run.  (Unfortunately,
+        // Show a progress dialog while this run.
+        //
+        // Unfortunately,
         // this dialog is *not* modal, so there is currently nothing
         // stopping the user from messing with the UI while this is
-        // up, which can lead to strange results.)
+        // up, which can lead to strange results.  Furthermore, if
+        // the user presses Esc while it is up, that dismisses the
+        // dialog but I am not informed of that fact, and do not see
+        // any straightforward way of learning about it, so in that
+        // case the analysis dialog eventually pops up anyway.  :(
         ProgressMonitor progressMonitor = new ProgressMonitor(this,
             "Analyzing rotations of active square...", "Starting...", 0, 100);
         progressMonitor.setProgress(0);
@@ -1747,6 +1753,8 @@ public class EarthShape
 
         for (int zIndex=0; zIndex < pointsPerAxis; zIndex++) {
             if (task.progressMonitor.isCanceled()) {
+                log("analysis canceled");
+                task.secondaryLoop.exit();
                 return null;     // Bail out.
             }
             task.progressMonitor.setProgress(zIndex);
