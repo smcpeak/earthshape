@@ -6,15 +6,28 @@ package earthshape;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
+import java.awt.ItemSelectable;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.geom.Rectangle2D;
+import java.util.ArrayList;
 
 import javax.swing.JPanel;
 
-/** Draw the data in a PlotData1D object as a JPanel. */
-public class PlotPanel1D extends JPanel implements MouseListener, MouseMotionListener {
+/** Draw the data in a PlotData1D object as a JPanel.
+  *
+  * This also responds to mouse clicks in the plot area, sending
+  * ItemEvents to any listeners, per the model that clicking on
+  * an X value is like selecting it. */
+public class PlotPanel1D extends JPanel implements
+    // Respond to mouse events in this panel.
+    MouseListener, MouseMotionListener,
+    // This panel is capable of sending ItemEvents.
+    ItemSelectable
+{
     // ---- Constants ----
     /** AWT boilerplate. */
     private static final long serialVersionUID = -6657389271092560523L;
@@ -55,6 +68,9 @@ public class PlotPanel1D extends JPanel implements MouseListener, MouseMotionLis
 
     /** True when a left button drag is ongoing. */
     private boolean lbuttonDown = false;
+
+    /** Set of registered item listeners. */
+    public ArrayList<ItemListener> itemListeners = new ArrayList<ItemListener>();
 
     // ---- Methods ----
     public PlotPanel1D(PlotData1D plotData_)
@@ -264,8 +280,7 @@ public class PlotPanel1D extends JPanel implements MouseListener, MouseMotionLis
             this.lbuttonPressOrDrag(ev);
         }
         else {
-            this.selectedXIndex = null;
-            this.repaint();
+            this.setSelectedXIndex(null);
         }
     }
 
@@ -306,10 +321,59 @@ public class PlotPanel1D extends JPanel implements MouseListener, MouseMotionLis
                                     (this.plotData.xLast - this.plotData.xFirst);
 
         // Closest index.
-        this.selectedXIndex =
-            (int)(xIndexRangeFraction * (this.plotData.yValues.length-1) + 0.5f);
+        this.setSelectedXIndex(
+            (int)(xIndexRangeFraction * (this.plotData.yValues.length-1) + 0.5f));
+    }
+
+    /** Change 'selectedXIndex' to 'i', then repaint and fire item
+      * selected events as necessary. */
+    public void setSelectedXIndex(Integer i)
+    {
+        if (this.selectedXIndex == i) {
+            return;     // No change.
+        }
+
+        Integer oldIndex = this.selectedXIndex;
+        this.selectedXIndex = i;
 
         this.repaint();
+
+        this.fireStateChangeEvent(oldIndex, ItemEvent.DESELECTED);
+        this.fireStateChangeEvent(this.selectedXIndex, ItemEvent.SELECTED);
+    }
+
+    /** If 'item' is not null, fire a state change for it. */
+    private void fireStateChangeEvent(Integer item, int stateChange)
+    {
+        if (item != null) {
+            for (ItemListener listener : this.itemListeners) {
+                listener.itemStateChanged(new ItemEvent(
+                    this, ItemEvent.ITEM_FIRST, item, stateChange));
+            }
+        }
+    }
+
+    @Override
+    public void addItemListener(ItemListener listener)
+    {
+        this.itemListeners.add(listener);
+    }
+
+    @Override
+    public void removeItemListener(ItemListener listener)
+    {
+        this.itemListeners.remove(listener);
+    }
+
+    @Override
+    public Object[] getSelectedObjects()
+    {
+        if (this.selectedXIndex == null) {
+            return null;
+        }
+        else {
+            return new Object[] { this.selectedXIndex };
+        }
     }
 
     // Empty event handlers.

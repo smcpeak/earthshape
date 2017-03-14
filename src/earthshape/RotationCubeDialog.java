@@ -3,6 +3,9 @@
 
 package earthshape;
 
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
+
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 
@@ -14,7 +17,7 @@ import util.swing.VBox;
   * of the active square after various amounts of roll, pitch, and
   * yaw rotation are applied.  That is, this visualizes a function
   * from 3 real inputs to one real output. */
-public class RotationCubeDialog extends ModalDialog {
+public class RotationCubeDialog extends ModalDialog implements ItemListener {
     /** AWT boilerplate generated ID. */
     private static final long serialVersionUID = 4473449078815404630L;
 
@@ -66,7 +69,10 @@ public class RotationCubeDialog extends ModalDialog {
 
             {
                 VBox col = new VBox();
-                this.addPlot1D(col, "roll", this.rollPlotData);
+
+                PlotPanel1D rollPanel = this.addPlot1D(col, "roll", this.rollPlotData);
+                rollPanel.addItemListener(this);
+
                 this.addPlot1D(col, "pitch", this.pitchPlotData);
                 this.addPlot1D(col, "yaw", this.yawPlotData);
                 innerHB.add(col);
@@ -104,7 +110,7 @@ public class RotationCubeDialog extends ModalDialog {
     }
 
     /** Construct widgets to show 1D 'plotData'. */
-    private void addPlot1D(VBox vb, String axisDescription, PlotData1D plotData)
+    private PlotPanel1D addPlot1D(VBox vb, String axisDescription, PlotData1D plotData)
     {
         {
             HBox hb = new HBox();
@@ -113,8 +119,11 @@ public class RotationCubeDialog extends ModalDialog {
             vb.add(hb);
         }
 
-        vb.add(new PlotPanel1D(plotData));
+        PlotPanel1D plotPanel = new PlotPanel1D(plotData);
+        vb.add(plotPanel);
         vb.strut();
+
+        return plotPanel;
     }
 
     /** Construct widgets to show 2D 'plotData'. */
@@ -143,6 +152,15 @@ public class RotationCubeDialog extends ModalDialog {
         this.yawPlotData = this.rollPitchYawPlotData.getZSlice(this.currentXIndex, midY);
 
         this.pitchYawPlotData = this.rollPitchYawPlotData.getYZSlice(this.currentXIndex);
+    }
+
+    @Override
+    public void itemStateChanged(ItemEvent e)
+    {
+        if (e.getStateChange() == ItemEvent.SELECTED) {
+            // TODO: temporary
+            System.out.println("Roll X index changed to: "+e.getItem());
+        }
     }
 }
 
