@@ -6,12 +6,15 @@ package earthshape;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
+import java.awt.event.MouseMotionListener;
 import java.awt.geom.Rectangle2D;
 
 import javax.swing.JPanel;
 
 /** Draw the data in a PlotData1D object as a JPanel. */
-public class PlotPanel1D extends JPanel {
+public class PlotPanel1D extends JPanel implements MouseListener, MouseMotionListener {
     // ---- Constants ----
     /** AWT boilerplate. */
     private static final long serialVersionUID = -6657389271092560523L;
@@ -46,6 +49,13 @@ public class PlotPanel1D extends JPanel {
     /** Data and plot options. */
     private PlotData1D plotData;
 
+    /** If not null, the user has selected the X value at this
+      * index (for some purpose; this panel does not know). */
+    public Integer selectedXIndex = null;
+
+    /** True when a left button drag is ongoing. */
+    private boolean lbuttonDown = false;
+
     // ---- Methods ----
     public PlotPanel1D(PlotData1D plotData_)
     {
@@ -53,6 +63,9 @@ public class PlotPanel1D extends JPanel {
         this.setBackground(Color.WHITE);
 
         this.plotData = plotData_;
+
+        this.addMouseListener(this);
+        this.addMouseMotionListener(this);
     }
 
     /** X pixel coordinate of the left of the main plot area. */
@@ -207,6 +220,7 @@ public class PlotPanel1D extends JPanel {
     {
         super.paint(g);
 
+        g.setColor(Color.BLACK);
         if (this.plotData.yValues.length < 1) {
             g.drawString("Insufficient data", 20, 20);
             return;
@@ -225,8 +239,8 @@ public class PlotPanel1D extends JPanel {
             float x = this.plotData.xValueForIndex(i);
             float y = this.plotData.yValues[i];
 
-            int px = plotX(x);
-            int py = plotY(y);
+            int px = this.plotX(x);
+            int py = this.plotY(y);
 
             if (i > 0) {
                 g.drawLine(prevX, prevY, px, py);
@@ -234,7 +248,75 @@ public class PlotPanel1D extends JPanel {
             prevX = px;
             prevY = py;
         }
+
+        if (this.selectedXIndex != null) {
+            g.setColor(Color.RED);
+            int px = this.plotX(this.plotData.xValueForIndex(this.selectedXIndex));
+            g.drawLine(px, this.plotTop(), px, this.plotBottom());
+        }
     }
+
+    @Override
+    public void mousePressed(MouseEvent ev)
+    {
+        if (ev.getButton() == MouseEvent.BUTTON1) {
+            this.lbuttonDown = true;
+            this.lbuttonPressOrDrag(ev);
+        }
+        else {
+            this.selectedXIndex = null;
+            this.repaint();
+        }
+    }
+
+    @Override
+    public void mouseReleased(MouseEvent ev)
+    {
+        if (ev.getButton() == MouseEvent.BUTTON1) {
+            this.lbuttonDown = false;
+        }
+    }
+
+    @Override
+    public void mouseDragged(MouseEvent ev)
+    {
+        if (this.lbuttonDown) {
+            this.lbuttonPressOrDrag(ev);
+        }
+    }
+
+    protected void lbuttonPressOrDrag(MouseEvent ev)
+    {
+        if (this.plotData.yValues == null) {
+            // Guard against this method being called in, say, PlotPanel2D.
+            return;
+        }
+
+        // Fraction of plot width where mouse clicked.
+        float xPlotFraction = (ev.getX() - this.plotLeft()) / (float)this.plotWidth();
+        if (xPlotFraction < 0 || xPlotFraction > 1) {
+            return;     // Ignore click outside plot area.
+        }
+
+        // X value where user clicked.
+        float x = this.plotData.xMin + xPlotFraction * (this.plotData.xMax - this.plotData.xMin);
+
+        // Fractional distance from first to last.
+        float xIndexRangeFraction = (x - this.plotData.xFirst) /
+                                    (this.plotData.xLast - this.plotData.xFirst);
+
+        // Closest index.
+        this.selectedXIndex =
+            (int)(xIndexRangeFraction * (this.plotData.yValues.length-1) + 0.5f);
+
+        this.repaint();
+    }
+
+    // Empty event handlers.
+    @Override public void mouseClicked(MouseEvent ev) {}
+    @Override public void mouseEntered(MouseEvent ev) {}
+    @Override public void mouseExited(MouseEvent ev) {}
+    @Override public void mouseMoved(MouseEvent ev) {}
 }
 
 // EOF
