@@ -22,6 +22,7 @@ import javax.swing.JLabel;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
 import javax.swing.KeyStroke;
 
 import com.jogamp.opengl.GLCapabilities;
@@ -90,6 +91,11 @@ public class EarthShape
       * recommendation was to zoom in or deviation is zero.  This is
       * only valid after a call to 'setInfoPanel'. */
     private RotationCommand recommendedRotationCommand = null;
+
+    /** When analyzing the solution space, use this many points of
+      * rotation on each side of 0, for each axis.  Note that the
+      * algorithm is cubic in this parameter. */
+    private int solutionAnalysisPointsPerSide = 10;
 
     // ---- Widgets ----
     /** Canvas showing the Earth surface built so far. */
@@ -397,6 +403,14 @@ public class EarthShape
                     EarthShape.this.analyzeSolutionSpace();
                 }
             });
+        addMenuItem(editMenu, "Set solution analysis resolution...",
+            null,
+            new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    EarthShape.this.setSolutionAnalysisResolution();
+                }
+            });
+        editMenu.addSeparator();
         addMenuItem(editMenu, "Do one recommended rotation adjustment",
             KeyStroke.getKeyStroke(';'),
             new ActionListener() {
@@ -1570,7 +1584,7 @@ public class EarthShape
     private PlotData3D getThreeRotationAxisPlotData(SurfaceSquare s)
     {
         // Number of data points on each side of 0.
-        int pointsPerSide = 10;
+        int pointsPerSide = this.solutionAnalysisPointsPerSide;
 
         // Total number of data points per axis, including 0.
         int pointsPerAxis = pointsPerSide * 2 + 1;
@@ -1618,6 +1632,34 @@ public class EarthShape
             pointsPerAxis /*xValuesPerRow*/,
             pointsPerAxis /*yValuesPerColumn*/,
             wData);
+    }
+
+    /** Show a dialog to let the user change
+      * 'solutionAnalysisPointsPerSide'. */
+    private void setSolutionAnalysisResolution()
+    {
+        String choice = JOptionPane.showInputDialog(this,
+            "Specify number of data points on each side of 0 to sample "+
+                "when performing a solution analysis",
+            (Integer)this.solutionAnalysisPointsPerSide);
+        if (choice != null) {
+            try {
+                int c = Integer.valueOf(choice);
+                if (c < 1) {
+                    ModalDialog.errorBox(this, "The minimum number of points is 1.");
+                }
+                else if (c > 100) {
+                    // At 100, it will take several minutes to complete.
+                    ModalDialog.errorBox(this, "The maximum number of points is 100.");
+                }
+                else {
+                    this.solutionAnalysisPointsPerSide = c;
+                }
+            }
+            catch (NumberFormatException e) {
+                ModalDialog.errorBox(this, "Invalid integer syntax: "+e.getMessage());
+            }
+        }
     }
 
     /** Make this window visible. */
