@@ -22,11 +22,20 @@ public class PlotData1D {
     /** Maximum Y value to plot. */
     public float dataMax;
 
+    /** Spacing between major tick marks on the Y axis.  Major tick
+      * marks are longer and have numeric labels. */
+    public double majorYTickSpace;
+
+    /** Spacing between minor tick marks on the Y axis.  Minor tick
+      * marks are shorter and are not labeled. */
+    public double minorYTickSpace;
+
     // ---- Methods ----
     public PlotData1D(float[] data_)
     {
         this.data = data_;
         this.computeLimits();
+        this.computeTickSpacing();
     }
 
     /** Compute the plot limit values based on the data present.  If
@@ -44,6 +53,15 @@ public class PlotData1D {
         }
         this.dataMax += yRange * 0.05f;
         this.dataMin -= yRange * 0.05f;
+    }
+
+    /** Compute good tick spacing based on the current limits. */
+    public void computeTickSpacing()
+    {
+        // Decide on a good label spacing.
+        double yRange = (this.dataMax - this.dataMin);
+        this.majorYTickSpace = Math.pow(10, Math.floor(Math.log10(yRange)));
+        this.minorYTickSpace = this.majorYTickSpace / 10.0f;
     }
 }
 

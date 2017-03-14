@@ -12,6 +12,7 @@ import javax.swing.JPanel;
 
 /** Draw the data in a PlotData1D object as a JPanel. */
 public class PlotPanel1D extends JPanel {
+    // ---- Constants ----
     /** AWT boilerplate. */
     private static final long serialVersionUID = -6657389271092560523L;
 
@@ -33,9 +34,11 @@ public class PlotPanel1D extends JPanel {
       * associated tick mark. */
     private static final int Y_AXIS_LABEL_PADDING = 3;
 
+    // ---- Instance data ----
     /** Data and plot options. */
     private PlotData1D plotData;
 
+    // ---- Methods ----
     public PlotPanel1D(PlotData1D plotData_)
     {
         this.setPreferredSize(new Dimension(400, 200));
@@ -113,14 +116,9 @@ public class PlotPanel1D extends JPanel {
         int plotLeft = LEFT_MARGIN;
         int plotRight = this.getWidth()-1;
 
-        // Decide on a good label spacing.
-        double yRange = (this.plotData.dataMax - this.plotData.dataMin);
-        double majorTickSpace = Math.pow(10, Math.floor(Math.log10(yRange)));
-        double minorTickSpace = majorTickSpace / 10.0f;
-
         // Draw Y axis ticks and labels.
-        this.drawYAxisLabels(g, majorTickSpace, MAJOR_TICK_LENGTH, true /*labels*/);
-        this.drawYAxisLabels(g, minorTickSpace, MINOR_TICK_LENGTH, false /*labels*/);
+        this.drawYAxisLabels(g, this.plotData.majorYTickSpace, MAJOR_TICK_LENGTH, true /*labels*/);
+        this.drawYAxisLabels(g, this.plotData.minorYTickSpace, MINOR_TICK_LENGTH, false /*labels*/);
 
         // Border.
         g.drawRect(plotLeft, plotTop, plotRight - plotLeft, plotBottom - plotTop);
