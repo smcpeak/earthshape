@@ -104,6 +104,14 @@ public class EarthShape
       * we cannot see any stars. */
     private float maximumSunElevation = -5;
 
+    /** When true, use the "new" orientation algorithm that
+      * repeatedly applies the recommended command.  Otherwise,
+      * use the older one based on average deviation. */
+    // TODO: The new algorithm has a problem in that it thinks
+    // it can orient squares that the other cannot, leading to
+    // misalignment since it is wrong.  I need to track that down.
+    private boolean newAutomaticOrientationAlgorithm = false;
+
     // ---- Widgets ----
     /** Canvas showing the Earth surface built so far. */
     private EarthMapCanvas emCanvas;
@@ -126,11 +134,14 @@ public class EarthShape
     /** Menu item to toggle 'drawStarRays'. */
     private JCheckBoxMenuItem drawStarRaysCBItem;
 
-    /** Menu item to toggle 'EarthMapCanvas.invertHorizontalCameraMovement. */
+    /** Menu item to toggle 'EarthMapCanvas.invertHorizontalCameraMovement'. */
     private JCheckBoxMenuItem invertHorizontalCameraMovementCBItem;
 
-    /** Menu item to toggle 'EarthMapCanvas.invertVerticalCameraMovement. */
+    /** Menu item to toggle 'EarthMapCanvas.invertVerticalCameraMovement'. */
     private JCheckBoxMenuItem invertVerticalCameraMovementCBItem;
+
+    /** Menu item to toggle 'newAutomaticOrientationAlgorithm'. */
+    private JCheckBoxMenuItem newAutomaticOrientationAlgorithmCBItem;
 
     // ---------- Methods ----------
     public EarthShape()
@@ -489,6 +500,16 @@ public class EarthShape
                     EarthShape.this.automaticallyOrientActiveSquare();
                 }
             });
+        this.newAutomaticOrientationAlgorithmCBItem =
+            addCBMenuItem(editMenu, "Use new automatic orientation algorithm", null,
+                this.newAutomaticOrientationAlgorithm,
+                new ActionListener() {
+                    public void actionPerformed(ActionEvent e) {
+                        EarthShape.this.newAutomaticOrientationAlgorithm =
+                            !EarthShape.this.newAutomaticOrientationAlgorithm;
+                        EarthShape.this.updateUIState();
+                    }
+                });
         addMenuItem(editMenu, "Delete active square",
             KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0),
             new ActionListener() {
@@ -1311,6 +1332,9 @@ public class EarthShape
 
         /** Maximum separation between observations, in degrees. */
         public float maxSeparation;
+
+        /** Number of pairs of stars used in comparison. */
+        public int numSamples;
     }
 
     /** Calculate variance and maximum separation for 'square'.  Returns
@@ -1358,6 +1382,7 @@ public class EarthShape
             ObservationStats ret = new ObservationStats();
             ret.variance = sumOfSquares / numSamples;
             ret.maxSeparation = maxSeparation;
+            ret.numSamples = numSamples;
             return ret;
         }
     }
@@ -1451,8 +1476,23 @@ public class EarthShape
             return;
         }
 
+        // Replace the active square.
+        this.setActiveSquare(
+            this.adjustDerivedSquareOrientation(axis, derived, this.adjustOrientationDegrees));
+
+        this.emCanvas.redrawCanvas();
+    }
+
+    /** Adjust the orientation of 'derived' by 'adjustDegrees' around
+      * 'axis', where 'axis' is relative to the square's current
+      * orientation. */
+    private SurfaceSquare adjustDerivedSquareOrientation(Vector3f axis,
+        SurfaceSquare derived, float adjustDegrees)
+    {
+        SurfaceSquare base = derived.baseSquare;
+
         // Rotate by 'adjustOrientationDegrees'.
-        Vector3f angleAxis = axis.times(this.adjustOrientationDegrees);
+        Vector3f angleAxis = axis.times(adjustDegrees);
 
         // Rotate the axis to align it with the square.
         angleAxis = angleAxis.rotateAA(derived.rotationFromNominal);
@@ -1461,29 +1501,29 @@ public class EarthShape
         // to its base square.
         angleAxis = Vector3f.composeRotations(derived.rotationFromBase, angleAxis);
 
-        // Now, replace the active square.
-        this.replaceWithNewRotation(base, derived, angleAxis);
+        // Now, replace it.
+        return this.replaceWithNewRotation(base, derived, angleAxis);
     }
 
     /** Replace the square 'derived', with a new square that
-      * is computed from 'base' by applying 'newRotation'.  Also
-      * make the new square active. */
-    private void replaceWithNewRotation(
+      * is computed from 'base' by applying 'newRotation'.
+      * Return the new square. */
+    private SurfaceSquare replaceWithNewRotation(
         SurfaceSquare base, SurfaceSquare derived, Vector3f newRotation)
     {
-        // Now, replace the active square with a new one created by
+        // Replace the derived square with a new one created by
         // rotating from the same base by this new amount.
         this.emCanvas.removeSurfaceSquare(derived);
-        this.setActiveSquare(
+        SurfaceSquare ret =
             this.addRotatedAdjacentSquare(base,
-                derived.latitude, derived.longitude, newRotation));
+                derived.latitude, derived.longitude, newRotation);
 
         // Copy some other data from the derived square that we
         // are in the process of discarding.
-        this.activeSquare.drawStarRays = derived.drawStarRays;
-        this.activeSquare.starObs = derived.starObs;
+        ret.drawStarRays = derived.drawStarRays;
+        ret.starObs = derived.starObs;
 
-        this.emCanvas.redrawCanvas();
+        return ret;
     }
 
     /** Calculate what the variation of observations would be for
@@ -1565,7 +1605,8 @@ public class EarthShape
         }
 
         // Get the recommended rotation.
-        VarianceAfterRotations var = this.getVarianceAfterRotations(s);
+        VarianceAfterRotations var = EarthShape.getVarianceAfterRotations(s,
+            this.adjustOrientationDegrees);
         if (var.bestRC == null) {
             if (this.adjustOrientationDegrees <= MINIMUM_ADJUST_ORIENTATION_DEGREES) {
                 ModalDialog.errorBox(this, "Cannot further improve orientation.");
@@ -1581,6 +1622,45 @@ public class EarthShape
 
         this.emCanvas.redrawCanvas();
         this.updateUIState();
+    }
+
+    /** Apply the recommended rotation to 's' until convergence.  Return
+      * the improved square, or null if that is not possible. */
+    private SurfaceSquare repeatedlyApplyRecommendedRotationCommand(SurfaceSquare s)
+    {
+        ObservationStats ostats = EarthShape.fitOfObservations(s);
+        if (ostats == null || ostats.numSamples < 2) {
+            return null;
+        }
+        if (ostats.variance == 0) {
+            return s;     // Already optimal.
+        }
+
+        // Rotation amount.  This will be gradually reduced.
+        float adjustDegrees = 1.0f;
+
+        // Iteration cap for safety.
+        int iters = 0;
+
+        // Iterate until the adjust amount is too small.
+        while (adjustDegrees > MINIMUM_ADJUST_ORIENTATION_DEGREES) {
+            // Get the recommended rotation.
+            VarianceAfterRotations var = EarthShape.getVarianceAfterRotations(s,
+                adjustDegrees);
+            if (var.bestRC == null) {
+                adjustDegrees = adjustDegrees * 0.5f;
+            }
+            else {
+                s = this.adjustDerivedSquareOrientation(var.bestRC.axis, s, adjustDegrees);
+            }
+
+            if (++iters > 1000) {
+                log("repeatedlyApply: exceeded iteration cap!");
+                break;
+            }
+        }
+
+        return s;
     }
 
     /** Delete the active square. */
@@ -1606,17 +1686,33 @@ public class EarthShape
         SurfaceSquare base = derived.baseSquare;
         if (base == null) {
             ModalDialog.errorBox(this, "The active square has no base square.");
-        }
-
-        Vector3f rot = calcRequiredRotation(base, this.manualStarObservations,
-            derived.latitude, derived.longitude);
-        if (rot == null) {
-            ModalDialog.errorBox(this, "Could not determine proper orientation!");
             return;
         }
 
-        // Now, replace the active square.
-        this.replaceWithNewRotation(base, derived, rot);
+        if (this.newAutomaticOrientationAlgorithm) {
+            SurfaceSquare newDerived = this.repeatedlyApplyRecommendedRotationCommand(derived);
+            if (newDerived == null) {
+                ModalDialog.errorBox(this, "Insufficient observations to determine proper orientation.");
+                return;
+            }
+
+            this.setActiveSquare(newDerived);
+        }
+        else {
+            // Calculate the best rotation.
+            Vector3f rot = calcRequiredRotation(base, this.manualStarObservations,
+                derived.latitude, derived.longitude);
+            if (rot == null) {
+                ModalDialog.errorBox(this, "Could not determine proper orientation!");
+                return;
+            }
+
+            // Now, replace the active square.
+            this.setActiveSquare(this.replaceWithNewRotation(base, derived, rot));
+        }
+
+        this.updateUIState();
+        this.emCanvas.redrawCanvas();
     }
 
     /** Make the next square in 'emCanvas.surfaceSquares' active. */
@@ -1963,6 +2059,9 @@ public class EarthShape
             this.emCanvas.invertHorizontalCameraMovement);
         this.invertVerticalCameraMovementCBItem.setSelected(
             this.emCanvas.invertVerticalCameraMovement);
+
+        this.newAutomaticOrientationAlgorithmCBItem.setSelected(
+            this.newAutomaticOrientationAlgorithm);
     }
 
     /** Update the contents of the info panel. */
@@ -2000,7 +2099,8 @@ public class EarthShape
                 char recommendation = (ostats.variance == 0? ' ' : '-');
 
                 // What is the best rotation command, and what does it achieve?
-                VarianceAfterRotations var = this.getVarianceAfterRotations(s);
+                VarianceAfterRotations var = EarthShape.getVarianceAfterRotations(s,
+                    this.adjustOrientationDegrees);
 
                 // Print the effects of all the available rotations.
                 sb.append("\n");
@@ -2044,7 +2144,8 @@ public class EarthShape
 
     /** Perform a trial rotation in each direction and record the
       * resulting variance, plus a decision about which is best, if any. */
-    private VarianceAfterRotations getVarianceAfterRotations(SurfaceSquare s)
+    private static VarianceAfterRotations getVarianceAfterRotations(SurfaceSquare s,
+        float adjustDegrees)
     {
         // Get variance if no rotation is performed.  We only recommend
         // a rotation if it improves on this.
@@ -2061,8 +2162,8 @@ public class EarthShape
         // Print the effects of all the available rotations.
         for (RotationCommand rc : RotationCommand.values()) {
             ObservationStats newStats = EarthShape.fitOfAdjustedSquare(s,
-                rc.axis.times(this.adjustOrientationDegrees));
-            if (newStats == null) {
+                rc.axis.times(adjustDegrees));
+            if (newStats == null || newStats.numSamples < 2) {
                 ret.rcToVariance.put(rc, null);
             }
             else {
