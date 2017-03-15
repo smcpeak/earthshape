@@ -414,7 +414,7 @@ public class EarthShape
             KeyStroke.getKeyStroke(KeyEvent.VK_M, InputEvent.CTRL_DOWN_MASK),
             new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
-                    EarthShape.this.createAndAutomaticallyOrientSquare(
+                    EarthShape.this.createAndAutomaticallyOrientActiveSquare(
                         0 /*deltLatitude*/, +9 /*deltaLongitude*/);
                 }
             });
@@ -422,7 +422,7 @@ public class EarthShape
             KeyStroke.getKeyStroke(KeyEvent.VK_N, InputEvent.CTRL_DOWN_MASK),
             new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
-                    EarthShape.this.createAndAutomaticallyOrientSquare(
+                    EarthShape.this.createAndAutomaticallyOrientActiveSquare(
                         +9 /*deltLatitude*/, 0 /*deltaLongitude*/);
                 }
             });
@@ -874,26 +874,19 @@ public class EarthShape
                     null /*base*/, null /*midpoint*/,
                     new Vector3f(0,0,0));
                 this.emCanvas.addSurfaceSquare(curSquare);
+                this.addMatchingData(curSquare, starObs);
                 firstSquare = curSquare;
             }
             else {
-                // Calculate a rotation vector that will best align
-                // the current square's star observations with the
-                // next square's.
-                Vector3f rot = calcRequiredRotation(curSquare, starObs,
+                // Create a new square adjacent to the current square,
+                // at the location from which observation 'so' was made.
+                curSquare = this.createAndAutomaticallyOrientSquare(curSquare,
                     so.latitude, so.longitude);
-                if (rot == null) {
+                if (curSquare == null) {
                     log("buildEarth: could not place next square!");
                     break;
                 }
-
-                // Make the new square from the old and the computed
-                // change in orientation.
-                curSquare =
-                    addRotatedAdjacentSquare(curSquare, so.latitude, so.longitude, rot);
             }
-
-            this.addMatchingData(curSquare, starObs);
 
             curLatitude = so.latitude;
             curLongitude = so.longitude;
@@ -907,20 +900,14 @@ public class EarthShape
 
             log("buildEarth: building lat="+newLatitude+" long="+newLongitude);
 
-            Vector3f rot = calcRequiredRotation(curSquare, starObs,
+            curSquare = this.createAndAutomaticallyOrientSquare(curSquare,
                 newLatitude, newLongitude);
-            if (rot == null) {
+            if (curSquare == null) {
                 log("buildEarth: could not place next square!");
             }
 
-            curSquare =
-                addRotatedAdjacentSquare(curSquare, newLatitude, newLongitude, rot);
-
-            this.addMatchingData(curSquare, starObs);
-
             curLatitude = newLatitude;
             curLongitude = newLongitude;
-
         }
 
         // From here, keep exploring, relying on the synthetic catalog.
@@ -953,17 +940,12 @@ public class EarthShape
 
             log("buildEarth: building lat="+newLatitude+" long="+newLongitude);
 
-            Vector3f rot = calcRequiredRotation(curSquare, starObs,
+            curSquare = this.createAndAutomaticallyOrientSquare(curSquare,
                 newLatitude, newLongitude);
-            if (rot == null) {
+            if (curSquare == null) {
                 log("buildEarth: could not place next square!");
                 break;
             }
-
-            curSquare =
-                addRotatedAdjacentSquare(curSquare, newLatitude, newLongitude, rot);
-
-            this.addMatchingData(curSquare, starObs);
 
             curLatitude = newLatitude;
             curLongitude = newLongitude;
@@ -988,17 +970,12 @@ public class EarthShape
             float newLongitude = FloatUtil.modulus2f(curLongitude + deltaLongitude, -180, 180);
             log("buildEarth: building lat="+newLatitude+" long="+newLongitude);
 
-            Vector3f rot = calcRequiredRotation(curSquare, starObs,
+            curSquare = this.createAndAutomaticallyOrientSquare(curSquare,
                 newLatitude, newLongitude);
-            if (rot == null) {
+            if (curSquare == null) {
                 log("buildEarth: could not place next square!");
                 break;
             }
-
-            curSquare =
-                addRotatedAdjacentSquare(curSquare, newLatitude, newLongitude, rot);
-
-            this.addMatchingData(curSquare, starObs);
 
             curLatitude = newLatitude;
             curLongitude = newLongitude;
@@ -1231,12 +1208,28 @@ public class EarthShape
     }
 
     /** True if the given observation is available for use, meaning
-      * it is high enough in the sky and is enabled. */
+      * it is high enough in the sky, is enabled, and not obscured
+      * by light from the Sun. */
     private boolean qualifyingStarObservation(StarObservation so)
     {
+        if (this.sunIsTooHigh(so.latitude, so.longitude)) {
+            return false;
+        }
+
         return so.elevation >= 20.0f &&
                this.enabledStars.containsKey(so.name) &&
                this.enabledStars.get(so.name) == true;
+    }
+
+    /** Return true if, at StarObservation.unixTimeOfManualData, the
+      * Sun is too high in the sky to see stars.  This depends on
+      * the configurable parameter 'maximumSunElevation'. */
+    private boolean sunIsTooHigh(float latitude, float longitude)
+    {
+        StarObservation so = this.sunPosition.makeObservation(
+            StarObservation.unixTimeOfManualData, latitude, longitude);
+
+        return so.elevation > this.maximumSunElevation;
     }
 
     /** For every star in 'starObs' that matches 'latitude' and
@@ -1248,15 +1241,6 @@ public class EarthShape
         float longitude)
     {
         HashMap<String, Vector3f> ret = new HashMap<String, Vector3f>();
-
-        // Check the position of the Sun.
-        {
-            StarObservation so = this.sunPosition.makeObservation(
-                StarObservation.unixTimeOfManualData, latitude, longitude);
-            if (so.elevation > this.maximumSunElevation) {
-                return ret;
-            }
-        }
 
         // First use any manual data I have.
         for (StarObservation so : starObs) {
@@ -1660,7 +1644,7 @@ public class EarthShape
                 return null;
             }
             if (var.underconstrained) {
-                log("solution is underconstrained, adjustDegrees="+ adjustDegrees);
+                log("repeatedlyApply: solution is underconstrained, adjustDegrees="+ adjustDegrees);
                 return s;
             }
             if (var.bestRC == null) {
@@ -1680,6 +1664,7 @@ public class EarthShape
             }
         }
 
+        log("repeatedlyApply done: iters="+iters+" adjustDegrees="+ adjustDegrees);
         return s;
     }
 
@@ -1695,7 +1680,8 @@ public class EarthShape
         this.setActiveSquare(null);
     }
 
-    /** Calculate and apply the optimal orientation for the active square. */
+    /** Calculate and apply the optimal orientation for the active square;
+      * make its replacement active if we do replace it.. */
     private void automaticallyOrientActiveSquare()
     {
         SurfaceSquare derived = this.activeSquare;
@@ -1709,30 +1695,38 @@ public class EarthShape
             return;
         }
 
-        if (this.newAutomaticOrientationAlgorithm) {
-            SurfaceSquare newDerived = this.repeatedlyApplyRecommendedRotationCommand(derived);
-            if (newDerived == null) {
-                ModalDialog.errorBox(this, "Insufficient observations to determine proper orientation.");
-            }
-            else {
-                this.setActiveSquare(newDerived);
-            }
+        SurfaceSquare newDerived = automaticallyOrientSquare(derived);
+        if (newDerived == null) {
+            ModalDialog.errorBox(this, "Insufficient observations to determine proper orientation.");
         }
         else {
-            // Calculate the best rotation.
-            Vector3f rot = calcRequiredRotation(base, this.manualStarObservations,
-                derived.latitude, derived.longitude);
-            if (rot == null) {
-                ModalDialog.errorBox(this, "Could not determine proper orientation!");
-                return;
-            }
-
-            // Now, replace the active square.
-            this.setActiveSquare(this.replaceWithNewRotation(base, derived, rot));
+            this.setActiveSquare(newDerived);
         }
 
         this.updateUIState();
         this.emCanvas.redrawCanvas();
+    }
+
+    /** Given a square 'derived' that is known to have a base square,
+      * adjust and/or replace it with one with a better orientation,
+      * and return the improved square.  Returns null if improvement
+      * is not possible due to insufficient observational data. */
+    private SurfaceSquare automaticallyOrientSquare(SurfaceSquare derived)
+    {
+        if (this.newAutomaticOrientationAlgorithm) {
+            return this.repeatedlyApplyRecommendedRotationCommand(derived);
+        }
+        else {
+            // Calculate the best rotation.
+            Vector3f rot = calcRequiredRotation(derived.baseSquare, this.manualStarObservations,
+                derived.latitude, derived.longitude);
+            if (rot == null) {
+                return null;
+            }
+
+            // Now, replace the active square.
+            return this.replaceWithNewRotation(derived.baseSquare, derived, rot);
+        }
     }
 
     /** Make the next square in 'emCanvas.surfaceSquares' active. */
@@ -1741,21 +1735,55 @@ public class EarthShape
         this.setActiveSquare(this.emCanvas.getNextSquare(this.activeSquare, forward));
     }
 
-    /** Build a square offset from the active square and set its orientation. */
-    private void createAndAutomaticallyOrientSquare(
+    /** Build a square offset from the active square, set its orientation,
+      * and make it active.  If we cannot make a new square, report that as
+      * an error and leave the active square alone. */
+    private void createAndAutomaticallyOrientActiveSquare(
         float deltaLatitude, float deltaLongitude)
     {
         SurfaceSquare base = this.activeSquare;
-        boolean drawStarRays = base.drawStarRays;
-        this.setActiveSquare(
-            this.addRotatedAdjacentSquare(this.activeSquare,
-                base.latitude + deltaLatitude,
-                base.longitude + deltaLongitude,
-                new Vector3f(0,0,0)));
-        this.activeSquare.drawStarRays = drawStarRays;
-        this.addMatchingData(this.activeSquare, this.manualStarObservations);
+        if (base == null) {
+            ModalDialog.errorBox(this, "There is no active square.");
+            return;
+        }
+        SurfaceSquare newSquare = this.createAndAutomaticallyOrientSquare(
+            base, base.latitude + deltaLatitude, base.longitude + deltaLongitude);
+        if (newSquare == null) {
+            ModalDialog.errorBox(this,
+                "Cannot place new square since observational data does not uniquely determine its orientation.");
+        }
+        else {
+            newSquare.drawStarRays = base.drawStarRays;
+            this.setActiveSquare(newSquare);
+        }
+    }
 
-        this.automaticallyOrientActiveSquare();
+    /** Build a square adjacent to the base square, set its orientation,
+      * and return it.  Returns null and adds nothing if such a square
+      * cannot be uniquely oriented. */
+    private SurfaceSquare createAndAutomaticallyOrientSquare(SurfaceSquare base,
+        float newLatitude, float newLongitude)
+    {
+        // Make a new adjacent square, initially with the same orientation
+        // as the base square.
+        SurfaceSquare newSquare =
+            this.addRotatedAdjacentSquare(base,
+                newLatitude,
+                newLongitude,
+                new Vector3f(0,0,0));
+        if (base == newSquare) {
+            return base;      // Did not move, no new square created.
+        }
+        this.addMatchingData(newSquare, this.manualStarObservations);
+
+        // Now try to set its orientation to match observations.
+        SurfaceSquare adjustedSquare = this.automaticallyOrientSquare(newSquare);
+        if (adjustedSquare == null) {
+            // No unique solution; remove the new square too.
+            this.emCanvas.removeSurfaceSquare(newSquare);
+        }
+
+        return adjustedSquare;
     }
 
     /** Show the user what the local rotation space looks like by.
