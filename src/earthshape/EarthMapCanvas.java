@@ -293,7 +293,7 @@ public class EarthMapCanvas
         // Position to try to get some more differentiation among
         // surfaces with different normals.
         gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_POSITION,
-            new float[] {-0.5f, 1f, 0.5f, 0}, 0);
+            new float[] {0.5f, 1f, 0.5f, 0}, 0);
 
         // Increase the ambient intensity of that light.
         //gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_AMBIENT, new float[] {1,1,1,1}, 0);
