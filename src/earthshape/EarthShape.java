@@ -307,7 +307,7 @@ public class EarthShape
     private JMenu buildFileMenu()
     {
         JMenu fileMenu = new JMenu("File");
-        addMenuItem(fileMenu, "Choose enabled stars", null, new ActionListener() {
+        addMenuItem(fileMenu, "Choose enabled stars...", null, new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 EarthShape.this.chooseEnabledStars();
             }
