@@ -26,6 +26,16 @@ public class Vectord {
         }
     }
 
+    /** Make a vector of floats out of a vector of doubles. */
+    public Vectorf toVectorf()
+    {
+        float[] v = new float[this.dim()];
+        for (int i=0; i < this.vals.length; i++) {
+            v[i] = (float)this.vals[i];
+        }
+        return new Vectorf(v);
+    }
+
     /** Return the number of components (dimensions) of this vector. */
     public int dim()
     {
@@ -161,19 +171,6 @@ public class Vectord {
 
         return FloatUtil.acosDeg(dot);
     }
-
-    /** Return 'this' cross 'v', assuming both are 3 dimensional.
-      * (If I had a Vector3d, I would put it there, but for the
-      * moment I am being lazy and do not have that class.) */
-    public Vectord cross(Vectord v)
-    {
-        double[] ret = new double[3];
-        ret[0] = this.get(1)*v.get(2) - this.get(2)*v.get(1);
-        ret[1] = this.get(2)*v.get(0) - this.get(0)*v.get(2);
-        ret[2] = this.get(0)*v.get(1) - this.get(1)*v.get(0);
-        return new Vectord(ret);
-    }
-
 }
 
 // EOF

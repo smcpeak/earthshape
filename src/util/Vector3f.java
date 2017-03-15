@@ -107,6 +107,12 @@ public class Vector3f {
         return new Vector3f(this.under.normalize());
     }
 
+    /** Return a normalized version as Vector3d. */
+    public Vector3d normalizeAsVector3d()
+    {
+        return new Vector3d(this.under.normalizeAsVectord());
+    }
+
     /** Return this vector after rotating by 'degrees' about 'axis'.
       * Rotation follows right-hand rule.  The axis vector is not
       * assumed to be normalized yet. */
@@ -177,42 +183,9 @@ public class Vector3f {
       * the rotation angle in degrees. */
     public static Vector3f composeRotations(Vector3f first, Vector3f second)
     {
-        // The computation here is based on this question and answer:
-        // http://math.stackexchange.com/questions/382760/composition-of-two-axis-angle-rotations
-
-        // First rotation angle (in radians) and axis.
-        double beta = FloatUtil.degreesToRadians(first.length());
-        Vectord m = first.getUnder().normalizeAsVectord();
-
-        // Second rotation angle and axis.
-        double alpha = FloatUtil.degreesToRadians(second.length());
-        Vectord l = second.getUnder().normalizeAsVectord();
-
-        // Combined rotation angle, in radians.  This guards against
-        // yielding NaN near boundaries by clamping the difference to [-1,1].
-        double gamma = FloatUtil.acosRad(Math.cos(alpha/2) * Math.cos(beta/2) -
-                                         Math.sin(alpha/2) * Math.sin(beta/2) * l.dot(m)) * 2;
-
-        // Map very small angles to zero directly (rather than divide by zero).
-        if (gamma < 1e-20) {
-            return new Vector3f(0,0,0);
-        }
-
-        // Combined rotation axis, which should be a unit vector.
-        Vectord n = ( l.times(Math.sin(alpha/2) * Math.cos(beta/2)).plus(
-                      m.times(Math.cos(alpha/2) * Math.sin(beta/2)).plus(
-                      (l.cross(m)).times(Math.sin(alpha/2) * Math.sin(beta/2)) ))).times(1/
-                    // ----------------------------------------------------------
-                                     Math.sin(gamma/2));
-
-        // Put axis and angle back together.
-        Vectord combined = n.times(FloatUtil.radiansToDegrees(gamma));
-
-        // Yield as Vector3f.
-        return new Vector3f(
-            (float)combined.get(0),
-            (float)combined.get(1),
-            (float)combined.get(2));
+        // This calculation is sensitive to small errors, so carry it
+        // out entirely using double.
+        return Vector3d.composeRotations(new Vector3d(first), new Vector3d(second)).toVector3f();
     }
 }
 
