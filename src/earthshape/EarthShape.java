@@ -1419,7 +1419,7 @@ public class EarthShape
                     sep = starRay.separationAngleDegrees(baseStarRay);
                 }
                 else {
-                    sep = Vector3d.getClosestApproachf(
+                    sep = EarthShape.getModifiedClosestApproach(
                         square.center, starRay,
                         square.baseSquare.center, baseStarRay).separationAngleDegrees;
                 }
@@ -1443,6 +1443,24 @@ public class EarthShape
             ret.numSamples = numSamples;
             return ret;
         }
+    }
+
+    /** Get closest approach, except with a modification to
+      * smooth out the search space. */
+    public static Vector3d.ClosestApproach getModifiedClosestApproach(
+        Vector3f p1, Vector3f u1,
+        Vector3f p2, Vector3f u2)
+    {
+        Vector3d.ClosestApproach ca = Vector3d.getClosestApproachf(p1, u1, p2, u2);
+
+        // If the intersection is obtuse, let's switch it to acute.
+        // I'm having a problem because the obtuse angles cause
+        // severe discontinuity in the search space.
+        if (ca.separationAngleDegrees > 90) {
+            ca.separationAngleDegrees = 180.0 - ca.separationAngleDegrees;
+        }
+
+        return ca;
     }
 
     /** Begin constructing a new surface using star data.  This just

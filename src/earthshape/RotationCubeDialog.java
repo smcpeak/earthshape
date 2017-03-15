@@ -3,9 +3,12 @@
 
 package earthshape;
 
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 
+import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 
@@ -113,6 +116,25 @@ public class RotationCubeDialog extends ModalDialog implements ItemListener {
         HBox hb3 = new HBox();
         {
             hb3.glue();
+
+            JButton halveWMaxButton = new JButton("Halve wMax");
+            halveWMaxButton.addActionListener(new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    RotationCubeDialog.this.adjustWRange(0.5f);
+                }
+            });
+            hb3.add(halveWMaxButton);
+            hb3.strut();
+            JButton doubleWMaxButton = new JButton("Double wMax");
+            doubleWMaxButton.addActionListener(new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    RotationCubeDialog.this.adjustWRange(2.0f);
+                }
+            });
+            hb3.add(doubleWMaxButton);
+
+            hb3.glue();
+
             hb3.add(this.makeOKButton());
             hb3.glue();
         }
@@ -198,6 +220,21 @@ public class RotationCubeDialog extends ModalDialog implements ItemListener {
             this.updatePanelData();
             this.repaint();
         }
+    }
+
+    /** Adjust the range from wMax to wMin by 'factor'. */
+    private void adjustWRange(float factor)
+    {
+        // Compute new wMax and wThreshold.
+        float wRange = this.rollPitchYawPlotData.wMax - this.rollPitchYawPlotData.wMin;
+        wRange *= factor;
+        this.rollPitchYawPlotData.wMax = this.rollPitchYawPlotData.wMin + wRange;
+        this.rollPitchYawPlotData.wThreshold = this.rollPitchYawPlotData.wMin + wRange / 100.0f;
+
+        // Repaint, etc.
+        this.computeSlices();
+        this.updatePanelData();
+        this.repaint();
     }
 }
 

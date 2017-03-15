@@ -970,7 +970,7 @@ public class EarthMapCanvas
                     }
                     else {
                         // Get info about visual separation of *lines*.
-                        Vector3d.ClosestApproach ca = Vector3d.getClosestApproachf(
+                        Vector3d.ClosestApproach ca = EarthShape.getModifiedClosestApproach(
                             s.center, starRay,
                             s.baseSquare.center, baseStarRay);
                         sep = (float)ca.separationAngleDegrees;

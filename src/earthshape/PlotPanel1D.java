@@ -156,6 +156,7 @@ public class PlotPanel1D extends JPanel implements
     protected void drawXAxisLabels(Graphics g, double tickSpace, int tickLength, boolean labels)
     {
         if (tickSpace > 0) {
+            int prevLeftEdge = Integer.MAX_VALUE;
             double x = Math.floor(this.plotData.xMax / tickSpace) * tickSpace;
             while (x >= this.plotData.xMin) {
                 int px = plotX(x);
@@ -173,7 +174,13 @@ public class PlotPanel1D extends JPanel implements
                     int dy = (int)(this.plotBottom() + tickLength + X_AXIS_LABEL_PADDING
                                      - rect.getY());
 
-                    g.drawString(label, dx, dy);
+                    if (dx + rect.getWidth() > prevLeftEdge) {
+                        // Do not draw labels that overlap.
+                    }
+                    else {
+                        g.drawString(label, dx, dy);
+                        prevLeftEdge = dx;
+                    }
                 }
                 x -= tickSpace;
             }
@@ -254,6 +261,14 @@ public class PlotPanel1D extends JPanel implements
         }
 
         this.drawBorderAndAxes(g);
+
+        this.drawMainPlot(g);
+    }
+
+    private void drawMainPlot(Graphics g0)
+    {
+        Graphics g = g0.create();
+        g.setClip(this.plotLeft(), this.plotTop(), this.plotWidth(), this.plotHeight());
 
         // Line segments connecting adjacent pairs of points.
         int prevX = 0;
