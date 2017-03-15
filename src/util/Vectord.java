@@ -1,20 +1,29 @@
-// Vectorf.java
+// Vectord.java
 // See copyright.txt for license and terms of use.
 
 package util;
 
-/** Arbitrary-length immutable vector of float. */
-public class Vectorf {
+/** Arbitrary-length immutable vector of double. */
+public class Vectord {
     // ---- Instance data ----
     /** Array of vector components, in order. */
-    private float[] vals;
+    private double[] vals;
 
     // ---- Methods ----
     /** This takes ownership of the passed values.  The caller should
       * not retain a reference to the 'vals_' array. */
-    public Vectorf(float[] vals_)
+    public Vectord(double[] vals_)
     {
         this.vals = vals_;
+    }
+
+    /** Make a vector of doubles out of a vector of floats. */
+    public Vectord(Vectorf vf)
+    {
+        this.vals = new double[vf.dim()];
+        for (int i=0; i < this.vals.length; i++) {
+            this.vals[i] = vf.get(i);
+        }
     }
 
     /** Return the number of components (dimensions) of this vector. */
@@ -25,7 +34,7 @@ public class Vectorf {
 
     /** Get one component of the vector.  'd' must be in
       * [0,dim()-1]. */
-    public float get(int d)
+    public double get(int d)
     {
         return vals[d];
     }
@@ -48,51 +57,41 @@ public class Vectorf {
     /** Get the values as an array.  For speed, this returns the
       * internal array, but the caller must promise not to
       * modify it! */
-    public float[] getArray()
+    public double[] getArray()
     {
         return vals;
     }
 
     /** Return sum of 'this' and 'v'. */
-    public Vectorf plus(Vectorf v)
+    public Vectord plus(Vectord v)
     {
         assert(this.dim() == v.dim());
-        float[] ret = new float[this.dim()];
+        double[] ret = new double[this.dim()];
         for (int i=0; i < this.dim(); i++) {
             ret[i] = this.get(i) + v.get(i);
         }
-        return new Vectorf(ret);
+        return new Vectord(ret);
     }
 
     /** Return 'this' minus 'v'. */
-    public Vectorf minus(Vectorf v)
+    public Vectord minus(Vectord v)
     {
         assert(this.dim() == v.dim());
-        float[] ret = new float[this.dim()];
+        double[] ret = new double[this.dim()];
         for (int i=0; i < this.dim(); i++) {
             ret[i] = this.get(i) - v.get(i);
         }
-        return new Vectorf(ret);
+        return new Vectord(ret);
     }
 
     /** Return 'this' times scalar 's'. */
-    public Vectorf times(float s)
+    public Vectord times(double s)
     {
-        float[] ret = new float[this.dim()];
+        double[] ret = new double[this.dim()];
         for (int i=0; i < this.dim(); i++) {
             ret[i] = this.get(i) * s;
         }
-        return new Vectorf(ret);
-    }
-
-    /** Return 'this' times scalar 's'. */
-    public Vectorf timesd(double s)
-    {
-        float[] ret = new float[this.dim()];
-        for (int i=0; i < this.dim(); i++) {
-            ret[i] = (float)(this.get(i) * s);
-        }
-        return new Vectorf(ret);
+        return new Vectord(ret);
     }
 
     /** Return the square of the length of this vector. */
@@ -100,7 +99,7 @@ public class Vectorf {
     {
         double ret = 0;
         for (int i=0; i < this.dim(); i++) {
-            ret += (double)this.get(i) * (double)this.get(i);
+            ret += this.get(i) * this.get(i);
         }
         return ret;
     }
@@ -125,31 +124,22 @@ public class Vectorf {
 
     /** Return a normalized version of this vector.  The zero
       * vector is returned unchanged. */
-    public Vectorf normalize()
+    public Vectord normalize()
     {
         if (isZero()) {
             return this;
         }
         double normFactor = 1.0 / this.length();
-        return this.timesd(normFactor);
-    }
-
-    /** Return a normalized version of this vector with 'double'
-      * components, which is often important for algorithms that
-      * require true unit vectors.  The zero vector is returned
-      * unchanged. */
-    public Vectord normalizeAsVectord()
-    {
-        return (new Vectord(this)).normalize();
+        return this.times(normFactor);
     }
 
     /** Return dot product of 'this' and 'v'. */
-    public double dot(Vectorf v)
+    public double dot(Vectord v)
     {
         assert(this.dim() == v.dim());
         double ret = 0;
         for (int i=0; i < this.dim(); i++) {
-            ret += (double)this.get(i) * (double)v.get(i);
+            ret += this.get(i) * v.get(i);
         }
         return ret;
     }
@@ -157,7 +147,7 @@ public class Vectorf {
     /** Calculate the separation angle between 'this' and 'v' by
       * first normalizing both to high precision and then using
       * the dot product and inverse cosine. */
-    public double separationAngleDegrees(Vectorf v)
+    public double separationAngleDegrees(Vectord v)
     {
         assert(this.dim() == v.dim());
 
@@ -171,6 +161,19 @@ public class Vectorf {
 
         return FloatUtil.acosDeg(dot);
     }
+
+    /** Return 'this' cross 'v', assuming both are 3 dimensional.
+      * (If I had a Vector3d, I would put it there, but for the
+      * moment I am being lazy and do not have that class.) */
+    public Vectord cross(Vectord v)
+    {
+        double[] ret = new double[3];
+        ret[0] = this.get(1)*v.get(2) - this.get(2)*v.get(1);
+        ret[1] = this.get(2)*v.get(0) - this.get(0)*v.get(2);
+        ret[2] = this.get(0)*v.get(1) - this.get(1)*v.get(0);
+        return new Vectord(ret);
+    }
+
 }
 
 // EOF

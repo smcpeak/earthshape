@@ -960,7 +960,7 @@ public class EarthMapCanvas
                     Vector3f baseStarRay = EarthShape.rayToStar(s.baseSquare, baseObservation);
 
                     // Calculate the visual separation angle between these rays.
-                    float sep = FloatUtil.acosDegf(starRay.dot(baseStarRay));
+                    float sep = (float)starRay.separationAngleDegrees(baseStarRay);
 
                     // Add that to the label.
                     starLabel += " ("+sep+")";
@@ -1394,14 +1394,14 @@ public class EarthMapCanvas
             float newAz = this.cameraAzimuthDegrees - dx * CAMERA_HORIZONTAL_SENSITIVITY;
 
             // Normalize the azimuth to [0,360).
-            this.cameraAzimuthDegrees = FloatUtil.modulus(newAz, 360);
+            this.cameraAzimuthDegrees = FloatUtil.modulusf(newAz, 360);
 
             // Rotate the pitch.
             if (this.invertVerticalCameraMovement) {
                 dy = -dy;
             }
             float newPitch = this.cameraPitchDegrees - dy * CAMERA_VERTICAL_SENSITIVITY;
-            this.cameraPitchDegrees = FloatUtil.clamp(newPitch, -90, 90);
+            this.cameraPitchDegrees = FloatUtil.clampf(newPitch, -90, 90);
 
             this.earthShapeFrame.updateUIState();
         }

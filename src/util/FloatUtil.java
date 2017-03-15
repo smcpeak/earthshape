@@ -7,7 +7,7 @@ package util;
 public class FloatUtil {
     /** Return a value 'x' in [0,limit) such that 'v-x'
       * is an integer multiple of 'limit'.  */
-    public static float modulus(float v, float limit)
+    public static double modulus(double v, double limit)
     {
         if (v < 0) {
             v += Math.ceil(-v / limit) * limit;
@@ -18,15 +18,27 @@ public class FloatUtil {
         return v;
     }
 
+    /** Like 'modulus' but for float. */
+    public static float modulusf(float v, float limit)
+    {
+        return (float)modulus(v, limit);
+    }
+
     /** Return a value 'x' in [lo, hi) such that 'v-x'
-     * is an integer multiple of 'limit'.  */
-   public static float modulus2(float v, float lo, float hi)
-   {
-       return lo + modulus(v - lo, hi - lo);
-   }
+      * is an integer multiple of 'limit'.  */
+    public static double modulus2(double v, double lo, double hi)
+    {
+        return lo + modulus(v - lo, hi - lo);
+    }
+
+    /** Like 'modulus2' but for float. */
+    public static float modulus2f(float v, float lo, float hi)
+    {
+        return (float)modulus2(v, lo, hi);
+    }
 
     /** Clamp v to [lo,hi]. */
-    public static float clamp(float v, float lo, float hi)
+    public static double clamp(double v, double lo, double hi)
     {
         if (v < lo) {
             return lo;
@@ -35,6 +47,12 @@ public class FloatUtil {
             return hi;
         }
         return v;
+    }
+
+    /** Like 'clamp' but for float. */
+    public static float clampf(float v, float lo, float hi)
+    {
+        return (float)clamp(v, lo, hi);
     }
 
     /** Convert degrees to radians using 'float'. */
@@ -90,15 +108,7 @@ public class FloatUtil {
       * range, whereas standard acos yields NaN. */
     public static double acosDeg(double x)
     {
-        if (x > 1) {
-            return 0;
-        }
-        else if (x < -1) {
-            return 180;
-        }
-        else {
-            return radiansToDegrees(Math.acos(x));
-        }
+        return radiansToDegrees(acosRad(x));
     }
 
     public static float acosDegf(float x)
@@ -106,25 +116,41 @@ public class FloatUtil {
         return (float)acosDeg(x);
     }
 
+    /** Inverse cosine, in radians in [0,pi].  Also, this handles
+      * inputs outside [-1,1] by effectively clamping them to that
+      * range, whereas standard acos yields NaN. */
+    public static double acosRad(double x)
+    {
+        if (x > 1) {
+            return 0;
+        }
+        else if (x < -1) {
+            return Math.PI;
+        }
+        else {
+            return Math.acos(x);
+        }
+    }
+
     /** Calculate the angle between two angles expressed as azimuth
       * and elevation, in degrees.  This also works for longitude
       * (as azimuth) and latitude (as elevation).  It is derived
       * from the "rule of cosines" for spherical trigonometry. */
-    public static float sphericalSeparationAngle(
-        float az1, float el1,
-        float az2, float el2)
+    public static double sphericalSeparationAngle(
+        double az1, double el1,
+        double az2, double el2)
     {
         // Product of cosines.
-        float cosines = FloatUtil.cosDegf(el1) *
-                        FloatUtil.cosDegf(el2) *
-                        FloatUtil.cosDegf(az2 - az1);
+        double cosines = FloatUtil.cosDeg(el1) *
+                         FloatUtil.cosDeg(el2) *
+                         FloatUtil.cosDeg(az2 - az1);
 
         // Product of sines.
-        float sines = FloatUtil.sinDegf(el1) *
-                      FloatUtil.sinDegf(el2);
+        double sines = FloatUtil.sinDeg(el1) *
+                       FloatUtil.sinDeg(el2);
 
         // Inverse cosine of the sum.
-        return acosDegf(cosines + sines);
+        return acosDeg(cosines + sines);
     }
 
     /** Given a pair of (latitude,longitude) points, in degrees, where
@@ -147,12 +173,12 @@ public class FloatUtil {
       * </pre>
       *
       * This method returns the angle 'h' in [-180,180]. */
-    public static float getLatLongPairHeading(
-        float lat1, float long1,
-        float lat2, float long2)
+    public static double getLatLongPairHeading(
+        double lat1, double long1,
+        double lat2, double long2)
     {
         // First, get the spherical angle between the points.
-        float sep = sphericalSeparationAngle(long1, lat1, long2, lat2);
+        double sep = sphericalSeparationAngle(long1, lat1, long2, lat2);
 
         // The spherical angle opposite h is 90-lat2, and the
         // spherical angles adjacent to h are 90-lat1 and 'sep'.
@@ -202,19 +228,19 @@ public class FloatUtil {
             heading = -heading;
         }
 
-        return (float)heading;
+        return heading;
     }
 
     /** Given a longitude that might not be in [-180,180], add or
       * subtract a multiple of 360 so that it is in that range. */
-    public static float normalizeLongitude(float longitude)
+    public static double normalizeLongitude(double longitude)
     {
         return modulus2(longitude, -180, 180);
     }
 
     /** Given a latitude that might be outside [-90,90], clamp
       * it to that range. */
-    public static float clampLatitude(float latitude)
+    public static double clampLatitude(double latitude)
     {
         return clamp(latitude, -90, 90);
     }
@@ -240,10 +266,10 @@ public class FloatUtil {
         float lat2, float long2,
         float h1, float h2)
     {
-        float actual1 = getLatLongPairHeading(lat1, long1, lat2, long2);
+        float actual1 = (float)getLatLongPairHeading(lat1, long1, lat2, long2);
         checkFloat(actual1, h1);
 
-        float actual2 = getLatLongPairHeading(lat2, long2, lat1, long1);
+        float actual2 = (float)getLatLongPairHeading(lat2, long2, lat1, long1);
         checkFloat(actual2, h2);
     }
 

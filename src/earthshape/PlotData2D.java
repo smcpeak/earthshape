@@ -126,7 +126,7 @@ public class PlotData2D extends PlotData1D {
       * as a fraction of the total Z range. */
     public float zScaledClamped(float z)
     {
-        float clamped = FloatUtil.clamp(z, this.zMin, this.zMax);
+        float clamped = FloatUtil.clampf(z, this.zMin, this.zMax);
         return (clamped - this.zMin) / (this.zMax - this.zMin);
     }
 

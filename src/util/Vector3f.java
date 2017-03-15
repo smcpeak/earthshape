@@ -110,11 +110,9 @@ public class Vector3f {
     /** Return this vector after rotating by 'degrees' about 'axis'.
       * Rotation follows right-hand rule.  The axis vector is not
       * assumed to be normalized yet. */
-    public Vector3f rotate(float degrees, Vector3f axis)
+    public Vector3f rotate(double degrees, Vector3f axis)
     {
-        float radians = (float)(degrees / 180.0 * Math.PI);
-
-        Matrix3f m = Matrix3f.rotate(radians, axis);
+        Matrix3f m = Matrix3f.rotate(FloatUtil.degreesToRadians(degrees), axis);
         return m.times(this);
     }
 
@@ -122,7 +120,7 @@ public class Vector3f {
       * the rotation angle in degrees. */
     public Vector3f rotateAA(Vector3f axisAndAngle)
     {
-        float degrees = (float)axisAndAngle.length();
+        double degrees = axisAndAngle.length();
         if (degrees == 0) {
             return this;
         }
@@ -130,16 +128,22 @@ public class Vector3f {
     }
 
     /** Return dot product of 'this' and 'v'. */
-    public float dot(Vector3f v)
+    public double dot(Vector3f v)
     {
         return this.under.dot(v.under);
+    }
+
+    /** Return the separation angle between 'this' and 'v' in degrees. */
+    public double separationAngleDegrees(Vector3f v)
+    {
+        return this.under.separationAngleDegrees(v.under);
     }
 
     /** Return 'this' projected onto 'u', which is assumed to be a
       * unit vector. */
     public Vector3f projectOntoUnitVector(Vector3f u)
     {
-        return u.times(this.dot(u));
+        return u.timesd(this.dot(u));
     }
 
     /** Return 'this' cross 'v'. */
@@ -178,15 +182,16 @@ public class Vector3f {
 
         // First rotation angle (in radians) and axis.
         double beta = FloatUtil.degreesToRadians(first.length());
-        Vector3f m = first.normalize();
+        Vectord m = first.getUnder().normalizeAsVectord();
 
         // Second rotation angle and axis.
         double alpha = FloatUtil.degreesToRadians(second.length());
-        Vector3f l = second.normalize();
+        Vectord l = second.getUnder().normalizeAsVectord();
 
-        // Combined rotation angle, in radians.
-        double gamma = Math.acos(Math.cos(alpha/2) * Math.cos(beta/2) -
-                                 Math.sin(alpha/2) * Math.sin(beta/2) * l.dot(m)) * 2;
+        // Combined rotation angle, in radians.  This guards against
+        // yielding NaN near boundaries by clamping the difference to [-1,1].
+        double gamma = FloatUtil.acosRad(Math.cos(alpha/2) * Math.cos(beta/2) -
+                                         Math.sin(alpha/2) * Math.sin(beta/2) * l.dot(m)) * 2;
 
         // Map very small angles to zero directly (rather than divide by zero).
         if (gamma < 1e-20) {
@@ -194,14 +199,20 @@ public class Vector3f {
         }
 
         // Combined rotation axis, which should be a unit vector.
-        Vector3f n = ( l.timesd(Math.sin(alpha/2) * Math.cos(beta/2)).plus(
-                       m.timesd(Math.cos(alpha/2) * Math.sin(beta/2)).plus(
-                       (l.cross(m)).timesd(Math.sin(alpha/2) * Math.sin(beta/2)) ))).timesd(1/
-                     // ----------------------------------------------------------
+        Vectord n = ( l.times(Math.sin(alpha/2) * Math.cos(beta/2)).plus(
+                      m.times(Math.cos(alpha/2) * Math.sin(beta/2)).plus(
+                      (l.cross(m)).times(Math.sin(alpha/2) * Math.sin(beta/2)) ))).times(1/
+                    // ----------------------------------------------------------
                                      Math.sin(gamma/2));
 
         // Put axis and angle back together.
-        return n.timesd(FloatUtil.radiansToDegrees(gamma));
+        Vectord combined = n.times(FloatUtil.radiansToDegrees(gamma));
+
+        // Yield as Vector3f.
+        return new Vector3f(
+            (float)combined.get(0),
+            (float)combined.get(1),
+            (float)combined.get(2));
     }
 }
 

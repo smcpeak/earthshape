@@ -55,16 +55,16 @@ public class Matrix3f {
 
     /** Yield a matrix that, when multiplied by a vector, rotates that
       * vector by 'radians' around 'axis'. */
-    public static Matrix3f rotate(float radians, Vector3f axis)
+    public static Matrix3f rotate(double radians, Vector3f axis)
     {
         // Normalize the rotation axis.
         if (axis.isZero()) {
             return Matrix3f.identity();
         }
-        Vector3f na = axis.normalize();
-        float x = na.x();
-        float y = na.y();
-        float z = na.z();
+        double axisLength = axis.length();
+        double x = axis.x() / axisLength;
+        double y = axis.y() / axisLength;
+        double z = axis.z() / axisLength;
 
         // Compute the upper 3x3 of this matrix:
         // https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/

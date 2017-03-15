@@ -107,10 +107,7 @@ public class EarthShape
     /** When true, use the "new" orientation algorithm that
       * repeatedly applies the recommended command.  Otherwise,
       * use the older one based on average deviation. */
-    // TODO: The new algorithm has a problem in that it thinks
-    // it can orient squares that the other cannot, leading to
-    // misalignment since it is wrong.  I need to track that down.
-    private boolean newAutomaticOrientationAlgorithm = false;
+    private boolean newAutomaticOrientationAlgorithm = true;
 
     // ---- Widgets ----
     /** Canvas showing the Earth surface built so far. */
@@ -716,7 +713,7 @@ public class EarthShape
                     break;
                 }
                 prevLongitude = longitude;
-                longitude = FloatUtil.modulus2(longitude+9, -180, 180);
+                longitude = FloatUtil.modulus2f(longitude+9, -180, 180);
             }
         }
 
@@ -741,7 +738,7 @@ public class EarthShape
                     break;
                 }
                 prevLongitude = longitude;
-                longitude = FloatUtil.modulus2(longitude+9, -180, 180);
+                longitude = FloatUtil.modulus2f(longitude+9, -180, 180);
             }
         }
 
@@ -784,8 +781,8 @@ public class EarthShape
             // within their usual ranges.  Also stay away from the poles
             // since the rounding errors cause problems there.
             square = this.addAdjacentSquare(square,
-                FloatUtil.clamp(square.latitude + deltaLatitude, -80, 80),
-                FloatUtil.modulus2(square.longitude + deltaLongitude, -180, 180));
+                FloatUtil.clampf(square.latitude + deltaLatitude, -80, 80),
+                FloatUtil.modulus2f(square.longitude + deltaLongitude, -180, 180));
         }
 
         this.emCanvas.redrawCanvas();
@@ -814,7 +811,7 @@ public class EarthShape
 
         // Get lat/long deltas.
         float deltaLatitude = newLatitude - old.latitude;
-        float deltaLongitude = FloatUtil.modulus2(
+        float deltaLongitude = FloatUtil.modulus2f(
             newLongitude - old.longitude, -180, 180);
 
         // If we didn't move, just return the old square.
@@ -988,7 +985,7 @@ public class EarthShape
 
         for (int i=0; i < 20; i++) {
             float newLatitude = curLatitude;
-            float newLongitude = FloatUtil.modulus2(curLongitude + deltaLongitude, -180, 180);
+            float newLongitude = FloatUtil.modulus2f(curLongitude + deltaLongitude, -180, 180);
             log("buildEarth: building lat="+newLatitude+" long="+newLongitude);
 
             Vector3f rot = calcRequiredRotation(curSquare, starObs,
@@ -1019,12 +1016,12 @@ public class EarthShape
         Vector3f rotation)
     {
         // Normalize latitude and longitude.
-        newLatitude = FloatUtil.clamp(newLatitude, -90, 90);
-        newLongitude = FloatUtil.modulus2(newLongitude, -180, 180);
+        newLatitude = FloatUtil.clampf(newLatitude, -90, 90);
+        newLongitude = FloatUtil.modulus2f(newLongitude, -180, 180);
 
         // Calculate the angle along the spherical Earth subtended
         // by the arc from 'old' to the new coordinates.
-        float arcAngleDegrees = FloatUtil.sphericalSeparationAngle(
+        double arcAngleDegrees = FloatUtil.sphericalSeparationAngle(
             old.longitude, old.latitude,
             newLongitude, newLatitude);
 
@@ -1035,7 +1032,7 @@ public class EarthShape
 
         // Get lat/long deltas.
         float deltaLatitude = newLatitude - old.latitude;
-        float deltaLongitude = FloatUtil.modulus2(
+        float deltaLongitude = FloatUtil.modulus2f(
             newLongitude - old.longitude, -180, 180);
 
         // If we didn't move, return null.
@@ -1050,9 +1047,9 @@ public class EarthShape
 
         // Calculate headings, in degrees East of North, from
         // the old square to the new and vice-versa.
-        float oldToNewHeading = FloatUtil.getLatLongPairHeading(
+        double oldToNewHeading = FloatUtil.getLatLongPairHeading(
             old.latitude, old.longitude, newLatitude, newLongitude);
-        float newToOldHeading = FloatUtil.getLatLongPairHeading(
+        double newToOldHeading = FloatUtil.getLatLongPairHeading(
             newLatitude, newLongitude, old.latitude, old.longitude);
 
         // For both old and new, calculate a unit vector for the
@@ -1340,10 +1337,10 @@ public class EarthShape
           * of the set.  I'll then reserve "deviation", if I use it, to refer to
           * the square root of the variance, by analogy with "standard deviation".
           * */
-        public float variance;
+        public double variance;
 
         /** Maximum separation between observations, in degrees. */
-        public float maxSeparation;
+        public double maxSeparation;
 
         /** Number of pairs of stars used in comparison. */
         public int numSamples;
@@ -1357,9 +1354,9 @@ public class EarthShape
             return null;
         }
 
-        float sumOfSquares = 0;
+        double sumOfSquares = 0;
         int numSamples = 0;
-        float maxSeparation = 0;
+        double maxSeparation = 0;
 
         for (Map.Entry<String, StarObservation> entry : square.starObs.entrySet()) {
             StarObservation so = entry.getValue();
@@ -1376,7 +1373,7 @@ public class EarthShape
                 Vector3f baseStarRay = EarthShape.rayToStar(square.baseSquare, baseObservation);
 
                 // Visual separation angle between these rays.
-                float sep = FloatUtil.acosDegf(starRay.dot(baseStarRay));
+                double sep = starRay.separationAngleDegrees(baseStarRay);
                 if (sep > maxSeparation) {
                     maxSeparation = sep;
                 }
@@ -1572,7 +1569,7 @@ public class EarthShape
 
     /** Like 'fitOfAdjustedSquare' except only retrieves the
       * variance.  This returns 40000 if the data is unavailable. */
-    private static float varianceOfAdjustedSquare(
+    private static double varianceOfAdjustedSquare(
         SurfaceSquare derived, Vector3f angleAxis)
     {
         ObservationStats os = EarthShape.fitOfAdjustedSquare(derived, angleAxis);
@@ -1668,6 +1665,10 @@ public class EarthShape
             }
             if (var.bestRC == null) {
                 adjustDegrees = adjustDegrees * 0.5f;
+
+                // Set the UI adjust degrees to what we came up with here so I
+                // can easily see where it ended up.
+                this.adjustOrientationDegrees = adjustDegrees;
             }
             else {
                 s = this.adjustDerivedSquareOrientation(var.bestRC.axis, s, adjustDegrees);
@@ -1713,8 +1714,9 @@ public class EarthShape
             if (newDerived == null) {
                 ModalDialog.errorBox(this, "Insufficient observations to determine proper orientation.");
             }
-
-            this.setActiveSquare(newDerived);
+            else {
+                this.setActiveSquare(newDerived);
+            }
         }
         else {
             // Calculate the best rotation.
@@ -1818,7 +1820,7 @@ public class EarthShape
 
         // Plot them.
         RotationCubeDialog d = new RotationCubeDialog(this,
-            ostats.variance,
+            (float)ostats.variance,
             rollPitchYawPlotData);
         d.exec();
     }
@@ -1913,7 +1915,7 @@ public class EarthShape
 
                     // Get variance after that adjustment.
                     wData[xIndex + pointsPerAxis * yIndex + pointsPerAxis * pointsPerAxis * zIndex] =
-                        EarthShape.varianceOfAdjustedSquare(s, rot);
+                        (float)EarthShape.varianceOfAdjustedSquare(s, rot);
                 }
             }
         }
@@ -2127,7 +2129,7 @@ public class EarthShape
                 sb.append("\n");
                 for (RotationCommand rc : RotationCommand.values()) {
                     sb.append("  adj("+rc.key+"): ");
-                    Float newVariance = var.rcToVariance.get(rc);
+                    Double newVariance = var.rcToVariance.get(rc);
                     if (newVariance == null) {
                         sb.append("(none)\n");
                     }
@@ -2156,7 +2158,7 @@ public class EarthShape
           * meaning the rotation produces a situation where we can't
           * measure the variance (e.g., because not enough stars are
           * above the horizon). */
-        public HashMap<RotationCommand, Float> rcToVariance = new HashMap<RotationCommand, Float>();
+        public HashMap<RotationCommand, Double> rcToVariance = new HashMap<RotationCommand, Double>();
 
         /** Which rotation command produces the greatest improvement
           * in variance, if any. */
@@ -2184,7 +2186,7 @@ public class EarthShape
         VarianceAfterRotations ret = new VarianceAfterRotations();
 
         // Variance achieved by the best rotation command, if there is one.
-        float bestNewVariance = 0;
+        double bestNewVariance = 0;
 
         // Get the effects of all the available rotations.
         for (RotationCommand rc : RotationCommand.values()) {
@@ -2194,7 +2196,7 @@ public class EarthShape
                 ret.rcToVariance.put(rc, null);
             }
             else {
-                float newVariance = newStats.variance;
+                double newVariance = newStats.variance;
                 ret.rcToVariance.put(rc, newVariance);
 
                 if (ostats.variance == 0 && newVariance == 0) {

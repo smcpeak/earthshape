@@ -125,9 +125,15 @@ public class Vector4f {
     }
 
     /** Return dot product of 'this' and 'v'. */
-    public float dot(Vector4f v)
+    public double dot(Vector4f v)
     {
         return this.under.dot(v.under);
+    }
+
+    /** Return the separation angle between 'this' and 'v' in degrees. */
+    public double separationAngleDegrees(Vector4f v)
+    {
+        return this.under.separationAngleDegrees(v.under);
     }
 }
 
