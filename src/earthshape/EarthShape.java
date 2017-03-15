@@ -244,6 +244,7 @@ public class EarthShape
             "N - Start a new surface.\n"+
             "M - Add a square adjacent to the active square.\n"+
             "Ctrl+M - Add a square to the East and automatically adjust it.\n"+
+            "Ctrl+N - Add a square to the North and automatically adjust it.\n"+
             ", (comma) - Move to previous active square.\n"+
             ". (period) - Move to next active square.\n"+
             "Delete - Delete active square.\n"+
@@ -295,6 +296,8 @@ public class EarthShape
         //   Delete - Delete active square
         //   Enter  - enter FPS mode
         //   Esc    - leave FPS mode
+        //   Ctrl+M - build and orient to the East
+        //   Ctrl+N - build and orient to the North
 
         menuBar.add(this.buildFileMenu());
         menuBar.add(this.buildDrawMenu());
@@ -414,7 +417,16 @@ public class EarthShape
             KeyStroke.getKeyStroke(KeyEvent.VK_M, InputEvent.CTRL_DOWN_MASK),
             new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
-                    EarthShape.this.createAndAutomaticallyOrientSquare();
+                    EarthShape.this.createAndAutomaticallyOrientSquare(
+                        0 /*deltLatitude*/, +9 /*deltaLongitude*/);
+                }
+            });
+        addMenuItem(buildMenu, "Create new square 9 degrees to the North and orient it automatically",
+            KeyStroke.getKeyStroke(KeyEvent.VK_N, InputEvent.CTRL_DOWN_MASK),
+            new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    EarthShape.this.createAndAutomaticallyOrientSquare(
+                        +9 /*deltLatitude*/, 0 /*deltaLongitude*/);
                 }
             });
         return buildMenu;
@@ -1625,12 +1637,13 @@ public class EarthShape
     }
 
     /** Apply the recommended rotation to 's' until convergence.  Return
-      * the improved square, or null if that is not possible. */
+      * the improved square, or null if that is not possible due to
+      * insufficient constraints. */
     private SurfaceSquare repeatedlyApplyRecommendedRotationCommand(SurfaceSquare s)
     {
         ObservationStats ostats = EarthShape.fitOfObservations(s);
         if (ostats == null || ostats.numSamples < 2) {
-            return null;
+            return null;  // Underconstrained.
         }
         if (ostats.variance == 0) {
             return s;     // Already optimal.
@@ -1645,8 +1658,14 @@ public class EarthShape
         // Iterate until the adjust amount is too small.
         while (adjustDegrees > MINIMUM_ADJUST_ORIENTATION_DEGREES) {
             // Get the recommended rotation.
-            VarianceAfterRotations var = EarthShape.getVarianceAfterRotations(s,
-                adjustDegrees);
+            VarianceAfterRotations var = EarthShape.getVarianceAfterRotations(s, adjustDegrees);
+            if (var == null) {
+                return null;
+            }
+            if (var.underconstrained) {
+                log("solution is underconstrained, adjustDegrees="+ adjustDegrees);
+                return s;
+            }
             if (var.bestRC == null) {
                 adjustDegrees = adjustDegrees * 0.5f;
             }
@@ -1693,7 +1712,6 @@ public class EarthShape
             SurfaceSquare newDerived = this.repeatedlyApplyRecommendedRotationCommand(derived);
             if (newDerived == null) {
                 ModalDialog.errorBox(this, "Insufficient observations to determine proper orientation.");
-                return;
             }
 
             this.setActiveSquare(newDerived);
@@ -1721,14 +1739,17 @@ public class EarthShape
         this.setActiveSquare(this.emCanvas.getNextSquare(this.activeSquare, forward));
     }
 
-    /** Like hitting 'm', Enter, then '/'. */
-    private void createAndAutomaticallyOrientSquare()
+    /** Build a square offset from the active square and set its orientation. */
+    private void createAndAutomaticallyOrientSquare(
+        float deltaLatitude, float deltaLongitude)
     {
         SurfaceSquare base = this.activeSquare;
         boolean drawStarRays = base.drawStarRays;
         this.setActiveSquare(
             this.addRotatedAdjacentSquare(this.activeSquare,
-                base.latitude, base.longitude + 9, new Vector3f(0,0,0)));
+                base.latitude + deltaLatitude,
+                base.longitude + deltaLongitude,
+                new Vector3f(0,0,0)));
         this.activeSquare.drawStarRays = drawStarRays;
         this.addMatchingData(this.activeSquare, this.manualStarObservations);
 
@@ -2135,15 +2156,21 @@ public class EarthShape
           * meaning the rotation produces a situation where we can't
           * measure the variance (e.g., because not enough stars are
           * above the horizon). */
-        HashMap<RotationCommand, Float> rcToVariance = new HashMap<RotationCommand, Float>();
+        public HashMap<RotationCommand, Float> rcToVariance = new HashMap<RotationCommand, Float>();
 
         /** Which rotation command produces the greatest improvement
           * in variance, if any. */
-        RotationCommand bestRC = null;
+        public RotationCommand bestRC = null;
+
+        /** If true, the solution space is underconstrained, meaning
+          * the best orientation is not unique. */
+        public boolean underconstrained = false;
     }
 
     /** Perform a trial rotation in each direction and record the
-      * resulting variance, plus a decision about which is best, if any. */
+      * resulting variance, plus a decision about which is best, if any.
+      * This returns null if we do not have enough data to measure
+      * the fitness of the square's orientation. */
     private static VarianceAfterRotations getVarianceAfterRotations(SurfaceSquare s,
         float adjustDegrees)
     {
@@ -2159,7 +2186,7 @@ public class EarthShape
         // Variance achieved by the best rotation command, if there is one.
         float bestNewVariance = 0;
 
-        // Print the effects of all the available rotations.
+        // Get the effects of all the available rotations.
         for (RotationCommand rc : RotationCommand.values()) {
             ObservationStats newStats = EarthShape.fitOfAdjustedSquare(s,
                 rc.axis.times(adjustDegrees));
@@ -2169,6 +2196,14 @@ public class EarthShape
             else {
                 float newVariance = newStats.variance;
                 ret.rcToVariance.put(rc, newVariance);
+
+                if (ostats.variance == 0 && newVariance == 0) {
+                    // The current orientation is ideal, but here
+                    // is a rotation that keeps it ideal.  That
+                    // must mean that the solution space is under-
+                    // constrained.
+                    ret.underconstrained = true;
+                }
 
                 if (newVariance < ostats.variance &&
                     (ret.bestRC == null || newVariance < bestNewVariance))
