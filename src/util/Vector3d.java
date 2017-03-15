@@ -236,21 +236,27 @@ public class Vector3d {
           * lines are parallel. */
         public Vector3d line2Closest = null;
 
+        /** Minimum visual separation angle between the lines,
+          * as seen from 'u1', in degrees. */
+        public double separationAngleDegrees = 0.0;
+
         /** Set distance only, for when lines are parallel. */
         public ClosestApproach(double minimumDistance_)
         {
             this.minimumDistance = minimumDistance_;
         }
 
-        /** Set all three components. */
+        /** Set all components. */
         public ClosestApproach(
             double minimumDistance_,
             Vector3d line1Closest_,
-            Vector3d line2Closest_)
+            Vector3d line2Closest_,
+            double separationAngleDegrees_)
         {
             this.minimumDistance = minimumDistance_;
             this.line1Closest = line1Closest_;
             this.line2Closest = line2Closest_;
+            this.separationAngleDegrees = separationAngleDegrees_;
         }
 
         /** Return true if 'this' approximately equals 'obj', to within
@@ -281,6 +287,10 @@ public class Vector3d {
                 return false;
             }
 
+            if (Math.abs(this.separationAngleDegrees - obj.separationAngleDegrees) > threshold) {
+                return false;
+            }
+
             return true;
         }
 
@@ -289,6 +299,7 @@ public class Vector3d {
             return "CA(min="+this.minimumDistance+
                    ", L1C="+this.line1Closest+
                    ", L2C="+this.line2Closest+
+                   ", sep="+this.separationAngleDegrees+
                    ")";
         }
     }
@@ -340,19 +351,34 @@ public class Vector3d {
             s = -s;
         }
 
-        // Repeat the last four steps for u2 going toward line1.
+        // Calculate where on line1 is the point of closest approach.
+        Vector3d line1Closest = p1.plus(u1.times(s));
+
+        // Repeat the last five steps for u2 going toward line1.
         Vector3d u2TowardLine1 = u2.minus(u2.projectOntoUnitVector(u1));
         Vector3d p2ToP1Ortho = p1.minus(p2Coplanar).projectOnto(u2TowardLine1);
         double t = p2ToP1Ortho.length() / u2TowardLine1.length();
         if (u2TowardLine1.dot(p2ToP1Ortho) < 0) {
             t = -t;
         }
+        Vector3d line2Closest = p2.plus(u2.times(t));
+
+        // Get the line of sight from 'p1' to the location on
+        // line2 that minimizes the separation angle between
+        // that line and 'u1', from the perspective of an
+        // observer at 'p1'.
+        Vector3d u1ToLine2Closest = line2Closest.minus(p1);
+
+        // The separation angle between that and the local line of
+        // sight is the desired quantity.
+        double separationAngle = u1.separationAngleDegrees(u1ToLine2Closest);
 
         // Package the results.
         return new ClosestApproach(
             orthogonalDifference.length(),
-            p1.plus(u1.times(s)),
-            p2.plus(u2.times(t)));
+            line1Closest,
+            line2Closest,
+            separationAngle);
     }
 
     private static void testOneClosestApproach(
@@ -397,32 +423,43 @@ public class Vector3d {
         testOneClosestApproach(
             new Vector3d(0,0,0), new Vector3d(0,1,0),
             new Vector3d(0,0,0), new Vector3d(1,0,0),
-            new ClosestApproach(0, new Vector3d(0,0,0), new Vector3d(0,0,0)));
+            new ClosestApproach(0, new Vector3d(0,0,0), new Vector3d(0,0,0), 0));
 
         // Different points, different directions, coplanar lines.
         testOneClosestApproach(
             new Vector3d(0,1,0), new Vector3d(0,1,0),
             new Vector3d(1,0,0), new Vector3d(1,0,0),
-            new ClosestApproach(0, new Vector3d(0,0,0), new Vector3d(0,0,0)));
+            new ClosestApproach(0, new Vector3d(0,0,0), new Vector3d(0,0,0), 180));
 
         // Different points, different directions, coplanar lines,
         // solution parameters have opposite sign.
         testOneClosestApproach(
             new Vector3d(0,-1,0), new Vector3d(0,1,0),
             new Vector3d(1,0,0), new Vector3d(1,0,0),
-            new ClosestApproach(0, new Vector3d(0,0,0), new Vector3d(0,0,0)));
+            new ClosestApproach(0, new Vector3d(0,0,0), new Vector3d(0,0,0), 0));
 
         // Not coplanar.
         testOneClosestApproach(
             new Vector3d(0,-1,1), new Vector3d(0,1,0),
             new Vector3d(1,0,0), new Vector3d(1,0,0),
-            new ClosestApproach(1, new Vector3d(0,0,1), new Vector3d(0,0,0)));
+            new ClosestApproach(1, new Vector3d(0,0,1), new Vector3d(0,0,0), 45));
 
-        // Another not copanar.
+        // Another not coplanar.
         testOneClosestApproach(
             new Vector3d(5,-1,1), new Vector3d(0,1,0),
             new Vector3d(1,7,0), new Vector3d(1,0,0),
-            new ClosestApproach(1, new Vector3d(5,7,1), new Vector3d(5,7,0)));
+            new ClosestApproach(1, new Vector3d(5,7,1), new Vector3d(5,7,0), 7.125016348901757));
+    }
+
+    /** Minor convenience: invoke 'getClosestApproach' with Vector3f.
+      * Note that the return value still uses doubles. */
+    public static ClosestApproach getClosestApproachf(
+        Vector3f p1, Vector3f u1,
+        Vector3f p2, Vector3f u2)
+    {
+        return getClosestApproach(
+            new Vector3d(p1), new Vector3d(u1),
+            new Vector3d(p2), new Vector3d(u2));
     }
 
     public static void main(String args[])

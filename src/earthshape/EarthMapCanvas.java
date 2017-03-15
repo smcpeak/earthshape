@@ -38,6 +38,7 @@ import com.jogamp.opengl.util.texture.TextureIO;
 
 import util.FloatUtil;
 import util.Matrix4f;
+import util.Vector3d;
 import util.Vector3f;
 import util.Vector4f;
 
@@ -901,9 +902,9 @@ public class EarthMapCanvas
                 gl.glBegin(GL.GL_LINE_STRIP);
                 glMaterialColor3f(gl, 0, 1, 0);    // Green
 
-                glVertex3(gl, s.baseSquare.center.plus(upShort));
-                glVertex3(gl, s.baseMidpoint.plus(upShort));
-                glVertex3(gl, s.center.plus(upShort));
+                glVertex3f(gl, s.baseSquare.center.plus(upShort));
+                glVertex3f(gl, s.baseMidpoint.plus(upShort));
+                glVertex3f(gl, s.center.plus(upShort));
 
                 gl.glEnd();
             }
@@ -934,7 +935,7 @@ public class EarthMapCanvas
             gl.glBegin(GL.GL_LINES);
             glMaterialColor3f(gl, rayBrightness, rayBrightness, rayBrightness);
 
-            glVertex3(gl, s.center);
+            glVertex3f(gl, s.center);
 
             // The observation is just a direction, so we draw
             // the ray as infinitely long (except it will be
@@ -959,10 +960,33 @@ public class EarthMapCanvas
                     // in world coordinates.
                     Vector3f baseStarRay = EarthShape.rayToStar(s.baseSquare, baseObservation);
 
-                    // Calculate the visual separation angle between these rays.
-                    float sep = (float)starRay.separationAngleDegrees(baseStarRay);
+                    // Get the visual separation angle.  This is a float
+                    // in order to avoid cluttering the 3D display with
+                    // too many digits.
+                    float sep;
+                    if (EarthShape.assumeInfiniteStarDistance) {
+                        // Angle between *rays*.
+                        sep = (float)starRay.separationAngleDegrees(baseStarRay);
+                    }
+                    else {
+                        // Get info about visual separation of *lines*.
+                        Vector3d.ClosestApproach ca = Vector3d.getClosestApproachf(
+                            s.center, starRay,
+                            s.baseSquare.center, baseStarRay);
+                        sep = (float)ca.separationAngleDegrees;
 
-                    // Add that to the label.
+                        if (ca.line1Closest != null && ca.line2Closest != null) {
+                            // Draw a connecting line showing the location of
+                            // minimum separation.
+                            glMaterialColor3f(gl, 1, 0, 0);     // Red.
+                            gl.glBegin(GL.GL_LINES);
+                            glVertex3d(gl, ca.line1Closest);
+                            glVertex3d(gl, ca.line2Closest);
+                            gl.glEnd();
+                        }
+                    }
+
+                    // Add separation angle to the label.
                     starLabel += " ("+sep+")";
                 }
             }
@@ -972,10 +996,16 @@ public class EarthMapCanvas
         }
     }
 
-    /** Add a vertex from a 3D vector. */
-    private static void glVertex3(GL2 gl, Vector3f pt)
+    /** Add a vertex from a Vector3f. */
+    private static void glVertex3f(GL2 gl, Vector3f pt)
     {
         gl.glVertex3fv(pt.getArray(), 0);
+    }
+
+    /** Add a vertex from a Vector3d. */
+    private static void glVertex3d(GL2 gl, Vector3d pt)
+    {
+        gl.glVertex3dv(pt.getArray(), 0);
     }
 
     /** Draw a 2D "+" in the [0,1] box. */

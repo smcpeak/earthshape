@@ -33,6 +33,7 @@ import javax.swing.SwingWorker;
 import com.jogamp.opengl.GLCapabilities;
 
 import util.FloatUtil;
+import util.Vector3d;
 import util.Vector3f;
 import util.swing.ModalDialog;
 
@@ -70,6 +71,17 @@ public class EarthShape
     /** The thread that last issued a 'log' command.  This is used to
       * only log thread names when there is interleaving. */
     private static Thread lastLoggedThread = null;
+
+    /** When true, star observations are only compared by their
+      * direction.  When false, we also consider the location of the
+      * observer, which allows us to handle nearby objects.
+      *
+      * This is static because it is an option to a routine that is
+      * static, and making it non-static would open the code to bugs
+      * where I unintentionally use non-static data members.  I am
+      * considering making all of these sorts of options static so
+      * non-static is exclusively for model data, not options. */
+    public static boolean assumeInfiniteStarDistance = true;
 
     // ---------- Instance variables ----------
     // ---- Star Information ----
@@ -140,6 +152,9 @@ public class EarthShape
 
     /** Menu item to toggle 'newAutomaticOrientationAlgorithm'. */
     private JCheckBoxMenuItem newAutomaticOrientationAlgorithmCBItem;
+
+    /** Menu item to toggle 'assumeInfiniteStarDistance'. */
+    private JCheckBoxMenuItem assumeInfiniteStarDistanceCBItem;
 
     // ---------- Methods ----------
     public EarthShape()
@@ -301,24 +316,13 @@ public class EarthShape
         menuBar.add(this.buildSelectMenu());
         menuBar.add(this.buildEditMenu());
         menuBar.add(this.buildNavigateMenu());
+        menuBar.add(this.buildOptionsMenu());
         menuBar.add(this.buildHelpMenu());
     }
 
     private JMenu buildFileMenu()
     {
         JMenu fileMenu = new JMenu("File");
-        addMenuItem(fileMenu, "Choose enabled stars...", null, new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                EarthShape.this.chooseEnabledStars();
-            }
-        });
-        addMenuItem(fileMenu, "Set maximum Sun elevation...",
-            null,
-            new ActionListener() {
-                public void actionPerformed(ActionEvent e) {
-                    EarthShape.this.setMaximumSunElevation();
-                }
-            });
         addMenuItem(fileMenu, "Exit", null, new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 EarthShape.log("exit menu item invoked");
@@ -508,16 +512,6 @@ public class EarthShape
                     EarthShape.this.automaticallyOrientActiveSquare();
                 }
             });
-        this.newAutomaticOrientationAlgorithmCBItem =
-            addCBMenuItem(editMenu, "Use new automatic orientation algorithm", null,
-                this.newAutomaticOrientationAlgorithm,
-                new ActionListener() {
-                    public void actionPerformed(ActionEvent e) {
-                        EarthShape.this.newAutomaticOrientationAlgorithm =
-                            !EarthShape.this.newAutomaticOrientationAlgorithm;
-                        EarthShape.this.updateUIState();
-                    }
-                });
         addMenuItem(editMenu, "Delete active square",
             KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0),
             new ActionListener() {
@@ -552,8 +546,30 @@ public class EarthShape
                     EarthShape.this.goToActiveSquareCenter();
                 }
             });
+        return navigateMenu;
+    }
+
+    private JMenu buildOptionsMenu()
+    {
+        JMenu menu = new JMenu("Options");
+
+        addMenuItem(menu, "Choose enabled stars...", null, new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                EarthShape.this.chooseEnabledStars();
+            }
+        });
+        addMenuItem(menu, "Set maximum Sun elevation...",
+            null,
+            new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    EarthShape.this.setMaximumSunElevation();
+                }
+            });
+
+        menu.addSeparator();
+
         this.invertHorizontalCameraMovementCBItem =
-            addCBMenuItem(navigateMenu, "Invert horizontal camera movement", null,
+            addCBMenuItem(menu, "Invert horizontal camera movement", null,
                 this.emCanvas.invertHorizontalCameraMovement,
                 new ActionListener() {
                     public void actionPerformed(ActionEvent e) {
@@ -563,7 +579,7 @@ public class EarthShape
                     }
                 });
         this.invertVerticalCameraMovementCBItem =
-            addCBMenuItem(navigateMenu, "Invert vertical camera movement", null,
+            addCBMenuItem(menu, "Invert vertical camera movement", null,
                 this.emCanvas.invertVerticalCameraMovement,
                 new ActionListener() {
                     public void actionPerformed(ActionEvent e) {
@@ -572,7 +588,32 @@ public class EarthShape
                         EarthShape.this.updateUIState();
                     }
                 });
-        return navigateMenu;
+
+        menu.addSeparator();
+
+        this.newAutomaticOrientationAlgorithmCBItem =
+            addCBMenuItem(menu, "Use new automatic orientation algorithm", null,
+                this.newAutomaticOrientationAlgorithm,
+                new ActionListener() {
+                    public void actionPerformed(ActionEvent e) {
+                        EarthShape.this.newAutomaticOrientationAlgorithm =
+                            !EarthShape.this.newAutomaticOrientationAlgorithm;
+                        EarthShape.this.updateUIState();
+                    }
+                });
+        this.assumeInfiniteStarDistanceCBItem =
+            addCBMenuItem(menu, "Assume stars are infinitely far away", null,
+                EarthShape.assumeInfiniteStarDistance,
+                new ActionListener() {
+                    public void actionPerformed(ActionEvent e) {
+                        EarthShape.assumeInfiniteStarDistance =
+                            !EarthShape.assumeInfiniteStarDistance;
+                        EarthShape.this.emCanvas.redrawCanvas();
+                        EarthShape.this.updateUIState();
+                    }
+                });
+
+        return menu;
     }
 
     private JMenu buildHelpMenu()
@@ -1373,7 +1414,15 @@ public class EarthShape
                 Vector3f baseStarRay = EarthShape.rayToStar(square.baseSquare, baseObservation);
 
                 // Visual separation angle between these rays.
-                double sep = starRay.separationAngleDegrees(baseStarRay);
+                double sep;
+                if (EarthShape.assumeInfiniteStarDistance) {
+                    sep = starRay.separationAngleDegrees(baseStarRay);
+                }
+                else {
+                    sep = Vector3d.getClosestApproachf(
+                        square.center, starRay,
+                        square.baseSquare.center, baseStarRay).separationAngleDegrees;
+                }
                 if (sep > maxSeparation) {
                     maxSeparation = sep;
                 }
@@ -2129,6 +2178,8 @@ public class EarthShape
 
         this.newAutomaticOrientationAlgorithmCBItem.setSelected(
             this.newAutomaticOrientationAlgorithm);
+        this.assumeInfiniteStarDistanceCBItem.setSelected(
+            EarthShape.assumeInfiniteStarDistance);
     }
 
     /** Update the contents of the info panel. */
