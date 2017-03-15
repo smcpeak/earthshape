@@ -4,6 +4,7 @@
 package earthshape;
 
 import java.awt.BorderLayout;
+import java.awt.Cursor;
 import java.awt.SecondaryLoop;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
@@ -164,8 +165,6 @@ public class EarthShape
         this.setLocationByPlatform(true);
 
         this.setupJOGL();
-
-        this.buildEarthSurfaceFromStarData();
 
         this.buildMenuBar();
 
@@ -838,6 +837,20 @@ public class EarthShape
       * size and shape. */
     public void buildEarthSurfaceFromStarData()
     {
+        Cursor oldCursor = this.getCursor();
+        this.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+        try {
+            this.buildEarthSurfaceFromStarDataInner();
+        }
+        finally {
+            this.setCursor(oldCursor);
+        }
+    }
+
+    /** Core of 'buildEarthSurfaceFromStarData', so I can more easily
+      * wrap computation around it. */
+    public void buildEarthSurfaceFromStarDataInner()
+    {
         log("building Earth using star data");
         this.clearSurfaceSquares();
 
@@ -915,6 +928,9 @@ public class EarthShape
         this.buildLatitudeStrip(curSquare, -9, starObs);
         this.buildLongitudeStrip(curSquare, +9, starObs);
         this.buildLongitudeStrip(curSquare, -9, starObs);
+
+        // Reset the adjustment angle.
+        this.adjustOrientationDegrees = EarthShape.DEFAULT_ADJUST_ORIENTATION_DEGREES;
 
         this.emCanvas.redrawCanvas();
         log("buildEarth: finished using star data");
