@@ -351,6 +351,11 @@ public class EarthShape
                 EarthShape.this.changeObservations(new CloseStarObservations());
             }
         });
+        addMenuItem(menu, "Use azimuthal equidistant projection flat Earth model", null, new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                EarthShape.this.changeObservations(new AzimuthalEquidistantObservations());
+            }
+        });
 
         menu.addSeparator();
 
@@ -964,7 +969,7 @@ public class EarthShape
         this.adjustOrientationDegrees = EarthShape.DEFAULT_ADJUST_ORIENTATION_DEGREES;
 
         this.emCanvas.redrawCanvas();
-        log("buildEarth: finished using star data");
+        log("buildEarth: finished using star data; nSquares="+this.emCanvas.numSurfaceSquares());
     }
 
     /** Build squares by going North or South from a starting square
@@ -1246,6 +1251,9 @@ public class EarthShape
     {
         StarObservation sun = this.worldObservations.getSunObservation(
             StarObservation.unixTimeOfManualData, latitude, longitude);
+        if (sun == null) {
+            return false;
+        }
 
         return sun.elevation > this.maximumSunElevation;
     }
@@ -1373,16 +1381,59 @@ public class EarthShape
     /** Get closest approach, except with a modification to
       * smooth out the search space. */
     public static Vector3d.ClosestApproach getModifiedClosestApproach(
-        Vector3f p1, Vector3f u1,
-        Vector3f p2, Vector3f u2)
+        Vector3f p1f, Vector3f u1f,
+        Vector3f p2f, Vector3f u2f)
     {
-        Vector3d.ClosestApproach ca = Vector3d.getClosestApproachf(p1, u1, p2, u2);
+        Vector3d p1 = new Vector3d(p1f);
+        Vector3d u1 = new Vector3d(u1f);
+        Vector3d p2 = new Vector3d(p2f);
+        Vector3d u2 = new Vector3d(u2f);
 
-        // If the intersection is obtuse, let's switch it to acute.
-        // I'm having a problem because the obtuse angles cause
-        // severe discontinuity in the search space.
-        if (ca.separationAngleDegrees > 90) {
-            ca.separationAngleDegrees = 180.0 - ca.separationAngleDegrees;
+        Vector3d.ClosestApproach ca = Vector3d.getClosestApproach(p1, u1, p2, u2);
+
+        if (ca.line1Closest != null) {
+            // Now, there is a problem if the closest approach is behind
+            // either observer.  Not only does that not make logical sense,
+            // but naively using the calculation will cause the search
+            // space to be very lumpy, which creates local minima that my
+            // hill-climbing algorithm gets trapped in.  So, we require
+            // that the points on each observation line be at least one
+            // unit away, which currently means 1000 km.  That smooths out
+            // the search space so the hill climber will find its way to
+            // the optimal solution more reliably.
+
+            // How far along u1 is the closest approach?
+            double m1 = ca.line1Closest.minus(p1).dot(u1);
+            if (m1 < 1.0) {
+                // That is unreasonably close.  Push the approach point
+                // out to one unit away along u1.
+                ca.line1Closest = p1.plus(u1);
+
+                // Find the closest point on (p2,u2) to that point.
+                ca.line2Closest = ca.line1Closest.closestPointOnLine(p2, u2);
+
+                // Recalculate the separation angle to that point.
+                ca.separationAngleDegrees = u1.separationAngleDegrees(ca.line2Closest.minus(p1));
+            }
+
+            // How far along u2?
+            double m2 = ca.line2Closest.minus(p2).dot(u2);
+            if (m2 < 1.0) {
+                // Too close; push it.
+                ca.line2Closest = p2.plus(u2);
+
+                // What is closest on (p1,u1) to that?
+                ca.line1Closest = ca.line2Closest.closestPointOnLine(p1, u1);
+
+                // Re-check if that is too close to p1.
+                if (ca.line1Closest.minus(p1).dot(u1) < 1.0) {
+                    // Push it without changing line2Closest.
+                    ca.line1Closest = p1.plus(u1);
+                }
+
+                // Recalculate the separation angle to that point.
+                ca.separationAngleDegrees = u1.separationAngleDegrees(ca.line2Closest.minus(p1));
+            }
         }
 
         return ca;
@@ -1670,7 +1721,15 @@ public class EarthShape
             }
         }
 
-        log("repeatedlyApply done: iters="+iters+" adjustDegrees="+ adjustDegrees);
+        // Get the final variance.
+        String finalVariance = "null";
+        ostats = this.fitOfObservations(s);
+        if (ostats != null) {
+            finalVariance = ""+ostats.variance;
+        }
+
+        log("repeatedlyApply done: iters="+iters+" adj="+ adjustDegrees+
+            " var="+finalVariance);
         return s;
     }
 
@@ -2096,6 +2155,7 @@ public class EarthShape
     {
         StringBuilder sb = new StringBuilder();
         sb.append(this.emCanvas.getStatusString());
+        sb.append(", model="+this.worldObservations.getDescription());
         this.statusLabel.setText(sb.toString());
     }
 

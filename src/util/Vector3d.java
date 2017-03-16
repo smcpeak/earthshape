@@ -367,11 +367,11 @@ public class Vector3d {
         // line2 that minimizes the separation angle between
         // that line and 'u1', from the perspective of an
         // observer at 'p1'.
-        Vector3d u1ToLine2Closest = line2Closest.minus(p1);
+        Vector3d p1ToLine2Closest = line2Closest.minus(p1);
 
         // The separation angle between that and the local line of
         // sight is the desired quantity.
-        double separationAngle = u1.separationAngleDegrees(u1ToLine2Closest);
+        double separationAngle = u1.separationAngleDegrees(p1ToLine2Closest);
 
         // Package the results.
         return new ClosestApproach(
@@ -460,6 +460,14 @@ public class Vector3d {
         return getClosestApproach(
             new Vector3d(p1), new Vector3d(u1),
             new Vector3d(p2), new Vector3d(u2));
+    }
+
+    /** Given the line "p + s*u" for real s, find the point on that
+      * line that is closest to 'this'.  'u' must be a unit vector. */
+    public Vector3d closestPointOnLine(Vector3d p, Vector3d u)
+    {
+        // Project the difference onto 'u', then add 'p'.
+        return p.plus(this.minus(p).projectOntoUnitVector(u));
     }
 
     public static void main(String args[])

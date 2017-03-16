@@ -162,7 +162,7 @@ public class FloatUtil {
     }
 
     /** Compute the two-argument inverse tangent of (y,x),
-      * in degrees. */
+      * in degrees in [-180,180]. */
     public static double atan2Deg(double y, double x)
     {
         return radiansToDegrees(Math.atan2(y, x));

@@ -51,7 +51,7 @@ public class CloseStarObservations extends RealWorldObservations {
       * coordinate system, using a spherical model for the Earth.
       * This square will not become part of the virtual 3D map, I am
       * just using it as a convenient package for some data. */
-    private SurfaceSquare getSquare(float latitude, float longitude)
+    public SurfaceSquare getSquare(float latitude, float longitude)
     {
         // The coordinate system here has the Earth's center at the
         // origin, its spin axis along the Z axis with celestial North
@@ -152,25 +152,8 @@ public class CloseStarObservations extends RealWorldObservations {
             Vector3d dir = targetToStarLocal.normalizeAsVector3d();
 
             // Extract azimuth and elevation from the components of 'dir'.
-            // Elevation is straightforward since +Y is up in the local
-            // coordinate system.
-            double elevation = FloatUtil.asinDeg(dir.y());
-
-            // Azimuth is a little tricky since my axes and angles are
-            // oriented differently from the standard 2D coordinate
-            // system used by atan2.
-            //
-            // The first argument to atan2 is the standard Y coordinate,
-            // which starts at 0 and increases as standard degrees
-            // increase (they go counter-clockwise from the standard X axis).
-            // Here, 'dir.x()' starts at 0 and increases as azimuth
-            // degrees increase (clockwise from North, which is my -Z).
-            //
-            // The second argument to atan2 is the standard X coordinate,
-            // which starts at 1 and decreases as standard degrees
-            // increase.  Here, '-dir.z()' does that as azimuth degrees
-            // increase.
-            double azimuth = FloatUtil.atan2Deg(dir.x(), -dir.z());
+            double elevation = elevationOfLocalDirection(dir);
+            double azimuth = azimuthOfLocalDirection(dir);
 
             // Package this up as an observation.
             modified.add(new StarObservation(
@@ -182,6 +165,41 @@ public class CloseStarObservations extends RealWorldObservations {
         }
 
         return modified;
+    }
+
+    /** Given a unit vector in my "nominal" coordinate system, where
+      * -Z is north and +Y is up, return its elevation in [-90,90]
+      * degrees. */
+    public static double elevationOfLocalDirection(Vector3d dir)
+    {
+        // Elevation is straightforward since +Y is up in the local
+        // coordinate system.
+        return FloatUtil.asinDeg(dir.y());
+    }
+
+    /** Given a unit vector in my "nominal" coordinate system, where
+      * -Z is north and +Y is up, return its azimuth in [0,360]
+      * degrees. */
+    public static double azimuthOfLocalDirection(Vector3d dir)
+    {
+        // Azimuth is a little tricky since my axes and angles are
+        // oriented differently from the standard 2D coordinate
+        // system used by atan2.
+        //
+        // The first argument to atan2 is the standard Y coordinate,
+        // which starts at 0 and increases as standard degrees
+        // increase (they go counter-clockwise from the standard X axis).
+        // Here, 'dir.x()' starts at 0 and increases as azimuth
+        // degrees increase (clockwise from North, which is my -Z).
+        //
+        // The second argument to atan2 is the standard X coordinate,
+        // which starts at 1 and decreases as standard degrees
+        // increase.  Here, '-dir.z()' does that as azimuth degrees
+        // increase.
+        double azimuth = FloatUtil.atan2Deg(dir.x(), -dir.z());
+
+        // atan2 return is in [-180,180] but I want [0,360].
+        return FloatUtil.modulus2(azimuth, 0, 360);
     }
 }
 
