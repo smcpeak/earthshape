@@ -74,14 +74,8 @@ public class EarthShape
 
     /** When true, star observations are only compared by their
       * direction.  When false, we also consider the location of the
-      * observer, which allows us to handle nearby objects.
-      *
-      * This is static because it is an option to a routine that is
-      * static, and making it non-static would open the code to bugs
-      * where I unintentionally use non-static data members.  I am
-      * considering making all of these sorts of options static so
-      * non-static is exclusively for model data, not options. */
-    public static boolean assumeInfiniteStarDistance = true;
+      * observer, which allows us to handle nearby objects. */
+    public boolean assumeInfiniteStarDistance = true;
 
     // ---------- Instance variables ----------
     // ---- Observation Information ----
@@ -601,11 +595,11 @@ public class EarthShape
                 });
         this.assumeInfiniteStarDistanceCBItem =
             addCBMenuItem(menu, "Assume stars are infinitely far away", null,
-                EarthShape.assumeInfiniteStarDistance,
+                this.assumeInfiniteStarDistance,
                 new ActionListener() {
                     public void actionPerformed(ActionEvent e) {
-                        EarthShape.assumeInfiniteStarDistance =
-                            !EarthShape.assumeInfiniteStarDistance;
+                        EarthShape.this.assumeInfiniteStarDistance =
+                            !EarthShape.this.assumeInfiniteStarDistance;
                         EarthShape.this.emCanvas.redrawCanvas();
                         EarthShape.this.updateUIState();
                     }
@@ -1297,7 +1291,7 @@ public class EarthShape
 
     /** Calculate variance and maximum separation for 'square'.  Returns
       * null if there is no base or there are no observations in common. */
-    private static ObservationStats fitOfObservations(SurfaceSquare square)
+    private ObservationStats fitOfObservations(SurfaceSquare square)
     {
         if (square.baseSquare == null) {
             return null;
@@ -1323,7 +1317,7 @@ public class EarthShape
 
                 // Visual separation angle between these rays.
                 double sep;
-                if (EarthShape.assumeInfiniteStarDistance) {
+                if (this.assumeInfiniteStarDistance) {
                     sep = starRay.separationAngleDegrees(baseStarRay);
                 }
                 else {
@@ -1531,7 +1525,7 @@ public class EarthShape
                 derived.latitude, derived.longitude, angleAxis);
         if (newSquare == null) {
             // If we do not move, use the original square's data.
-            return EarthShape.fitOfObservations(derived);
+            return this.fitOfObservations(derived);
         }
 
         // Copy the observation data since that is needed to calculate
@@ -1539,7 +1533,7 @@ public class EarthShape
         newSquare.starObs = derived.starObs;
 
         // Now calculate the new variance.
-        return EarthShape.fitOfObservations(newSquare);
+        return this.fitOfObservations(newSquare);
     }
 
     /** Like 'fitOfAdjustedSquare' except only retrieves the
@@ -1578,7 +1572,7 @@ public class EarthShape
             ModalDialog.errorBox(this, "No active square.");
             return;
         }
-        ObservationStats ostats = EarthShape.fitOfObservations(s);
+        ObservationStats ostats = this.fitOfObservations(s);
         if (ostats == null) {
             ModalDialog.errorBox(this, "Not enough observational data available.");
             return;
@@ -1613,7 +1607,7 @@ public class EarthShape
       * insufficient constraints. */
     private SurfaceSquare repeatedlyApplyRecommendedRotationCommand(SurfaceSquare s)
     {
-        ObservationStats ostats = EarthShape.fitOfObservations(s);
+        ObservationStats ostats = this.fitOfObservations(s);
         if (ostats == null || ostats.numSamples < 2) {
             return null;  // Underconstrained.
         }
@@ -1787,7 +1781,7 @@ public class EarthShape
         }
         SurfaceSquare s = this.activeSquare;
 
-        ObservationStats ostats = EarthShape.fitOfObservations(s);
+        ObservationStats ostats = this.fitOfObservations(s);
         if (ostats == null) {
             ModalDialog.errorBox(this, "No observation fitness stats for the active square.");
             return;
@@ -2105,7 +2099,7 @@ public class EarthShape
         this.newAutomaticOrientationAlgorithmCBItem.setSelected(
             this.newAutomaticOrientationAlgorithm);
         this.assumeInfiniteStarDistanceCBItem.setSelected(
-            EarthShape.assumeInfiniteStarDistance);
+            this.assumeInfiniteStarDistance);
     }
 
     /** Update the contents of the info panel. */
@@ -2128,7 +2122,7 @@ public class EarthShape
             sb.append("  roty: "+s.rotationFromNominal.y()+"\n");
             sb.append("  rotz: "+s.rotationFromNominal.z()+"\n");
 
-            ObservationStats ostats = EarthShape.fitOfObservations(s);
+            ObservationStats ostats = this.fitOfObservations(s);
             if (ostats == null) {
                 sb.append("  No obs stats\n");
             }
@@ -2199,7 +2193,7 @@ public class EarthShape
     {
         // Get variance if no rotation is performed.  We only recommend
         // a rotation if it improves on this.
-        ObservationStats ostats = EarthShape.fitOfObservations(s);
+        ObservationStats ostats = this.fitOfObservations(s);
         if (ostats == null) {
             return null;
         }

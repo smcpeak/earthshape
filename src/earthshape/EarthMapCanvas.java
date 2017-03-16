@@ -964,7 +964,7 @@ public class EarthMapCanvas
                     // in order to avoid cluttering the 3D display with
                     // too many digits.
                     float sep;
-                    if (EarthShape.assumeInfiniteStarDistance) {
+                    if (this.earthShapeFrame.assumeInfiniteStarDistance) {
                         // Angle between *rays*.
                         sep = (float)starRay.separationAngleDegrees(baseStarRay);
                     }
