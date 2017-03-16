@@ -5,6 +5,7 @@ package earthshape;
 
 import java.awt.BorderLayout;
 import java.awt.Cursor;
+import java.awt.Image;
 import java.awt.SecondaryLoop;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
@@ -13,6 +14,7 @@ import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.net.URL;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -157,6 +159,7 @@ public class EarthShape
         this.setName("EarthShape (JFrame)");
 
         this.setLayout(new BorderLayout());
+        this.setIcon();
 
         // Exit the app when window close button is pressed (AWT boilerplate).
         this.addWindowListener(new WindowAdapter() {
@@ -207,6 +210,19 @@ public class EarthShape
 
         // Associate the canvas with 'this' window.
         this.add(this.emCanvas, BorderLayout.CENTER);
+    }
+
+    /** Set the window icon to my application's icon. */
+    private void setIcon()
+    {
+        try {
+            URL url = this.getClass().getResource("globe-icon.png");
+            Image img = Toolkit.getDefaultToolkit().createImage(url);
+            this.setIconImage(img);
+        }
+        catch (Exception e) {
+            System.err.println("Failed to set app icon: "+e.getMessage());
+        }
     }
 
     private void showAboutBox()
