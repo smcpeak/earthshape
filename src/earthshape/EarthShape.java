@@ -2219,6 +2219,16 @@ public class EarthShape
                     // is a rotation that keeps it ideal.  That
                     // must mean that the solution space is under-
                     // constrained.
+                    //
+                    // Note: This is an unnecessarily strong condition for
+                    // being underconstrained.  It requires that we
+                    // find a zero in the objective function, and
+                    // furthermore that the solution space be parallel
+                    // to one of the three local rotation axes.  I have
+                    // some ideas for more robust detection of underconstraint,
+                    // but haven't tried to implement them yet.  For now I
+                    // will rely on manual inspection of the rotation cube
+                    // analysis dialog.
                     ret.underconstrained = true;
                 }
 
