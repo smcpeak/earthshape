@@ -14,8 +14,8 @@ import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import javax.swing.JCheckBoxMenuItem;
@@ -84,16 +84,11 @@ public class EarthShape
     public static boolean assumeInfiniteStarDistance = true;
 
     // ---------- Instance variables ----------
-    // ---- Star Information ----
-    /** Some star observations I manually gathered. */
-    private StarObservation[] manualStarObservations = StarObservation.getManualObservations();
-
-    /** Some star celestial coordinates, which can be used to derive
-      * synthetic star observations. */
-    private StarCatalog[] starCatalog = StarCatalog.makeCatalog();
-
-    /** Position of the sun on StarObservation.unixTimeOfManualData. */
-    private StarCatalog sunPosition = StarCatalog.sunPosition();
+    // ---- Observation Information ----
+    /** The observations that will drive surface reconstruction.
+      * By default, this will be data from the real world, but it
+      * can be swapped out at the user's option. */
+    private WorldObservations worldObservations = new RealWorldObservations();
 
     /** Set of stars that are enabled. */
     private LinkedHashMap<String, Boolean> enabledStars = new LinkedHashMap<String, Boolean>();
@@ -119,7 +114,10 @@ public class EarthShape
 
     /** When true, use the "new" orientation algorithm that
       * repeatedly applies the recommended command.  Otherwise,
-      * use the older one based on average deviation. */
+      * use the older one based on average deviation.  The old
+      * algorithm is faster, but slightly less accurate, and
+      * does not mimic the process a user would use to manually
+      * adjust a square's orientation. */
     private boolean newAutomaticOrientationAlgorithm = true;
 
     // ---- Widgets ----
@@ -171,9 +169,9 @@ public class EarthShape
             }
         });
 
-        for (StarCatalog sc : this.starCatalog) {
+        for (String starName : this.worldObservations.getAllStars()) {
             // Initially all stars are enabled.
-            this.enabledStars.put(sc.name, true);
+            this.enabledStars.put(starName, true);
         }
 
         this.setSize(1150, 800);
@@ -892,83 +890,41 @@ public class EarthShape
       * wrap computation around it. */
     public void buildEarthSurfaceFromStarDataInner()
     {
-        log("building Earth using star data");
+        log("building Earth using star data: "+this.worldObservations.getDescription());
         this.clearSurfaceSquares();
-
-        StarObservation[] starObs = this.manualStarObservations;
 
         // Size of squares to build, in km.
         float sizeKm = 1000;
 
-        SurfaceSquare firstSquare = null;
+        // Start at approximately my location in SF, CA.  This is one of
+        // the locations for which I have manual data, and when we build
+        // the first latitude strip, that will pick up the other manual
+        // data points.
+        float latitude = 38;
+        float longitude = -122;
+        SurfaceSquare square = null;
+        log("buildEarth: building first square at lat="+latitude+" long="+longitude);
 
-        // Work through the data in order, assuming that observations
-        // for a given location are contiguous, and that the data appears
-        // in a good walk order.
-        float curLatitude = 0;
-        float curLongitude = 0;
-        SurfaceSquare curSquare = null;
-        for (StarObservation so : starObs) {
-            // Skip forward to next location.
-            if (curSquare != null && so.latitude == curLatitude && so.longitude == curLongitude) {
-                continue;
-            }
-            log("buildEarth: building lat="+so.latitude+" long="+so.longitude);
+        // First square will be placed at the 3D origin with
+        // its North pointed along the -Z axis.
+        square = new SurfaceSquare(
+            new Vector3f(0,0,0),      // center
+            new Vector3f(0,0,-1),     // north
+            new Vector3f(0,1,0),      // up
+            sizeKm,
+            latitude,
+            longitude,
+            null /*base*/, null /*midpoint*/,
+            new Vector3f(0,0,0));
+        this.emCanvas.addSurfaceSquare(square);
+        this.addMatchingData(square);
 
-            if (curSquare == null) {
-                // First square will be placed at the 3D origin with
-                // its North pointed along the -Z axis.
-                curSquare = new SurfaceSquare(
-                    new Vector3f(0,0,0),      // center
-                    new Vector3f(0,0,-1),     // north
-                    new Vector3f(0,1,0),      // up
-                    sizeKm,
-                    so.latitude,
-                    so.longitude,
-                    null /*base*/, null /*midpoint*/,
-                    new Vector3f(0,0,0));
-                this.emCanvas.addSurfaceSquare(curSquare);
-                this.addMatchingData(curSquare, starObs);
-                firstSquare = curSquare;
-            }
-            else {
-                // Create a new square adjacent to the current square,
-                // at the location from which observation 'so' was made.
-                curSquare = this.createAndAutomaticallyOrientSquare(curSquare,
-                    so.latitude, so.longitude);
-                if (curSquare == null) {
-                    log("buildEarth: could not place next square!");
-                    break;
-                }
-            }
-
-            curLatitude = so.latitude;
-            curLongitude = so.longitude;
-        }
-
-        // Go one step North from first square;
-        {
-            curSquare = firstSquare;
-            float newLatitude = 38 + 9;
-            float newLongitude = -122;
-
-            log("buildEarth: building lat="+newLatitude+" long="+newLongitude);
-
-            curSquare = this.createAndAutomaticallyOrientSquare(curSquare,
-                newLatitude, newLongitude);
-            if (curSquare == null) {
-                log("buildEarth: could not place next square!");
-            }
-
-            curLatitude = newLatitude;
-            curLongitude = newLongitude;
-        }
-
-        // From here, keep exploring, relying on the synthetic catalog.
-        this.buildLatitudeStrip(curSquare, +9, starObs);
-        this.buildLatitudeStrip(curSquare, -9, starObs);
-        this.buildLongitudeStrip(curSquare, +9, starObs);
-        this.buildLongitudeStrip(curSquare, -9, starObs);
+        // From here, explore in all directions until all points on
+        // the surface have been explored (to within 9 degrees).
+        this.buildLatitudeStrip(square, +9);
+        this.buildLatitudeStrip(square, -9);
+        this.buildLongitudeStrip(square, +9);
+        this.buildLongitudeStrip(square, -9);
 
         // Reset the adjustment angle.
         this.adjustOrientationDegrees = EarthShape.DEFAULT_ADJUST_ORIENTATION_DEGREES;
@@ -980,8 +936,7 @@ public class EarthShape
     /** Build squares by going North or South from a starting square
       * until we add 20 or we can't add any more.  At each spot, also
       * build latitude strips in both directions. */
-    private void buildLongitudeStrip(SurfaceSquare startSquare,
-        float deltaLatitude, StarObservation[] starObs)
+    private void buildLongitudeStrip(SurfaceSquare startSquare, float deltaLatitude)
     {
         float curLatitude = startSquare.latitude;
         float curLongitude = startSquare.longitude;
@@ -1008,15 +963,14 @@ public class EarthShape
             curLongitude = newLongitude;
 
             // Also build strips in each direction.
-            this.buildLatitudeStrip(curSquare, +9, starObs);
-            this.buildLatitudeStrip(curSquare, -9, starObs);
+            this.buildLatitudeStrip(curSquare, +9);
+            this.buildLatitudeStrip(curSquare, -9);
         }
     }
 
     /** Build squares by going East or West from a starting square
       * until we add 20 or we can't add any more. */
-    private void buildLatitudeStrip(SurfaceSquare startSquare,
-        float deltaLongitude, StarObservation[] starObs)
+    private void buildLatitudeStrip(SurfaceSquare startSquare, float deltaLongitude)
     {
         float curLatitude = startSquare.latitude;
         float curLongitude = startSquare.longitude;
@@ -1043,7 +997,7 @@ public class EarthShape
       * and longitude, with orientation changed by 'rotation'.  If there is
       * no change, return null.  Even if not, do not add the square yet,
       * just return it. */
-    private static SurfaceSquare createRotatedAdjacentSquare(
+    private SurfaceSquare createRotatedAdjacentSquare(
         SurfaceSquare old,
         float newLatitude,
         float newLongitude,
@@ -1053,24 +1007,8 @@ public class EarthShape
         newLatitude = FloatUtil.clampf(newLatitude, -90, 90);
         newLongitude = FloatUtil.modulus2f(newLongitude, -180, 180);
 
-        // Calculate the angle along the spherical Earth subtended
-        // by the arc from 'old' to the new coordinates.
-        double arcAngleDegrees = FloatUtil.sphericalSeparationAngle(
-            old.longitude, old.latitude,
-            newLongitude, newLatitude);
-
-        // Calculate the distance along the surface that separates
-        // these points by using the fact that there are 111 km per
-        // degree of arc.
-        float distanceKm = (float)(111.0 * arcAngleDegrees);
-
-        // Get lat/long deltas.
-        float deltaLatitude = newLatitude - old.latitude;
-        float deltaLongitude = FloatUtil.modulus2f(
-            newLongitude - old.longitude, -180, 180);
-
         // If we didn't move, return null.
-        if (deltaLongitude == 0 && deltaLatitude == 0) {
+        if (old.latitude == newLatitude && old.longitude == newLongitude) {
             return null;
         }
 
@@ -1079,25 +1017,22 @@ public class EarthShape
         Vector3f newNorth = old.north.rotateAA(rotation);
         Vector3f newUp = old.up.rotateAA(rotation);
 
-        // Calculate headings, in degrees East of North, from
-        // the old square to the new and vice-versa.
-        double oldToNewHeading = FloatUtil.getLatLongPairHeading(
+        // Get observed travel details going to the new location.
+        TravelObservation tobs = this.worldObservations.getTravelObservation(
             old.latitude, old.longitude, newLatitude, newLongitude);
-        double newToOldHeading = FloatUtil.getLatLongPairHeading(
-            newLatitude, newLongitude, old.latitude, old.longitude);
 
         // For both old and new, calculate a unit vector for the
         // travel direction.  Both headings are negated due to the
         // right hand rule for rotation.  The new to old heading is
         // then flipped 180 since I want both to indicate the local
         // direction from old to new.
-        Vector3f oldTravel = old.north.rotate(-oldToNewHeading, old.up);
-        Vector3f newTravel = newNorth.rotate(-newToOldHeading + 180, newUp);
+        Vector3f oldTravel = old.north.rotate(-tobs.startToEndHeading, old.up);
+        Vector3f newTravel = newNorth.rotate(-tobs.endToStartHeading + 180, newUp);
 
         // Calculate the new square's center by going half the distance
         // according to the old orientation and then half the distance
         // according to the new orientation, in world coordinates.
-        float halfDistWorld = distanceKm / 2.0f * EarthMapCanvas.SPACE_UNITS_PER_KM;
+        float halfDistWorld = tobs.distanceKm / 2.0f * EarthMapCanvas.SPACE_UNITS_PER_KM;
         Vector3f midPoint = old.center.plus(oldTravel.times(halfDistWorld));
         Vector3f newCenter = midPoint.plus(newTravel.times(halfDistWorld));
 
@@ -1123,7 +1058,7 @@ public class EarthShape
         float newLongitude,
         Vector3f rotation)
     {
-        SurfaceSquare ret = EarthShape.createRotatedAdjacentSquare(
+        SurfaceSquare ret = this.createRotatedAdjacentSquare(
             old, newLatitude, newLongitude, rotation);
         if (ret == null) {
             return old;        // Did not move.
@@ -1134,31 +1069,24 @@ public class EarthShape
         return ret;
     }
 
+    /** Get star observations for the given location, at the particular
+      * point in time that I am using for everything. */
+    private List<StarObservation> getStarObservationsFor(
+        float latitude, float longitude)
+    {
+        return this.worldObservations.getStarObservations(
+            StarObservation.unixTimeOfManualData, latitude, longitude);
+    }
+
     /** Add to 'square.starObs' all entries of 'starObs' that have
       * the same latitude and longitude, and also are at least
       * 20 degrees above the horizon. */
-    private void addMatchingData(SurfaceSquare square, StarObservation[] starObs)
+    private void addMatchingData(SurfaceSquare square)
     {
-        // For which stars do I have manual data?
-        HashSet<String> manualStars = new HashSet<String>();
-        for (StarObservation so : starObs) {
-            if (square.latitude == so.latitude &&
-                square.longitude == so.longitude &&
-                this.qualifyingStarObservation(so))
-            {
-                manualStars.add(so.name);
+        for (StarObservation so :
+                 this.getStarObservationsFor(square.latitude, square.longitude)) {
+            if (this.qualifyingStarObservation(so)) {
                 square.addObservation(so);
-            }
-        }
-
-        // Synthesize observations for others.
-        for (StarCatalog sc : this.starCatalog) {
-            if (!manualStars.contains(sc.name)) {
-                StarObservation so = sc.makeObservation(StarObservation.unixTimeOfManualData,
-                    square.latitude, square.longitude);
-                if (this.qualifyingStarObservation(so)) {
-                    square.addObservation(so);
-                }
             }
         }
     }
@@ -1172,16 +1100,15 @@ public class EarthShape
       * Returns null if there are not enough stars in common. */
     private Vector3f calcRequiredRotation(
         SurfaceSquare startSquare,
-        StarObservation[] starObs,
         float newLatitude,
         float newLongitude)
     {
         // Set of stars visible at the start and end squares and
         // above 20 degrees above the horizon.
         HashMap<String, Vector3f> startStars =
-            getVisibleStars(starObs, startSquare.latitude, startSquare.longitude);
+            getVisibleStars(startSquare.latitude, startSquare.longitude);
         HashMap<String, Vector3f> endStars =
-            getVisibleStars(starObs, newLatitude, newLongitude);
+            getVisibleStars(newLatitude, newLongitude);
 
         // Current best rotation and average difference.
         Vector3f currentRotation = new Vector3f(0,0,0);
@@ -1283,42 +1210,23 @@ public class EarthShape
       * the configurable parameter 'maximumSunElevation'. */
     private boolean sunIsTooHigh(float latitude, float longitude)
     {
-        StarObservation so = this.sunPosition.makeObservation(
+        StarObservation sun = this.worldObservations.getSunObservation(
             StarObservation.unixTimeOfManualData, latitude, longitude);
 
-        return so.elevation > this.maximumSunElevation;
+        return sun.elevation > this.maximumSunElevation;
     }
 
-    /** For every star in 'starObs' that matches 'latitude' and
-      * 'longitude', and has an elevation of at least 20 degrees,
+    /** For every visible star vislble at the specified coordinate
+      * that has an elevation of at least 20 degrees,
       * add it to a map from star name to azEl vector. */
     private HashMap<String, Vector3f> getVisibleStars(
-        StarObservation[] starObs,
         float latitude,
         float longitude)
     {
         HashMap<String, Vector3f> ret = new HashMap<String, Vector3f>();
 
-        // First use any manual data I have.
-        for (StarObservation so : starObs) {
-            if (so.latitude == latitude &&
-                so.longitude == longitude &&
-                this.qualifyingStarObservation(so))
-            {
-                ret.put(so.name,
-                    azimuthElevationToVector(so.azimuth, so.elevation));
-            }
-        }
-
-        // Then use the synthetic data.
-        for (StarCatalog sc : this.starCatalog) {
-            if (ret.containsKey(sc.name)) {
-                continue;
-            }
-
-            // Synthesize an observation.
-            StarObservation so = sc.makeObservation(StarObservation.unixTimeOfManualData,
-                latitude, longitude);
+        for (StarObservation so :
+                 this.getStarObservationsFor(latitude, longitude)) {
             if (this.qualifyingStarObservation(so)) {
                 ret.put(so.name,
                     azimuthElevationToVector(so.azimuth, so.elevation));
@@ -1483,7 +1391,7 @@ public class EarthShape
                 d.finalLongitude,
                 null /*base*/, null /*midpoint*/,
                 new Vector3f(0,0,0)));
-            this.addMatchingData(this.activeSquare, this.manualStarObservations);
+            this.addMatchingData(this.activeSquare);
             this.emCanvas.addSurfaceSquare(this.activeSquare);
             this.emCanvas.redrawCanvas();
         }
@@ -1529,7 +1437,7 @@ public class EarthShape
             // Reset the rotation angle after adding a square.
             this.adjustOrientationDegrees = DEFAULT_ADJUST_ORIENTATION_DEGREES;
 
-            this.addMatchingData(this.activeSquare, this.manualStarObservations);
+            this.addMatchingData(this.activeSquare);
             this.emCanvas.redrawCanvas();
         }
     }
@@ -1606,7 +1514,7 @@ public class EarthShape
       * 'derived' if its orientation were adjusted by
       * 'angleAxis.degrees()' around 'angleAxis'.  Returns null if
       * the calculation cannot be done because of missing information. */
-    private static ObservationStats fitOfAdjustedSquare(
+    private ObservationStats fitOfAdjustedSquare(
         SurfaceSquare derived, Vector3f angleAxis)
     {
         // This part mirrors 'adjustActiveSquareOrientation'.
@@ -1619,7 +1527,7 @@ public class EarthShape
 
         // Now, create a new square with this new rotation.
         SurfaceSquare newSquare =
-            EarthShape.createRotatedAdjacentSquare(base,
+            this.createRotatedAdjacentSquare(base,
                 derived.latitude, derived.longitude, angleAxis);
         if (newSquare == null) {
             // If we do not move, use the original square's data.
@@ -1636,10 +1544,10 @@ public class EarthShape
 
     /** Like 'fitOfAdjustedSquare' except only retrieves the
       * variance.  This returns 40000 if the data is unavailable. */
-    private static double varianceOfAdjustedSquare(
+    private double varianceOfAdjustedSquare(
         SurfaceSquare derived, Vector3f angleAxis)
     {
-        ObservationStats os = EarthShape.fitOfAdjustedSquare(derived, angleAxis);
+        ObservationStats os = this.fitOfAdjustedSquare(derived, angleAxis);
         if (os == null) {
             // The variance should never be greater than 180 squared,
             // since that would be the worst possible fit for a star.
@@ -1681,7 +1589,7 @@ public class EarthShape
         }
 
         // Get the recommended rotation.
-        VarianceAfterRotations var = EarthShape.getVarianceAfterRotations(s,
+        VarianceAfterRotations var = this.getVarianceAfterRotations(s,
             this.adjustOrientationDegrees);
         if (var.bestRC == null) {
             if (this.adjustOrientationDegrees <= MINIMUM_ADJUST_ORIENTATION_DEGREES) {
@@ -1722,7 +1630,7 @@ public class EarthShape
         // Iterate until the adjust amount is too small.
         while (adjustDegrees > MINIMUM_ADJUST_ORIENTATION_DEGREES) {
             // Get the recommended rotation.
-            VarianceAfterRotations var = EarthShape.getVarianceAfterRotations(s, adjustDegrees);
+            VarianceAfterRotations var = this.getVarianceAfterRotations(s, adjustDegrees);
             if (var == null) {
                 return null;
             }
@@ -1801,7 +1709,7 @@ public class EarthShape
         }
         else {
             // Calculate the best rotation.
-            Vector3f rot = calcRequiredRotation(derived.baseSquare, this.manualStarObservations,
+            Vector3f rot = calcRequiredRotation(derived.baseSquare,
                 derived.latitude, derived.longitude);
             if (rot == null) {
                 return null;
@@ -1857,7 +1765,7 @@ public class EarthShape
         if (base == newSquare) {
             return base;      // Did not move, no new square created.
         }
-        this.addMatchingData(newSquare, this.manualStarObservations);
+        this.addMatchingData(newSquare);
 
         // Now try to set its orientation to match observations.
         SurfaceSquare adjustedSquare = this.automaticallyOrientSquare(newSquare);
@@ -2026,7 +1934,7 @@ public class EarthShape
 
                     // Get variance after that adjustment.
                     wData[xIndex + pointsPerAxis * yIndex + pointsPerAxis * pointsPerAxis * zIndex] =
-                        (float)EarthShape.varianceOfAdjustedSquare(s, rot);
+                        (float)this.varianceOfAdjustedSquare(s, rot);
                 }
             }
         }
@@ -2235,7 +2143,7 @@ public class EarthShape
                 char recommendation = (ostats.variance == 0? ' ' : '-');
 
                 // What is the best rotation command, and what does it achieve?
-                VarianceAfterRotations var = EarthShape.getVarianceAfterRotations(s,
+                VarianceAfterRotations var = this.getVarianceAfterRotations(s,
                     this.adjustOrientationDegrees);
 
                 // Print the effects of all the available rotations.
@@ -2286,7 +2194,7 @@ public class EarthShape
       * resulting variance, plus a decision about which is best, if any.
       * This returns null if we do not have enough data to measure
       * the fitness of the square's orientation. */
-    private static VarianceAfterRotations getVarianceAfterRotations(SurfaceSquare s,
+    private VarianceAfterRotations getVarianceAfterRotations(SurfaceSquare s,
         float adjustDegrees)
     {
         // Get variance if no rotation is performed.  We only recommend
@@ -2303,7 +2211,7 @@ public class EarthShape
 
         // Get the effects of all the available rotations.
         for (RotationCommand rc : RotationCommand.values()) {
-            ObservationStats newStats = EarthShape.fitOfAdjustedSquare(s,
+            ObservationStats newStats = this.fitOfAdjustedSquare(s,
                 rc.axis.times(adjustDegrees));
             if (newStats == null || newStats.numSamples < 2) {
                 ret.rcToVariance.put(rc, null);

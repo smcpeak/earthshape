@@ -238,11 +238,25 @@ public class FloatUtil {
         return modulus2(longitude, -180, 180);
     }
 
+    /** Given a longitude that might not be in [-180,180], add or
+      * subtract a multiple of 360 so that it is in that range. */
+    public static float normalizeLongitudef(float longitude)
+    {
+        return modulus2f(longitude, -180, 180);
+    }
+
     /** Given a latitude that might be outside [-90,90], clamp
       * it to that range. */
     public static double clampLatitude(double latitude)
     {
         return clamp(latitude, -90, 90);
+    }
+
+    /** Given a latitude that might be outside [-90,90], clamp
+      * it to that range. */
+    public static float clampLatitudef(float latitude)
+    {
+        return clampf(latitude, -90, 90);
     }
 
     /** Compare an actual result to an expected result, throwing
