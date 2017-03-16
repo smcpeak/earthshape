@@ -117,7 +117,7 @@ public class RotationCubeDialog extends ModalDialog implements ItemListener {
         {
             hb3.glue();
 
-            JButton halveWMaxButton = new JButton("Halve wMax");
+            JButton halveWMaxButton = new JButton("Halve w Range");
             halveWMaxButton.addActionListener(new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
                     RotationCubeDialog.this.adjustWRange(0.5f);
@@ -125,7 +125,7 @@ public class RotationCubeDialog extends ModalDialog implements ItemListener {
             });
             hb3.add(halveWMaxButton);
             hb3.strut();
-            JButton doubleWMaxButton = new JButton("Double wMax");
+            JButton doubleWMaxButton = new JButton("Double w Range");
             doubleWMaxButton.addActionListener(new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
                     RotationCubeDialog.this.adjustWRange(2.0f);
