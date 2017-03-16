@@ -17,6 +17,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeSet;
 
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JFrame;
@@ -25,6 +26,7 @@ import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
+import javax.swing.JPopupMenu;
 import javax.swing.KeyStroke;
 import javax.swing.ProgressMonitor;
 import javax.swing.SwingUtilities;
@@ -258,6 +260,13 @@ public class EarthShape
     /** Build the menu bar and attach it to 'this'. */
     private void buildMenuBar()
     {
+        // This ensures that the menu items do not appear underneath
+        // the GL canvas.  Strangely, this problem appeared suddenly,
+        // after I made a seemingly irrelevant change (putting a
+        // scroll bar on the info panel).  But this call solves it,
+        // so whatever.
+        JPopupMenu.setDefaultLightWeightPopupEnabled(false);
+
         JMenuBar menuBar = new JMenuBar();
         this.setJMenuBar(menuBar);
 
@@ -2164,7 +2173,20 @@ public class EarthShape
         sb.append("\n");
         sb.append("adjDeg: "+this.adjustOrientationDegrees+"\n");
 
-        this.infoPanel.text.setText(sb.toString());
+        // Also show star observation data.
+        if (this.activeSquare != null) {
+            sb.append("\n");
+            sb.append("Visible stars (az, el):\n");
+
+            // Iterate over stars in name order.
+            TreeSet<String> stars = new TreeSet<String>(this.activeSquare.starObs.keySet());
+            for (String starName : stars) {
+                StarObservation so = this.activeSquare.starObs.get(starName);
+                sb.append("  "+so.name+": "+so.azimuth+", "+so.elevation+"\n");
+            }
+        }
+
+        this.infoPanel.setText(sb.toString());
     }
 
     /** Result of call to 'getVarianceAfterRotations'. */

@@ -3,13 +3,13 @@
 
 package earthshape;
 
+import java.awt.BorderLayout;
 import java.awt.Dimension;
 
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
-
-import util.swing.HBox;
-import util.swing.VBox;
+import javax.swing.ScrollPaneConstants;
 
 /** Shows information about the selected square. */
 public class InfoPanel extends JPanel {
@@ -18,28 +18,36 @@ public class InfoPanel extends JPanel {
 
     /** For now, all info is in a single multi-line text area that
       * cannot be edited. */
-    public JTextArea text;
+    private JTextArea text;
+
+    /** Scroller for the text. */
+    private JScrollPane scrollPane;
 
     public InfoPanel()
     {
         super();
         this.setName("InfoPanel");
 
-        this.setPreferredSize(new Dimension(350, 500));
+        this.setLayout(new BorderLayout());
 
-        HBox outer = new HBox();
-        this.add(outer);
-
-        outer.strut();
-
-        VBox vb = new VBox();
-        outer.add(vb);
-
+        // Make the text area, but do not let it get focus since
+        // I want the canvas key bindings to keep working.
         this.text = new JTextArea("No info set");
         this.text.setFocusable(false);
+        this.text.setEditable(false);
         this.text.setFont(this.text.getFont().deriveFont(20.0f));
-        vb.add(this.text);
 
-        outer.strut();
+        // Make the text scrollable.
+        this.scrollPane = new JScrollPane(this.text);
+        this.scrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
+        this.scrollPane.setPreferredSize(new Dimension(350, 500));
+        this.add(this.scrollPane, BorderLayout.CENTER);
+    }
+
+    /** Update the main info panel text. */
+    public void setText(String text)
+    {
+        this.text.setText(text);
+        this.text.setCaretPosition(0);
     }
 }
