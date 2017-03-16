@@ -103,6 +103,35 @@ public class FloatUtil {
         return Math.cos(degreesToRadians(degrees));
     }
 
+    /** Inverse sine, in degrees in [-90,90].  Also, this handles
+      * inputs outside [-1,1] by effectively clamping them to that
+      * range, whereas standard asin yields NaN. */
+    public static double asinDeg(double x)
+    {
+        return radiansToDegrees(asinRad(x));
+    }
+
+    public static float asinDegf(float x)
+    {
+        return (float)asinDeg(x);
+    }
+
+    /** Inverse sine, in radians in [-pi/2,pi/2].  Also, this handles
+      * inputs outside [-1,1] by effectively clamping them to that
+      * range, whereas standard acos yields NaN. */
+    public static double asinRad(double x)
+    {
+        if (x > 1) {
+            return Math.PI / 2.0;
+        }
+        else if (x < -1) {
+            return - Math.PI / 2.0;
+        }
+        else {
+            return Math.asin(x);
+        }
+    }
+
     /** Inverse cosine, in degrees in [0,180].  Also, this handles
       * inputs outside [-1,1] by effectively clamping them to that
       * range, whereas standard acos yields NaN. */
@@ -130,6 +159,13 @@ public class FloatUtil {
         else {
             return Math.acos(x);
         }
+    }
+
+    /** Compute the two-argument inverse tangent of (y,x),
+      * in degrees. */
+    public static double atan2Deg(double y, double x)
+    {
+        return radiansToDegrees(Math.atan2(y, x));
     }
 
     /** Calculate the angle between two angles expressed as azimuth

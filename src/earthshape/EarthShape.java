@@ -339,14 +339,29 @@ public class EarthShape
 
     private JMenu buildFileMenu()
     {
-        JMenu fileMenu = new JMenu("File");
-        addMenuItem(fileMenu, "Exit", null, new ActionListener() {
+        JMenu menu = new JMenu("File");
+
+        addMenuItem(menu, "Use real world observations", null, new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                EarthShape.this.changeObservations(new RealWorldObservations());
+            }
+        });
+        addMenuItem(menu, "Use close star observations", null, new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                EarthShape.this.changeObservations(new CloseStarObservations());
+            }
+        });
+
+        menu.addSeparator();
+
+        addMenuItem(menu, "Exit", null, new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 EarthShape.log("exit menu item invoked");
                 EarthShape.this.dispose();
             }
         });
-        return fileMenu;
+
+        return menu;
     }
 
     private JMenu buildDrawMenu()
@@ -1248,28 +1263,11 @@ public class EarthShape
                  this.getStarObservationsFor(latitude, longitude)) {
             if (this.qualifyingStarObservation(so)) {
                 ret.put(so.name,
-                    azimuthElevationToVector(so.azimuth, so.elevation));
+                    Vector3f.azimuthElevationToVector(so.azimuth, so.elevation));
             }
         }
 
         return ret;
-    }
-
-    /** Convert a pair of azimuth and elevation, in degrees, to a unit
-      * vector that points in the same direction, in a coordinate system
-      * where 0 degrees azimuth is -Z, East is +X, and up is +Y. */
-    public static Vector3f azimuthElevationToVector(float azimuth, float elevation)
-    {
-        // Start by pointing a vector at 0 degrees azimuth (North).
-        Vector3f v = new Vector3f(0, 0, -1);
-
-        // Now rotate it up to align with elevation.
-        v = v.rotate(elevation, new Vector3f(1, 0, 0));
-
-        // Now rotate it East to align with azimuth.
-        v = v.rotate(-azimuth, new Vector3f(0, 1, 0));
-
-        return v;
     }
 
     /** Get the unit ray, in world coordinates, from the center of 'square' to
@@ -1278,7 +1276,7 @@ public class EarthShape
     {
         // Ray to star in nominal, -Z facing, coordinates.
         Vector3f nominalRay =
-            EarthShape.azimuthElevationToVector(so.azimuth, so.elevation);
+            Vector3f.azimuthElevationToVector(so.azimuth, so.elevation);
 
         // Ray to star in world coordinates, taking into account
         // how the surface is rotated.
@@ -1427,8 +1425,7 @@ public class EarthShape
             this.activeSquare.showAsActive = true;
         }
 
-        this.emCanvas.redrawCanvas();
-        this.updateUIState();
+        this.updateAndRedraw();
     }
 
     /** Add another square to the surface by building one adjacent
@@ -1623,8 +1620,7 @@ public class EarthShape
             this.adjustActiveSquareOrientation(var.bestRC.axis);
         }
 
-        this.emCanvas.redrawCanvas();
-        this.updateUIState();
+        this.updateAndRedraw();
     }
 
     /** Apply the recommended rotation to 's' until convergence.  Return
@@ -1713,8 +1709,7 @@ public class EarthShape
             this.setActiveSquare(newDerived);
         }
 
-        this.updateUIState();
-        this.emCanvas.redrawCanvas();
+        this.updateAndRedraw();
     }
 
     /** Given a square 'derived' that is known to have a base square,
@@ -2040,24 +2035,21 @@ public class EarthShape
     {
         log("toggleDrawCompasses");
         this.emCanvas.drawCompasses = !this.emCanvas.drawCompasses;
-        this.updateUIState();
-        this.emCanvas.redrawCanvas();
+        this.updateAndRedraw();
     }
 
     /** Toggle the 'drawSurfaceNormals' flag. */
     public void toggleDrawSurfaceNormals()
     {
         this.emCanvas.drawSurfaceNormals = !this.emCanvas.drawSurfaceNormals;
-        this.updateUIState();
-        this.emCanvas.redrawCanvas();
+        this.updateAndRedraw();
     }
 
     /** Toggle the 'drawCelestialNorth' flag. */
     public void toggleDrawCelestialNorth()
     {
         this.emCanvas.drawCelestialNorth = !this.emCanvas.drawCelestialNorth;
-        this.updateUIState();
-        this.emCanvas.redrawCanvas();
+        this.updateAndRedraw();
     }
 
     /** Toggle the 'drawStarRays' flag. */
@@ -2086,8 +2078,7 @@ public class EarthShape
         }
         else {
             this.emCanvas.cameraPosition = this.activeSquare.center;
-            this.emCanvas.redrawCanvas();
-            this.updateUIState();
+            this.updateAndRedraw();
         }
     }
 
@@ -2287,6 +2278,22 @@ public class EarthShape
     {
         return this.activeSquare != null &&
                this.activeSquare.drawStarRays;
+    }
+
+    /** Replace the current observations with a new source and clear
+      * the virtual map. */
+    private void changeObservations(WorldObservations obs)
+    {
+        this.clearSurfaceSquares();
+        this.worldObservations = obs;
+        this.updateAndRedraw();
+    }
+
+    /** Refresh all the UI elements and the map canvas. */
+    private void updateAndRedraw()
+    {
+        this.updateUIState();
+        this.emCanvas.redrawCanvas();
     }
 }
 

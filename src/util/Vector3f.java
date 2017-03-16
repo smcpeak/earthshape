@@ -187,6 +187,23 @@ public class Vector3f {
         // out entirely using double.
         return Vector3d.composeRotations(new Vector3d(first), new Vector3d(second)).toVector3f();
     }
+
+    /** Convert a pair of azimuth and elevation, in degrees, to a unit
+      * vector that points in the same direction, in a coordinate system
+      * where 0 degrees azimuth is -Z, East is +X, and up is +Y. */
+    public static Vector3f azimuthElevationToVector(float azimuth, float elevation)
+    {
+        // Start by pointing a vector at 0 degrees azimuth (North).
+        Vector3f v = new Vector3f(0, 0, -1);
+
+        // Now rotate it up to align with elevation.
+        v = v.rotate(elevation, new Vector3f(1, 0, 0));
+
+        // Now rotate it East to align with azimuth.
+        v = v.rotate(-azimuth, new Vector3f(0, 1, 0));
+
+        return v;
+    }
 }
 
 // EOF

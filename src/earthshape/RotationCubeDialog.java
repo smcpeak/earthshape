@@ -205,6 +205,7 @@ public class RotationCubeDialog extends ModalDialog implements ItemListener {
         // The roll panel's data should never change, even though I
         // recompute it when I recompute the others.
 
+        this.rollPlotPanel.setPlotData(this.rollPlotData);
         this.pitchPlotPanel.setPlotData(this.pitchPlotData);
         this.yawPlotPanel.setPlotData(this.yawPlotData);
 
@@ -230,6 +231,7 @@ public class RotationCubeDialog extends ModalDialog implements ItemListener {
         wRange *= factor;
         this.rollPitchYawPlotData.wMax = this.rollPitchYawPlotData.wMin + wRange;
         this.rollPitchYawPlotData.wThreshold = this.rollPitchYawPlotData.wMin + wRange / 100.0f;
+        this.rollPitchYawPlotData.computeWTickSpacing();
 
         // Repaint, etc.
         this.computeSlices();

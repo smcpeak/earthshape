@@ -11,6 +11,15 @@ import util.FloatUtil;
 
 /** Observations for the actual Earth. */
 public class RealWorldObservations implements WorldObservations {
+    // ---- Constants ----
+    /** The average radius of the Earth in kilometers, from Wikipedia.
+      *
+      * Within this class, this value is used to calculate the distance
+      * between different surface locations, given their latitude and
+      * longitude, which is something that can also be easily measured
+      * by anyone. */
+    public static final float EARTH_RADIUS_KM = 6371.0f;
+
     // ---- Instance data ----
     /** Some star observations I gathered manually from an
       * online planetarium. */
@@ -51,13 +60,14 @@ public class RealWorldObservations implements WorldObservations {
             endLongitude, endLatitude);
 
         // Calculate the distance along the surface that separates
-        // these points by using the fact that there are 111 km per
-        // degree of arc according to the original definition of the
-        // meter: 1/10,000,000 of the distance from the North pole to
-        // the Equator through the Paris meridian.  (The true average
-        // value is within 0.1% of that, which is on the order of the
-        // effect of the Earth's oblateness.)
-        float distanceKm = (float)(111.11 * arcAngleDegrees);
+        // these points.  Obviously, this statement and the one above
+        // encode the size and shape of the Earth.  But this is
+        // empirically the same value one would obtain by walking
+        // or driving the path in question; the accuracy of the formula
+        // it is readily verifiable, regardless of the model used to
+        // compute it.
+        float distanceKm =
+            (float)(arcAngleDegrees / 180.0 * Math.PI * EARTH_RADIUS_KM);
 
         // Calculate headings, in degrees East of North, from
         // the old square to the new and vice-versa.
