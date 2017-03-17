@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import util.Vector3d;
 import util.Vector3f;
 import util.Vector4f;
 
@@ -54,9 +53,9 @@ public abstract class ManifoldObservations implements WorldObservations {
             endToStart.orthogonalComponentToUnitVector(endSquare.up);
 
         // Now get headings for both.
-        double startToEndHeading = CloseStarObservations.azimuthOfLocalDirection(
+        double startToEndHeading = CloseStarGenerator.azimuthOfLocalDirection(
             startToEndHorizontal.normalizeAsVector3d());
-        double endToStartHeading = CloseStarObservations.azimuthOfLocalDirection(
+        double endToStartHeading = CloseStarGenerator.azimuthOfLocalDirection(
             endToStartHorizontal.normalizeAsVector3d());
 
         // The distance is straightforward (again, ignoring intervening
@@ -167,49 +166,8 @@ public abstract class ManifoldObservations implements WorldObservations {
         // Get the square at this location.
         SurfaceSquare square = this.getSquare(latitude, longitude);
 
-        ArrayList<StarObservation> ret = new ArrayList<StarObservation>();
-        for (Map.Entry<String, Vector4f> e : this.getStarMap().entrySet()) {
-            String starName = e.getKey();
-
-            // Absolute location of the star in both 4D and 3D.
-            Vector4f starLoc4D = e.getValue();
-            Vector3f starLoc3D = new Vector3f(starLoc4D.x(), starLoc4D.y(), starLoc4D.z());
-
-            // Get a vector to the star in global coordinates.
-            Vector3f targetToStarGlobal;
-            if (starLoc4D.w() == 0) {
-                // Point at infinity; the position of the square is
-                // irrelevant.
-                targetToStarGlobal = starLoc3D;
-            }
-            else {
-                // Subtract off the square's coordinates.
-                targetToStarGlobal = starLoc3D.minus(square.center);
-            }
-
-            // Convert it to the target square's local coordinates by
-            // reversing that square's rotation.
-            Vector3f targetToStarLocal =
-                targetToStarGlobal.rotateAA(square.rotationFromNominal.times(-1));
-
-            // Normalize to treat it as a direction in local coordinates.
-            // Use 'double' due to the sensitivity of normalization.
-            Vector3d dir = targetToStarLocal.normalizeAsVector3d();
-
-            // Extract azimuth and elevation from the components of 'dir'.
-            double elevation = CloseStarObservations.elevationOfLocalDirection(dir);
-            double azimuth = CloseStarObservations.azimuthOfLocalDirection(dir);
-
-            // Package this up as an observation.
-            ret.add(new StarObservation(
-                latitude,
-                longitude,
-                starName,
-                azimuth,
-                elevation));
-        }
-
-        return ret;
+        // Synthesize observations for it.
+        return CloseStarGenerator.getStarObservations(square, this.getStarMap());
     }
 
 }

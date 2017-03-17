@@ -732,6 +732,10 @@ public class EarthMapCanvas
                         glVertex3f(gl, pt);
                         glVertex3f(gl, mo.mapLL(latitude - 30, longitude));
                         gl.glEnd();
+
+                        // Minor note: Usually the -180 longitude line is
+                        // the same as the 180 longitude line, meaning that
+                        // line will get drawn twice.
                     }
                 }
             }
