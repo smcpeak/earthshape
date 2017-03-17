@@ -671,30 +671,35 @@ public class EarthMapCanvas
             gl.glNormal3f(0,1,0);
             gl.glDisable(GL.GL_TEXTURE_2D);
 
-            // Get the square that I normally place first.
-            SurfaceSquare rootSquare = mo.getSquare(38, -122);
-            rootSquare.sizeKm = 1000;
-
             gl.glPushMatrix();
 
             // Position of camera in transformed coordinate system.
             Vector3f transformedCamera = this.cameraPosition;
 
-            // Push a transformation matrix that will align the
-            // drawn world model with the world we will start
-            // building, assuming it begins at 'rootSquare'.
-            double angle = rootSquare.rotationFromNominal.length();
-            Vector3d u = rootSquare.rotationFromNominal.normalizeAsVector3d();
-            gl.glRotated(-angle, u.x(), u.y(), u.z());
-            transformedCamera = transformedCamera.rotate(angle, u.toVector3f());
+            // Get the square in original manifold coordinates
+            // corresponding to the first reconstruction square.
+            if (!this.surfaceSquares.isEmpty()) {
+                SurfaceSquare firstPlaced = this.surfaceSquares.get(0);
+                SurfaceSquare rootSquare =
+                    mo.getSquare(firstPlaced.latitude, firstPlaced.longitude);
+                rootSquare.sizeKm = firstPlaced.sizeKm;
 
-            Vector3f c = rootSquare.center.times(-1);
-            gl.glTranslatef(c.x(), c.y(), c.z());
-            transformedCamera = transformedCamera.minus(c);
+                // Push a transformation matrix that will align the
+                // drawn world model with the world we will start
+                // building, assuming it begins at 'rootSquare'.
+                double angle = rootSquare.rotationFromNominal.length();
+                Vector3d u = rootSquare.rotationFromNominal.normalizeAsVector3d();
+                gl.glRotated(-angle, u.x(), u.y(), u.z());
+                transformedCamera = transformedCamera.rotate(angle, u.toVector3f());
 
-            // Draw a box around that square.
-            glMaterialColor3f(gl, 0,1,0);       // Green
-            this.drawActiveBoxAround(gl, rootSquare, 0.02f);
+                Vector3f c = rootSquare.center.times(-1);
+                gl.glTranslatef(c.x(), c.y(), c.z());
+                transformedCamera = transformedCamera.minus(c);
+
+                // Draw a box around that square.
+                glMaterialColor3f(gl, 0,1,0);       // Green
+                this.drawActiveBoxAround(gl, rootSquare, 0.02f);
+            }
 
             // Draw a wireframe of the world model.
             for (int longitude = -180; longitude <= 180; longitude += 30) {
