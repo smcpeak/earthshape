@@ -174,7 +174,10 @@ public class EarthMapCanvas
     public boolean drawCelestialNorth = false;
 
     /** If true, draw the active world model if we are using one. */
-    public boolean drawWorldModel = true;
+    public boolean drawWorldWireframe = true;
+
+    /** If true, draw the active world stars if we are using them. */
+    public boolean drawWorldStars = true;
 
     // ---- GL canvas support ----
     /** The underlying GL canvas. */
@@ -661,7 +664,7 @@ public class EarthMapCanvas
       * and the associated option is enabled. */
     private void doDrawWorldModel(GL2 gl)
     {
-        if (this.drawWorldModel &&
+        if ((this.drawWorldWireframe || this.drawWorldStars) &&
             this.earthShapeFrame.worldObservations instanceof ManifoldObservations)
         {
             ManifoldObservations mo =
@@ -701,86 +704,101 @@ public class EarthMapCanvas
                 this.drawActiveBoxAround(gl, rootSquare, 0.02f);
             }
 
-            // Draw a wireframe of the world model.
-            for (int longitude = -180; longitude <= 180; longitude += 30) {
-                for (int latitude = -90; latitude <= 90; latitude += 30) {
-                    Vector3f pt = mo.mapLL(latitude, longitude);
-                    if (longitude > -180) {
-                        if (latitude == 0) {
-                            // Draw the equator in white.
-                            glMaterialColor3f(gl, 1,1,1);
-                        }
-                        else {
-                            glMaterialColor3f(gl, 0,1,0);       // Green
-                        }
-
-                        gl.glBegin(GL.GL_LINES);
-                        glVertex3f(gl, pt);
-                        glVertex3f(gl, mo.mapLL(latitude, longitude - 30));
-                        gl.glEnd();
-                    }
-                    if (latitude > -90) {
-                        if (longitude == 0) {
-                            // Draw the prime meridian in white too.
-                            glMaterialColor3f(gl, 1,1,1);
-                        }
-                        else {
-                            glMaterialColor3f(gl, 0,1,0);       // Green
-                        }
-
-                        gl.glBegin(GL.GL_LINES);
-                        glVertex3f(gl, pt);
-                        glVertex3f(gl, mo.mapLL(latitude - 30, longitude));
-                        gl.glEnd();
-
-                        // Minor note: Usually the -180 longitude line is
-                        // the same as the 180 longitude line, meaning that
-                        // line will get drawn twice.
-                    }
-                }
+            if (this.drawWorldWireframe) {
+                this.doDrawWorldWireframe(gl, mo);
             }
 
-            // When a star is far away, draw it as being this far from
-            // the camera so it is not too small, nor beyond the back
-            // clipping plane.
-            final float starFarDistance = 20;
-
-            // Draw indicators around the stars.
-            for (Map.Entry<String, Vector4f> e : mo.getStarMap().entrySet()) {
-                Vector4f pt = e.getValue();
-                Vector3f pt3 = pt.slice3();
-
-                // Distance from camera to the star (when finite).
-                double starDistance = transformedCamera.minus(pt3).length();
-
-                if (pt.w() == 0) {
-                    // Point at infinity.  Add the camera's position,
-                    // and push it out far enough to appear smallish.
-                    glMaterialColor3f(gl, 1,0,0);       // Red
-                    pt3 = transformedCamera.plus(pt3.normalize().times(starFarDistance));
-                }
-                else if (starDistance > starFarDistance) {
-                    // Star is far away.  Treat it similarly to one at
-                    // infinity.
-                    glMaterialColor3f(gl, 1,0.5f,0);    // Orange
-
-                    // Get direction from camera to the star.
-                    pt3 = pt3.minus(transformedCamera);
-
-                    // Then put it a fixed distance in that direction.
-                    pt3 = transformedCamera.plus(pt3.normalize().times(20));
-                }
-                else {
-                    glMaterialColor3f(gl, 1,1,0);       // Yellow
-                }
-
-                // Draw a symbol at the star's location.
-                gl.glPushMatrix();
-                gl.glTranslatef(pt3.x(), pt3.y(), pt3.z());
-                EarthMapCanvas.drawOctahedron(gl, 0.1f /*radius*/);
-                gl.glPopMatrix();
+            if (this.drawWorldStars) {
+                this.doDrawWorldStars(gl, mo, transformedCamera);
             }
 
+            gl.glPopMatrix();
+        }
+    }
+
+    /** Draw the world model in 'mo'. */
+    private void doDrawWorldWireframe(GL2 gl, ManifoldObservations mo)
+    {
+        for (int longitude = -180; longitude <= 180; longitude += 30) {
+            for (int latitude = -90; latitude <= 90; latitude += 30) {
+                Vector3f pt = mo.mapLL(latitude, longitude);
+                if (longitude > -180) {
+                    if (latitude == 0) {
+                        // Draw the equator in white.
+                        glMaterialColor3f(gl, 1,1,1);
+                    }
+                    else {
+                        glMaterialColor3f(gl, 0,1,0);       // Green
+                    }
+
+                    gl.glBegin(GL.GL_LINES);
+                    glVertex3f(gl, pt);
+                    glVertex3f(gl, mo.mapLL(latitude, longitude - 30));
+                    gl.glEnd();
+                }
+                if (latitude > -90) {
+                    if (longitude == 0) {
+                        // Draw the prime meridian in white too.
+                        glMaterialColor3f(gl, 1,1,1);
+                    }
+                    else {
+                        glMaterialColor3f(gl, 0,1,0);       // Green
+                    }
+
+                    gl.glBegin(GL.GL_LINES);
+                    glVertex3f(gl, pt);
+                    glVertex3f(gl, mo.mapLL(latitude - 30, longitude));
+                    gl.glEnd();
+
+                    // Minor note: Usually the -180 longitude line is
+                    // the same as the 180 longitude line, meaning that
+                    // line will get drawn twice.
+                }
+            }
+        }
+    }
+
+    private void doDrawWorldStars(GL2 gl, ManifoldObservations mo,
+        Vector3f transformedCamera)
+    {
+        // When a star is far away, draw it as being this far from
+        // the camera so it is not too small, nor beyond the back
+        // clipping plane.
+        final float starFarDistance = 20;
+
+        // Draw indicators around the stars.
+        for (Map.Entry<String, Vector4f> e : mo.getStarMap().entrySet()) {
+            Vector4f pt = e.getValue();
+            Vector3f pt3 = pt.slice3();
+
+            // Distance from camera to the star (when finite).
+            double starDistance = transformedCamera.minus(pt3).length();
+
+            if (pt.w() == 0) {
+                // Point at infinity.  Add the camera's position,
+                // and push it out far enough to appear smallish.
+                glMaterialColor3f(gl, 1,0,0);       // Red
+                pt3 = transformedCamera.plus(pt3.normalize().times(starFarDistance));
+            }
+            else if (starDistance > starFarDistance) {
+                // Star is far away.  Treat it similarly to one at
+                // infinity.
+                glMaterialColor3f(gl, 1,0.5f,0);    // Orange
+
+                // Get direction from camera to the star.
+                pt3 = pt3.minus(transformedCamera);
+
+                // Then put it a fixed distance in that direction.
+                pt3 = transformedCamera.plus(pt3.normalize().times(20));
+            }
+            else {
+                glMaterialColor3f(gl, 1,1,0);       // Yellow
+            }
+
+            // Draw a symbol at the star's location.
+            gl.glPushMatrix();
+            gl.glTranslatef(pt3.x(), pt3.y(), pt3.z());
+            EarthMapCanvas.drawOctahedron(gl, 0.1f /*radius*/);
             gl.glPopMatrix();
         }
     }

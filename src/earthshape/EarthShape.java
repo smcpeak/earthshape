@@ -137,7 +137,8 @@ public class EarthShape
     private JCheckBoxMenuItem invertVerticalCameraMovementCBItem;
     private JCheckBoxMenuItem newAutomaticOrientationAlgorithmCBItem;
     private JCheckBoxMenuItem assumeInfiniteStarDistanceCBItem;
-    private JCheckBoxMenuItem drawWorldModelCBItem;
+    private JCheckBoxMenuItem drawWorldWireframeCBItem;
+    private JCheckBoxMenuItem drawWorldStarsCBItem;
 
     // ---------- Methods ----------
     public EarthShape()
@@ -396,12 +397,20 @@ public class EarthShape
                         EarthShape.this.toggleDrawStarRays();
                     }
                 });
-        this.drawWorldModelCBItem =
-            addCBMenuItem(drawMenu, "Draw world model (if one is in use)", null,
-                this.emCanvas.drawWorldModel,
+        this.drawWorldWireframeCBItem =
+            addCBMenuItem(drawMenu, "Draw world wireframe (if one is in use)", null,
+                this.emCanvas.drawWorldWireframe,
                 new ActionListener() {
                     public void actionPerformed(ActionEvent e) {
-                        EarthShape.this.toggleDrawWorldModel();
+                        EarthShape.this.toggleDrawWorldWireframe();
+                    }
+                });
+        this.drawWorldStarsCBItem =
+            addCBMenuItem(drawMenu, "Draw world stars (if in use)", null,
+                this.emCanvas.drawWorldStars,
+                new ActionListener() {
+                    public void actionPerformed(ActionEvent e) {
+                        EarthShape.this.toggleDrawWorldStars();
                     }
                 });
         addMenuItem(drawMenu, "Turn off all star rays", null,
@@ -2150,9 +2159,15 @@ public class EarthShape
         this.emCanvas.redrawCanvas();
     }
 
-    private void toggleDrawWorldModel()
+    private void toggleDrawWorldWireframe()
     {
-        this.emCanvas.drawWorldModel = !this.emCanvas.drawWorldModel;
+        this.emCanvas.drawWorldWireframe = !this.emCanvas.drawWorldWireframe;
+        this.updateAndRedraw();
+    }
+
+    private void toggleDrawWorldStars()
+    {
+        this.emCanvas.drawWorldStars = !this.emCanvas.drawWorldStars;
         this.updateAndRedraw();
     }
 
@@ -2205,7 +2220,8 @@ public class EarthShape
         this.drawSurfaceNormalsCBItem.setSelected(this.emCanvas.drawSurfaceNormals);
         this.drawCelestialNorthCBItem.setSelected(this.emCanvas.drawCelestialNorth);
         this.drawStarRaysCBItem.setSelected(this.activeSquareDrawsStarRays());
-        this.drawWorldModelCBItem.setSelected(this.emCanvas.drawWorldModel);
+        this.drawWorldWireframeCBItem.setSelected(this.emCanvas.drawWorldWireframe);
+        this.drawWorldStarsCBItem.setSelected(this.emCanvas.drawWorldStars);
 
         this.invertHorizontalCameraMovementCBItem.setSelected(
             this.emCanvas.invertHorizontalCameraMovement);
