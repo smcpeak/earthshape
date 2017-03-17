@@ -79,7 +79,7 @@ public class EarthShape
     /** When true, star observations are only compared by their
       * direction.  When false, we also consider the location of the
       * observer, which allows us to handle nearby objects. */
-    public boolean assumeInfiniteStarDistance = true;
+    public boolean assumeInfiniteStarDistance = false;
 
     // ---------- Instance variables ----------
     // ---- Observation Information ----
