@@ -35,6 +35,17 @@ public class Matrix4f {
         this.mat = m;
     }
 
+    /** Make a 4x4 matrix by adding 1 on the diagonal and 0 elsewhere. */
+    public Matrix4f(Matrix3f m)
+    {
+        this.mat = new Matrixf(4, 4,
+            new float[] { m.a11(), m.a12(), m.a13(), 0,
+                          m.a21(), m.a22(), m.a23(), 0,
+                          m.a31(), m.a32(), m.a33(), 0,
+                          0,       0,       0,       1 });
+
+    }
+
     public float a11() { return this.mat.get(0,0); }
     public float a12() { return this.mat.get(0,1); }
     public float a13() { return this.mat.get(0,2); }
@@ -85,6 +96,13 @@ public class Matrix4f {
     public static Matrix3f identity()
     {
         return new Matrix3f(Matrixf.identity(4));
+    }
+
+    /** Yield a matrix that, when multiplied by a vector, rotates that
+      * vector by 'radians' around 'axis'. */
+    public static Matrix4f rotate(double radians, Vector3f axis)
+    {
+        return new Matrix4f(Matrix3f.rotate(radians, axis));
     }
 }
 

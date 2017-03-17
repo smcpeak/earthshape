@@ -124,6 +124,15 @@ public class Vector4f {
         return new Vector4f(this.under.normalize());
     }
 
+    /** Return this vector after rotating by 'degrees' about 'axis'.
+      * Rotation follows right-hand rule.  The axis vector is not
+      * assumed to be normalized yet. */
+    public Vector4f rotate(double degrees, Vector3f axis)
+    {
+        Matrix4f m = Matrix4f.rotate(FloatUtil.degreesToRadians(degrees), axis);
+        return m.times(this);
+    }
+
     /** Return dot product of 'this' and 'v'. */
     public double dot(Vector4f v)
     {

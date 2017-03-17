@@ -86,7 +86,7 @@ public class EarthShape
     /** The observations that will drive surface reconstruction.
       * By default, this will be data from the real world, but it
       * can be swapped out at the user's option. */
-    private WorldObservations worldObservations = new RealWorldObservations();
+    public WorldObservations worldObservations = new RealWorldObservations();
 
     /** Set of stars that are enabled. */
     private LinkedHashMap<String, Boolean> enabledStars = new LinkedHashMap<String, Boolean>();
@@ -128,29 +128,16 @@ public class EarthShape
     /** Selected square info panel on right side. */
     private InfoPanel infoPanel;
 
-    /** Menu item to toggle 'drawCompasses'. */
+    // Menu items to toggle various options.
     private JCheckBoxMenuItem drawCompassesCBItem;
-
-    /** Menu item to toggle 'drawSurfaceNormals'. */
     private JCheckBoxMenuItem drawSurfaceNormalsCBItem;
-
-    /** Menu item to toggle 'drawCelestialNorth'. */
     private JCheckBoxMenuItem drawCelestialNorthCBItem;
-
-    /** Menu item to toggle 'drawStarRays'. */
     private JCheckBoxMenuItem drawStarRaysCBItem;
-
-    /** Menu item to toggle 'EarthMapCanvas.invertHorizontalCameraMovement'. */
     private JCheckBoxMenuItem invertHorizontalCameraMovementCBItem;
-
-    /** Menu item to toggle 'EarthMapCanvas.invertVerticalCameraMovement'. */
     private JCheckBoxMenuItem invertVerticalCameraMovementCBItem;
-
-    /** Menu item to toggle 'newAutomaticOrientationAlgorithm'. */
     private JCheckBoxMenuItem newAutomaticOrientationAlgorithmCBItem;
-
-    /** Menu item to toggle 'assumeInfiniteStarDistance'. */
     private JCheckBoxMenuItem assumeInfiniteStarDistanceCBItem;
+    private JCheckBoxMenuItem drawWorldModelCBItem;
 
     // ---------- Methods ----------
     public EarthShape()
@@ -264,8 +251,7 @@ public class EarthShape
             "\n"+
             "N - Start a new surface.\n"+
             "M - Add a square adjacent to the active square.\n"+
-            "Ctrl+M - Add a square to the East and automatically adjust it.\n"+
-            "Ctrl+N - Add a square to the North and automatically adjust it.\n"+
+            "Ctrl+N/S/E/W - Add a square to the N/S/E/W and automatically adjust it.\n"+
             ", (comma) - Move to previous active square.\n"+
             ". (period) - Move to next active square.\n"+
             "Delete - Delete active square.\n"+
@@ -324,8 +310,10 @@ public class EarthShape
         //   Delete - Delete active square
         //   Enter  - enter FPS mode
         //   Esc    - leave FPS mode
-        //   Ctrl+M - build and orient to the East
+        //   Ctrl+E - build and orient to the East
+        //   Ctrl+W - build and orient to the West
         //   Ctrl+N - build and orient to the North
+        //   Ctrl+S - build and orient to the South
 
         menuBar.add(this.buildFileMenu());
         menuBar.add(this.buildDrawMenu());
@@ -408,6 +396,14 @@ public class EarthShape
                         EarthShape.this.toggleDrawStarRays();
                     }
                 });
+        this.drawWorldModelCBItem =
+            addCBMenuItem(drawMenu, "Draw world model (if one is in use)", null,
+                this.emCanvas.drawWorldModel,
+                new ActionListener() {
+                    public void actionPerformed(ActionEvent e) {
+                        EarthShape.this.toggleDrawWorldModel();
+                    }
+                });
         addMenuItem(drawMenu, "Turn off all star rays", null,
             new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
@@ -455,12 +451,23 @@ public class EarthShape
                     EarthShape.this.buildNextSquare();
                 }
             });
+
+        buildMenu.addSeparator();
+
         addMenuItem(buildMenu, "Create new square 9 degrees to the East and orient it automatically",
-            KeyStroke.getKeyStroke(KeyEvent.VK_M, InputEvent.CTRL_DOWN_MASK),
+            KeyStroke.getKeyStroke(KeyEvent.VK_E, InputEvent.CTRL_DOWN_MASK),
             new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
                     EarthShape.this.createAndAutomaticallyOrientActiveSquare(
                         0 /*deltLatitude*/, +9 /*deltaLongitude*/);
+                }
+            });
+        addMenuItem(buildMenu, "Create new square 9 degrees to the West and orient it automatically",
+            KeyStroke.getKeyStroke(KeyEvent.VK_W, InputEvent.CTRL_DOWN_MASK),
+            new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    EarthShape.this.createAndAutomaticallyOrientActiveSquare(
+                        0 /*deltLatitude*/, -9 /*deltaLongitude*/);
                 }
             });
         addMenuItem(buildMenu, "Create new square 9 degrees to the North and orient it automatically",
@@ -471,6 +478,15 @@ public class EarthShape
                         +9 /*deltLatitude*/, 0 /*deltaLongitude*/);
                 }
             });
+        addMenuItem(buildMenu, "Create new square 9 degrees to the South and orient it automatically",
+            KeyStroke.getKeyStroke(KeyEvent.VK_S, InputEvent.CTRL_DOWN_MASK),
+            new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    EarthShape.this.createAndAutomaticallyOrientActiveSquare(
+                        -9 /*deltLatitude*/, 0 /*deltaLongitude*/);
+                }
+            });
+
         return buildMenu;
     }
 
@@ -2128,6 +2144,12 @@ public class EarthShape
         this.emCanvas.redrawCanvas();
     }
 
+    private void toggleDrawWorldModel()
+    {
+        this.emCanvas.drawWorldModel = !this.emCanvas.drawWorldModel;
+        this.updateAndRedraw();
+    }
+
     private void turnOffAllStarRays()
     {
         this.emCanvas.turnOffAllStarRays();
@@ -2171,6 +2193,7 @@ public class EarthShape
         this.drawSurfaceNormalsCBItem.setSelected(this.emCanvas.drawSurfaceNormals);
         this.drawCelestialNorthCBItem.setSelected(this.emCanvas.drawCelestialNorth);
         this.drawStarRaysCBItem.setSelected(this.activeSquareDrawsStarRays());
+        this.drawWorldModelCBItem.setSelected(this.emCanvas.drawWorldModel);
 
         this.invertHorizontalCameraMovementCBItem.setSelected(
             this.emCanvas.invertHorizontalCameraMovement);

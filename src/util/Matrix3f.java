@@ -66,8 +66,7 @@ public class Matrix3f {
         double y = axis.y() / axisLength;
         double z = axis.z() / axisLength;
 
-        // Compute the upper 3x3 of this matrix:
-        // https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/
+        // https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/glRotate.xml
         double c = Math.cos(radians);
         double s = Math.sin(radians);
         return new Matrix3f(
