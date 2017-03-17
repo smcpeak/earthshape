@@ -604,6 +604,12 @@ public class EarthShape
                     EarthShape.this.goToActiveSquareCenter();
                 }
             });
+        addMenuItem(navigateMenu, "Go to origin", null,
+            new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    EarthShape.this.moveCamera(new Vector3f(0,0,0));
+                }
+            });
         return navigateMenu;
     }
 
@@ -2163,9 +2169,15 @@ public class EarthShape
             ModalDialog.errorBox(this, "No active square.");
         }
         else {
-            this.emCanvas.cameraPosition = this.activeSquare.center;
-            this.updateAndRedraw();
+            this.moveCamera(this.activeSquare.center);
         }
+    }
+
+    /** Place the camera at the specified location. */
+    private void moveCamera(Vector3f loc)
+    {
+        this.emCanvas.cameraPosition = loc;
+        this.updateAndRedraw();
     }
 
     /** Update all stateful UI elements. */

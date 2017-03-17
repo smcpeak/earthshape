@@ -670,7 +670,6 @@ public class EarthMapCanvas
             gl.glLineWidth(2);
             gl.glNormal3f(0,1,0);
             gl.glDisable(GL.GL_TEXTURE_2D);
-            glMaterialColor3f(gl, 0,1,0);       // Green
 
             // Get the square that I normally place first.
             SurfaceSquare rootSquare = mo.getSquare(38, -122);
@@ -678,32 +677,52 @@ public class EarthMapCanvas
 
             gl.glPushMatrix();
 
+            // Position of camera in transformed coordinate system.
+            Vector3f transformedCamera = this.cameraPosition;
+
             // Push a transformation matrix that will align the
             // drawn world model with the world we will start
             // building, assuming it begins at 'rootSquare'.
-            {
-                double angle = rootSquare.rotationFromNominal.length();
-                Vector3d u = rootSquare.rotationFromNominal.normalizeAsVector3d();
-                gl.glRotated(-angle, u.x(), u.y(), u.z());
+            double angle = rootSquare.rotationFromNominal.length();
+            Vector3d u = rootSquare.rotationFromNominal.normalizeAsVector3d();
+            gl.glRotated(-angle, u.x(), u.y(), u.z());
+            transformedCamera = transformedCamera.rotate(angle, u.toVector3f());
 
-                Vector3f c = rootSquare.center.times(-1);
-                gl.glTranslatef(c.x(), c.y(), c.z());
-            }
+            Vector3f c = rootSquare.center.times(-1);
+            gl.glTranslatef(c.x(), c.y(), c.z());
+            transformedCamera = transformedCamera.minus(c);
 
             // Draw a box around that square.
-            this.drawActiveBoxAround(gl, rootSquare);
+            glMaterialColor3f(gl, 0,1,0);       // Green
+            this.drawActiveBoxAround(gl, rootSquare, 0.02f);
 
             // Draw a wireframe of the world model.
             for (int longitude = -180; longitude <= 180; longitude += 30) {
                 for (int latitude = -90; latitude <= 90; latitude += 30) {
                     Vector3f pt = mo.mapLL(latitude, longitude);
                     if (longitude > -180) {
+                        if (latitude == 0) {
+                            // Draw the equator in white.
+                            glMaterialColor3f(gl, 1,1,1);
+                        }
+                        else {
+                            glMaterialColor3f(gl, 0,1,0);       // Green
+                        }
+
                         gl.glBegin(GL.GL_LINES);
                         glVertex3f(gl, pt);
                         glVertex3f(gl, mo.mapLL(latitude, longitude - 30));
                         gl.glEnd();
                     }
                     if (latitude > -90) {
+                        if (longitude == 0) {
+                            // Draw the prime meridian in white too.
+                            glMaterialColor3f(gl, 1,1,1);
+                        }
+                        else {
+                            glMaterialColor3f(gl, 0,1,0);       // Green
+                        }
+
                         gl.glBegin(GL.GL_LINES);
                         glVertex3f(gl, pt);
                         glVertex3f(gl, mo.mapLL(latitude - 30, longitude));
@@ -712,68 +731,86 @@ public class EarthMapCanvas
                 }
             }
 
+            // When a star is far away, draw it as being this far from
+            // the camera so it is not too small, nor beyond the back
+            // clipping plane.
+            final float starFarDistance = 20;
+
             // Draw indicators around the stars.
-            //glMaterialColor3f(gl, 1,1,0);       // Yellow
-            Vector3f up = new Vector3f(0, 1, 0);
             for (Map.Entry<String, Vector4f> e : mo.getStarMap().entrySet()) {
                 Vector4f pt = e.getValue();
                 Vector3f pt3 = pt.slice3();
 
+                // Distance from camera to the star (when finite).
+                double starDistance = transformedCamera.minus(pt3).length();
+
                 if (pt.w() == 0) {
                     // Point at infinity.  Add the camera's position,
-                    // and push it out close to the far clip plane.
-                    // TODO: This isn't working and I do not know why.
+                    // and push it out far enough to appear smallish.
                     glMaterialColor3f(gl, 1,0,0);       // Red
-                    pt3 = this.cameraPosition.times(-1).plus(
-                        pt3.normalize().times(BACK_CLIP_DISTANCE * 0.03f));
+                    pt3 = transformedCamera.plus(pt3.normalize().times(starFarDistance));
+                }
+                else if (starDistance > starFarDistance) {
+                    // Star is far away.  Treat it similarly to one at
+                    // infinity.
+                    glMaterialColor3f(gl, 1,0.5f,0);    // Orange
+
+                    // Get direction from camera to the star.
+                    pt3 = pt3.minus(transformedCamera);
+
+                    // Then put it a fixed distance in that direction.
+                    pt3 = transformedCamera.plus(pt3.normalize().times(20));
                 }
                 else {
                     glMaterialColor3f(gl, 1,1,0);       // Yellow
                 }
 
-                // Point in space.  Translate to it.
+                // Draw a symbol at the star's location.
                 gl.glPushMatrix();
                 gl.glTranslatef(pt3.x(), pt3.y(), pt3.z());
-
-                // Push a small distance away in each of 6
-                // directions to make a tetrahedron.
-                float dist = 0.1f;
-                Vector3f top = up.times(dist);
-                Vector3f bot = up.times(-dist);
-                Vector3f l = new Vector3f(-dist, 0, 0);
-                Vector3f r = new Vector3f(+dist, 0, 0);
-                Vector3f f = new Vector3f(0, 0, +dist);
-                Vector3f b = new Vector3f(0, 0, -dist);
-
-                // Top to each side corner.
-                gl.glBegin(GL.GL_LINES);
-                glVertex3f2(gl, top, l);
-                glVertex3f2(gl, top, r);
-                glVertex3f2(gl, top, f);
-                glVertex3f2(gl, top, b);
-                gl.glEnd();
-
-                // Bottom to each side corner.
-                gl.glBegin(GL.GL_LINES);
-                glVertex3f2(gl, bot, l);
-                glVertex3f2(gl, bot, r);
-                glVertex3f2(gl, bot, f);
-                glVertex3f2(gl, bot, b);
-                gl.glEnd();
-
-                // Connect the side corners.
-                gl.glBegin(GL.GL_LINE_LOOP);
-                glVertex3f(gl, l);
-                glVertex3f(gl, f);
-                glVertex3f(gl, r);
-                glVertex3f(gl, b);
-                gl.glEnd();
-
+                EarthMapCanvas.drawOctahedron(gl, 0.1f /*radius*/);
                 gl.glPopMatrix();
             }
 
             gl.glPopMatrix();
         }
+    }
+
+    /** Draw an octahedron at the origin with the given radius,
+      * the distance from the center to a corner. */
+    private static void drawOctahedron(GL2 gl, float radius)
+    {
+        // Vectors from center to each corner.
+        Vector3f top = new Vector3f(0, radius, 0);
+        Vector3f bot = new Vector3f(0, -radius, 0);
+        Vector3f l = new Vector3f(-radius, 0, 0);
+        Vector3f r = new Vector3f(+radius, 0, 0);
+        Vector3f f = new Vector3f(0, 0, +radius);
+        Vector3f b = new Vector3f(0, 0, -radius);
+
+        // Top to each side corner.
+        gl.glBegin(GL.GL_LINES);
+        glVertex3f2(gl, top, l);
+        glVertex3f2(gl, top, r);
+        glVertex3f2(gl, top, f);
+        glVertex3f2(gl, top, b);
+        gl.glEnd();
+
+        // Bottom to each side corner.
+        gl.glBegin(GL.GL_LINES);
+        glVertex3f2(gl, bot, l);
+        glVertex3f2(gl, bot, r);
+        glVertex3f2(gl, bot, f);
+        glVertex3f2(gl, bot, b);
+        gl.glEnd();
+
+        // Connect the side corners.
+        gl.glBegin(GL.GL_LINE_LOOP);
+        glVertex3f(gl, l);
+        glVertex3f(gl, f);
+        glVertex3f(gl, r);
+        glVertex3f(gl, b);
+        gl.glEnd();
     }
 
     /** Set the next vertex's color using glMaterial.  My intent is this
@@ -998,7 +1035,7 @@ public class EarthMapCanvas
         // Draw a box above the active square.
         if (s.showAsActive) {
             glMaterialColor3f(gl, 0, 1, 1);    // Cyan
-            this.drawActiveBoxAround(gl, s);
+            this.drawActiveBoxAround(gl, s, 0.01f);
         }
 
         // Also draw rays to the stars observed here.
@@ -1009,7 +1046,7 @@ public class EarthMapCanvas
 
     /** Draw a shallow rectangle around the indicated box using
       * the current material color. */
-    private void drawActiveBoxAround(GL2 gl, SurfaceSquare s)
+    private void drawActiveBoxAround(GL2 gl, SurfaceSquare s, float height)
     {
         Vector3f east = s.north.cross(s.up);
 
@@ -1028,7 +1065,7 @@ public class EarthMapCanvas
         // A shorter version of "up".  I want to go a short distance so
         // the line is visible above the texture, but not so far
         // that the association with the square is unclear.
-        Vector3f upShort = s.up.times(0.01f);
+        Vector3f upShort = s.up.times(height);
 
         gl.glDisable(GL.GL_TEXTURE_2D);
         gl.glBegin(GL.GL_LINE_LOOP);

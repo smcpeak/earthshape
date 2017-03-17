@@ -42,16 +42,16 @@ public class BowlObservations extends ManifoldObservations {
         // Some close stars.
         ret.put("A", new Vector4f(1, 6, 2, 1));
         ret.put("B", new Vector4f(-3, 7, 4, 1));
-        ret.put("C", new Vector4f(5, 8, -6, 1));
-        ret.put("D", new Vector4f(-17, 9, -8, 1));
+        ret.put("C", new Vector4f(5, 18, -6, 1));
+        ret.put("D", new Vector4f(-17, 19, -8, 1));
 
         // Some far away, but finitely so.
-        ret.put("E", new Vector4f(300, 380, 800, 1));
-        ret.put("F", new Vector4f(-900, 390, 400, 1));
+        ret.put("E", new Vector4f(200, 380, 300, 1));
+        ret.put("F", new Vector4f(-300, 390, 150, 1));
 
         // Some infinitely far away.
-        ret.put("G", new Vector4f(15, 8, -6, 0));
-        ret.put("H", new Vector4f(-7, 9, -18, 0));
+        ret.put("G", new Vector4f(15, 28, -6, 0));
+        ret.put("H", new Vector4f(-7, 29, -18, 0));
 
         return ret;
     }
