@@ -4,12 +4,14 @@
 package earthshape;
 
 import java.util.List;
+import java.util.Map;
 
 import util.Vector3f;
+import util.Vector4f;
 
 /** Observations for a hypothetical world that has the same size and
   * shape as the real Earth, but the stars are nearby. */
-public class CloseStarObservations extends RealWorldObservations {
+public class CloseStarObservations extends ManifoldObservations {
     // ---- Constants ----
     // The star observation data for this one location will be
     // the same as in the real world.
@@ -20,11 +22,15 @@ public class CloseStarObservations extends RealWorldObservations {
     /** Star physical locations, in thousands of kilometers. */
     private CloseStarGenerator starGenerator;
 
+    /** Observations this class is based on. */
+    private RealWorldObservations rwo = new RealWorldObservations();
+
     // ---- Methods ----
     public CloseStarObservations()
     {
+        // Use real world observations for the reference square.
         this.starGenerator = CloseStarObservations.buildStarGenerator(
-            super.getStarObservations(StarObservation.unixTimeOfManualData,
+            rwo.getStarObservations(StarObservation.unixTimeOfManualData,
                 REFERENCE_LATITUDE, REFERENCE_LONGITUDE),
             this.getSquare(REFERENCE_LATITUDE, REFERENCE_LONGITUDE));
     }
@@ -51,6 +57,7 @@ public class CloseStarObservations extends RealWorldObservations {
       * coordinate system, using a spherical model for the Earth.
       * This square will not become part of the virtual 3D map, I am
       * just using it as a convenient package for some data. */
+    @Override
     public SurfaceSquare getSquare(float latitude, float longitude)
     {
         // The coordinate system here has the Earth's center at the
@@ -101,6 +108,16 @@ public class CloseStarObservations extends RealWorldObservations {
             rot);           // rotationFromBase
     }
 
+    // TODO: Why is this necessary?  I thought the implementation in
+    // ManifoldObservations would suffice given how I defined mapLL.
+    @Override
+    public TravelObservation getTravelObservation(
+        float startLatitude, float startLongitude,
+        float endLatitude, float endLongitude)
+    {
+        return rwo.getTravelObservation(startLatitude, startLongitude, endLatitude, endLongitude);
+    }
+
     @Override
     public List<StarObservation> getStarObservations(
         double unixTime,
@@ -109,10 +126,34 @@ public class CloseStarObservations extends RealWorldObservations {
     {
         // Get the square whose observations we want to compute,
         // using the spherical Earth model.
-        SurfaceSquare targetSquare = getSquare(latitude, longitude);
+        SurfaceSquare targetSquare = this.getSquare(latitude, longitude);
 
         // Synthesize observations for it.
         return this.starGenerator.getMyStarObservations(targetSquare);
+    }
+
+    @Override
+    public Vector3f mapLL(float latitude, float longitude)
+    {
+        // This is backwards from how ManifoldObservations usually works:
+        // I derive the coordinate from the square here.
+        SurfaceSquare s = this.getSquare(latitude, longitude);
+        return s.center;
+    }
+
+    @Override
+    public Map<String, Vector4f> getStarMap()
+    {
+        return this.starGenerator.starLocations;
+    }
+
+    @Override
+    public StarObservation getSunObservation(
+        double unixTime,
+        float latitude,
+        float longitude)
+    {
+        return rwo.getSunObservation(unixTime, latitude, longitude);
     }
 }
 

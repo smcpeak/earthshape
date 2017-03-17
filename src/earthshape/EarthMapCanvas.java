@@ -671,7 +671,7 @@ public class EarthMapCanvas
                 (ManifoldObservations)this.earthShapeFrame.worldObservations;
 
             gl.glLineWidth(2);
-            gl.glNormal3f(0,1,0);
+            gl.glNormal3f(0, 1, 0);
             gl.glDisable(GL.GL_TEXTURE_2D);
 
             gl.glPushMatrix();
@@ -693,11 +693,18 @@ public class EarthMapCanvas
                 double angle = rootSquare.rotationFromNominal.length();
                 Vector3d u = rootSquare.rotationFromNominal.normalizeAsVector3d();
                 gl.glRotated(-angle, u.x(), u.y(), u.z());
-                transformedCamera = transformedCamera.rotate(angle, u.toVector3f());
-
                 Vector3f c = rootSquare.center.times(-1);
                 gl.glTranslatef(c.x(), c.y(), c.z());
+
+                // Reverse the transformation's effects on the camera
+                // position.
+                transformedCamera = transformedCamera.rotate(angle, u.toVector3f());
                 transformedCamera = transformedCamera.minus(c);
+
+                // Do the same for my desired surface normal.
+                Vector3f transformedNormal = new Vector3f(0, 1, 0);
+                transformedNormal = transformedNormal.rotate(angle, u.toVector3f());
+                gl.glNormal3fv(transformedNormal.getArray(), 0);
 
                 // Draw a box around that square.
                 glMaterialColor3f(gl, 0,1,0);       // Green
@@ -1072,7 +1079,7 @@ public class EarthMapCanvas
     }
 
     /** Draw a shallow rectangle around the indicated box using
-      * the current material color. */
+      * the current material color and surface normal. */
     private void drawActiveBoxAround(GL2 gl, SurfaceSquare s, float height)
     {
         Vector3f east = s.north.cross(s.up);
@@ -1096,7 +1103,6 @@ public class EarthMapCanvas
 
         gl.glDisable(GL.GL_TEXTURE_2D);
         gl.glBegin(GL.GL_LINE_LOOP);
-        gl.glNormal3f(0,1,0);
 
         gl.glVertex3fv(nw.plus(upShort).getArray(), 0);
         gl.glVertex3fv(sw.plus(upShort).getArray(), 0);

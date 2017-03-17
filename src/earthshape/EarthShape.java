@@ -110,6 +110,9 @@ public class EarthShape
       * we cannot see any stars. */
     private float maximumSunElevation = -5;
 
+    /** When true, take the Sun's elevation into account. */
+    private boolean useSunElevation = true;
+
     /** When true, use the "new" orientation algorithm that
       * repeatedly applies the recommended command.  Otherwise,
       * use the older one based on average deviation.  The old
@@ -133,6 +136,7 @@ public class EarthShape
     private JCheckBoxMenuItem drawSurfaceNormalsCBItem;
     private JCheckBoxMenuItem drawCelestialNorthCBItem;
     private JCheckBoxMenuItem drawStarRaysCBItem;
+    private JCheckBoxMenuItem useSunElevationCBItem;
     private JCheckBoxMenuItem invertHorizontalCameraMovementCBItem;
     private JCheckBoxMenuItem invertVerticalCameraMovementCBItem;
     private JCheckBoxMenuItem newAutomaticOrientationAlgorithmCBItem;
@@ -330,22 +334,25 @@ public class EarthShape
     {
         JMenu menu = new JMenu("File");
 
-        addMenuItem(menu, "Use real world observations", null, new ActionListener() {
+        addMenuItem(menu, "Use real world astronomical observations", null, new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 EarthShape.this.changeObservations(new RealWorldObservations());
             }
         });
-        addMenuItem(menu, "Use close star observations", null, new ActionListener() {
+
+        menu.addSeparator();
+
+        addMenuItem(menu, "Use model: spherical Earth with nearby stars", null, new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 EarthShape.this.changeObservations(new CloseStarObservations());
             }
         });
-        addMenuItem(menu, "Use azimuthal equidistant projection flat Earth model", null, new ActionListener() {
+        addMenuItem(menu, "Use model: azimuthal equidistant projection flat Earth", null, new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 EarthShape.this.changeObservations(new AzimuthalEquidistantObservations());
             }
         });
-        addMenuItem(menu, "Use bowl-shaped Earth model", null, new ActionListener() {
+        addMenuItem(menu, "Use model: bowl-shaped Earth", null, new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 EarthShape.this.changeObservations(new BowlObservations());
             }
@@ -355,7 +362,6 @@ public class EarthShape
 
         addMenuItem(menu, "Exit", null, new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                EarthShape.log("exit menu item invoked");
                 EarthShape.this.dispose();
             }
         });
@@ -425,7 +431,7 @@ public class EarthShape
     private JMenu buildBuildMenu()
     {
         JMenu buildMenu = new JMenu("Build");
-        addMenuItem(buildMenu, "Build Earth using star data and no assumed shape",
+        addMenuItem(buildMenu, "Build Earth using active observational data or model",
             KeyStroke.getKeyStroke('t'),
             new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
@@ -638,6 +644,16 @@ public class EarthShape
                     EarthShape.this.setMaximumSunElevation();
                 }
             });
+        this.useSunElevationCBItem =
+            addCBMenuItem(menu, "Take Sun elevation into account", null,
+                this.useSunElevation,
+                new ActionListener() {
+                    public void actionPerformed(ActionEvent e) {
+                        EarthShape.this.useSunElevation =
+                            !EarthShape.this.useSunElevation;
+                        EarthShape.this.updateUIState();
+                    }
+                });
 
         menu.addSeparator();
 
@@ -1285,6 +1301,10 @@ public class EarthShape
       * the configurable parameter 'maximumSunElevation'. */
     private boolean sunIsTooHigh(float latitude, float longitude)
     {
+        if (!this.useSunElevation) {
+            return false;
+        }
+
         StarObservation sun = this.worldObservations.getSunObservation(
             StarObservation.unixTimeOfManualData, latitude, longitude);
         if (sun == null) {
@@ -2223,6 +2243,7 @@ public class EarthShape
         this.drawWorldWireframeCBItem.setSelected(this.emCanvas.drawWorldWireframe);
         this.drawWorldStarsCBItem.setSelected(this.emCanvas.drawWorldStars);
 
+        this.useSunElevationCBItem.setSelected(this.useSunElevation);
         this.invertHorizontalCameraMovementCBItem.setSelected(
             this.emCanvas.invertHorizontalCameraMovement);
         this.invertVerticalCameraMovementCBItem.setSelected(
