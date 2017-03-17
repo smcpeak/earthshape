@@ -39,7 +39,7 @@ public class RealWorldObservations implements WorldObservations {
     @Override
     public String getDescription()
     {
-        return "real world data";
+        return "real world star data";
     }
 
     @Override

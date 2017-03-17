@@ -44,7 +44,7 @@ public class CloseStarObservations extends RealWorldObservations {
     @Override
     public String getDescription()
     {
-        return "close star data";
+        return "spherical Earth with close stars";
     }
 
     /** Get details of a square at a given location, in an arbitrary

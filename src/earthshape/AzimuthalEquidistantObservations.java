@@ -13,7 +13,7 @@ public class AzimuthalEquidistantObservations extends CloseStarObservations {
     @Override
     public String getDescription()
     {
-        return "azimuthal equidistant projection flat Earth data";
+        return "azimuthal equidistant projection flat Earth";
     }
 
     @Override

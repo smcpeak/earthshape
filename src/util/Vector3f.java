@@ -173,9 +173,22 @@ public class Vector3f {
         // sine of the desired length.
         Vector3f v = src.cross(dest);
 
-        // Fix the length.
+        // Get the angle from the length.
         float degrees = FloatUtil.radiansToDegreesf(
             (float)Math.asin(v.length()));
+
+        // If the input vectors point in opposite directions,
+        // we need to push the result into Q2 or Q3 (resolving
+        // the ambiguity of inverse since).
+        if (dest.dot(src) < 0) {
+            if (degrees > 0) {
+                degrees = 180 - degrees;
+            }
+            else {
+                degrees = -180 - degrees;
+            }
+        }
+
         return v.normalize().times(degrees);
     }
 
@@ -204,6 +217,13 @@ public class Vector3f {
 
         return v;
     }
+
+    /** Return the component of 'this' orthogonal to unit vector 'u'. */
+    public Vector3f orthogonalComponentToUnitVector(Vector3f u)
+    {
+        return this.minus(this.projectOntoUnitVector(u));
+    }
+
 }
 
 // EOF

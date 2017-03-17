@@ -356,6 +356,11 @@ public class EarthShape
                 EarthShape.this.changeObservations(new AzimuthalEquidistantObservations());
             }
         });
+        addMenuItem(menu, "Use bowl-shaped Earth model", null, new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                EarthShape.this.changeObservations(new BowlObservations());
+            }
+        });
 
         menu.addSeparator();
 
@@ -2345,7 +2350,15 @@ public class EarthShape
     private void changeObservations(WorldObservations obs)
     {
         this.clearSurfaceSquares();
+
         this.worldObservations = obs;
+
+        // Enable all stars in the new model.
+        this.enabledStars.clear();
+        for (String starName : this.worldObservations.getAllStars()) {
+            this.enabledStars.put(starName, true);
+        }
+
         this.updateAndRedraw();
     }
 
