@@ -1,2 +1,7 @@
 res/* binary
 src/earthshape/textures/* binary
+
+# The Makefile is not actually binary, but it has to be stored with
+# LF endings, otherwise cygwin make will be unhappy.
+Makefile binary
+
