@@ -53,60 +53,6 @@ public class CloseStarObservations extends ManifoldObservations {
         return "spherical Earth with close stars";
     }
 
-    // It is not clear that I need to override getModelSquare here, but
-    // for the moment I am doing so to preserve how the code worked
-    // before some refactoring.
-    @Override
-    public SurfaceSquare getModelSquare(float latitude, float longitude)
-    {
-        // The coordinate system here has the Earth's center at the
-        // origin, its spin axis along the Z axis with celestial North
-        // at -Z, and the prime meridian intersecting the +Y axis.
-        // This orientation means that the square at (latitude 0,
-        // longitude 0) is oriented the same way as the output of
-        // Vector3f.azimuthElevationToVector.
-        //
-        // The units of this coordinate system are 1000 kilometers.
-
-        // Start with a vector going from the center of the Earth to
-        // the intersection of the equator and prime meridian.  This
-        // will become the center of the resulting square.
-        Vector3f center =
-            new Vector3f(0, RealWorldObservations.EARTH_RADIUS_KM / 1000.0f, 0);
-
-        // Also define unit vectors that will be geographic North and up.
-        Vector3f north = new Vector3f(0, 0, -1);
-        Vector3f up = new Vector3f(0, 1, 0);
-
-        // Now, define a composed rotation to put each of these three
-        // into the proper position for the square we want.
-
-        // Start with a rotation about the X axis (toward one of the
-        // poles) for latitude as an angle-axis vector.
-        Vector3f rot = new Vector3f(-latitude, 0, 0);
-
-        // Then add a rotation about the Earth's spin axis to account
-        // for longitude.
-        rot = Vector3f.composeRotations(rot, new Vector3f(0, 0, -longitude));
-
-        // Now apply this rotation to all three spatial vectors.
-        center = center.rotateAA(rot);
-        north = north.rotateAA(rot);
-        up = up.rotateAA(rot);
-
-        // Package these up.
-        return new SurfaceSquare(
-            center,
-            north,
-            up,
-            1,              // sizeKm, irrelevant here
-            latitude,
-            longitude,
-            null,           // baseSquare
-            null,           // baseMidpoint
-            rot);           // rotationFromBase
-    }
-
     // TODO: Why is this necessary?  I thought the implementation in
     // ManifoldObservations would suffice given how I defined
     // getModelPt.
@@ -150,10 +96,30 @@ public class CloseStarObservations extends ManifoldObservations {
     @Override
     public Vector3f getModelPt(float latitude, float longitude)
     {
-        // This is backwards from how ManifoldObservations usually works:
-        // I derive the coordinate from the square here.
-        SurfaceSquare s = this.getModelSquare(latitude, longitude);
-        return s.center;
+        // The coordinate system here has the Earth's center at the
+        // origin, its spin axis along the Z axis with celestial North
+        // at -Z, and the prime meridian intersecting the +Y axis.
+        // This orientation means that the square at (latitude 0,
+        // longitude 0) is oriented the same way as the output of
+        // Vector3f.azimuthElevationToVector.
+        //
+        // The units of this coordinate system are 1000 kilometers.
+
+        // Start with a vector going from the center of the Earth to
+        // the intersection of the equator and prime meridian.  This
+        // will become the center of the resulting square.
+        Vector3f pt =
+            new Vector3f(0, RealWorldObservations.EARTH_RADIUS_KM / 1000.0f, 0);
+
+        // Then rotate about the X axis (toward one of the
+        // poles) for latitude.
+        pt = pt.rotate(-latitude, new Vector3f(1, 0, 0));
+
+        // Then rotate about the Earth's spin axis to account
+        // for longitude.
+        pt = pt.rotate(-longitude, new Vector3f(0, 0, 1));
+
+        return pt;
     }
 
     @Override
