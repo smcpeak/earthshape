@@ -4,11 +4,14 @@
 package earthshape;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 
 import util.FloatUtil;
 import util.Vector3f;
+import util.Vector4f;
 
 /** Observations for the actual Earth. */
 public class RealWorldObservations extends WorldObservations {
@@ -36,7 +39,25 @@ public class RealWorldObservations extends WorldObservations {
     /** Position of the sun on StarObservation.unixTimeOfManualData. */
     private StarCatalog sunPosition = StarCatalog.sunPosition();
 
+    /** Star physical directions, as inferred from the observations
+      * at 38N, 122W.  This is used to plot their theoretical positions
+      * in the 3D map, but *not* used in the surface reconstruction
+      * algorithm. */
+    private StarGenerator starGenerator;
+
     // ---- Methods ----
+    public RealWorldObservations()
+    {
+        this.starGenerator = CloseStarObservations.buildStarGenerator(
+            this.getStarObservations(StarObservation.unixTimeOfManualData,
+                CloseStarObservations.REFERENCE_LATITUDE,
+                CloseStarObservations.REFERENCE_LONGITUDE),
+            this.getModelSquare(
+                CloseStarObservations.REFERENCE_LATITUDE,
+                CloseStarObservations.REFERENCE_LONGITUDE),
+            new HashMap<String, Float>() /*all at infinity*/);
+    }
+
     @Override
     public String getDescription()
     {
@@ -141,6 +162,12 @@ public class RealWorldObservations extends WorldObservations {
         }
     }
 
+    @Override
+    public boolean hasModelPoints()
+    {
+        return true;
+    }
+
     // This is the theoretical sphere that our observations should be
     // able to reconstruct.
     @Override
@@ -173,9 +200,9 @@ public class RealWorldObservations extends WorldObservations {
     }
 
     @Override
-    public boolean hasModelPoints()
+    public Map<String, Vector4f> getModelStarMap()
     {
-        return true;
+        return this.starGenerator.starLocations;
     }
 }
 

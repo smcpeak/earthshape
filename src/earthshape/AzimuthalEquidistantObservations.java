@@ -31,7 +31,9 @@ public class AzimuthalEquidistantObservations extends ManifoldObservations {
             cso.getStarObservations(StarObservation.unixTimeOfManualData,
                 latitude, longitude);
         this.starGenerator = CloseStarObservations.buildStarGenerator(
-            referenceObservations, this.getModelSquare(latitude, longitude));
+            referenceObservations,
+            this.getModelSquare(latitude, longitude),
+            CloseStarObservations.getStarDistances());
     }
 
     @Override

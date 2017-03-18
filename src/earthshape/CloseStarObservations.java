@@ -33,7 +33,8 @@ public class CloseStarObservations extends ManifoldObservations {
         this.starGenerator = CloseStarObservations.buildStarGenerator(
             rwo.getStarObservations(StarObservation.unixTimeOfManualData,
                 REFERENCE_LATITUDE, REFERENCE_LONGITUDE),
-            this.getModelSquare(REFERENCE_LATITUDE, REFERENCE_LONGITUDE));
+            this.getModelSquare(REFERENCE_LATITUDE, REFERENCE_LONGITUDE),
+            CloseStarObservations.getStarDistances());
     }
 
     public static HashMap<String, Float> getStarDistances()
@@ -57,7 +58,8 @@ public class CloseStarObservations extends ManifoldObservations {
 
     public static StarGenerator buildStarGenerator(
         List<StarObservation> referenceObservations,
-        SurfaceSquare referenceSquare)
+        SurfaceSquare referenceSquare,
+        Map<String, Float> distanceToStar)
     {
         // Store the observations in the square.
         for (StarObservation so : referenceObservations) {
@@ -65,8 +67,7 @@ public class CloseStarObservations extends ManifoldObservations {
         }
 
         // Build the star generator from that data.
-        return new StarGenerator(referenceSquare,
-            CloseStarObservations.getStarDistances());
+        return new StarGenerator(referenceSquare, distanceToStar);
     }
 
     @Override

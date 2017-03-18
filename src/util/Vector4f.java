@@ -23,6 +23,12 @@ public class Vector4f {
         this(v3.x(), v3.y(), v3.z(), 1);
     }
 
+    /** Add a 'w' coordinate as specified. */
+    public Vector4f(Vector3f v3, float w)
+    {
+        this(v3.x(), v3.y(), v3.z(), w);
+    }
+
     public Vector4f(Vectorf v4)
     {
         assert(v4.dim() == 4);

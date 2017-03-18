@@ -50,27 +50,33 @@ public class StarGenerator {
         for (Map.Entry<String, StarObservation> e : refSquare.starObs.entrySet()) {
             StarObservation refObs = e.getValue();
 
+            // Unit vector from reference location to the star, in the reference
+            // location's local geographic coordinate system.
+            Vector3f refToStarLocalUnit =
+                Vector3f.azimuthElevationToVector(refObs.azimuth, refObs.elevation);
+
+            // Convert that to global coordinates rotating it the same way the
+            // square's orientation was.
+            Vector3f starDirectionGlobal =
+                refToStarLocalUnit.rotateAA(refSquare.rotationFromNominal);
+
             // How far away is the star from the reference location?
             Float distanceFromRef = distanceToStar.get(refObs.name);
             if (distanceFromRef == null) {
-                continue;      // Skip this star.
+                // We will treat it as infinitely far away.
+                this.starLocations.put(refObs.name,
+                    new Vector4f(starDirectionGlobal, 0 /*w*/));
             }
+            else {
+                // Stretch the direction vector to match its distance, then
+                // add the reference square's center, to create a global
+                // position vector.
+                Vector3f starAbsolute =
+                    starDirectionGlobal.times(distanceFromRef).plus(refSquare.center);
 
-            // Vector from reference location to the star, in the reference
-            // location's local geographic coordinate system.
-            Vector3f refToStarLocal =
-                Vector3f.azimuthElevationToVector(refObs.azimuth, refObs.elevation)
-                    .times(distanceFromRef);
-
-            // Convert it to an absolute position vector by first rotating
-            // it the same way the square's orientation was, then adding
-            // the square's location.
-            Vector3f starAbsolute =
-                refToStarLocal.rotateAA(refSquare.rotationFromNominal)
-                    .plus(refSquare.center);
-
-            // Store this position.
-            this.starLocations.put(refObs.name, new Vector4f(starAbsolute));
+                // Store this position.
+                this.starLocations.put(refObs.name, new Vector4f(starAbsolute));
+            }
         }
     }
 
