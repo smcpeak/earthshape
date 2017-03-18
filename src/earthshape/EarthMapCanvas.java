@@ -168,7 +168,7 @@ public class EarthMapCanvas
     public boolean drawCompasses = true;
 
     /** If true, draw surface normals as short line segments. */
-    public boolean drawSurfaceNormals = true;
+    public boolean drawSurfaceNormals = false;
 
     /** If true, draw celestial North vectors on each square. */
     public boolean drawCelestialNorth = false;
