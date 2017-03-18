@@ -14,15 +14,16 @@ import util.Vector4f;
   * of physical star locations (which can be infinitely far away). */
 public abstract class ManifoldObservations implements WorldObservations {
     // ---- Abstract methods ----
-    /** Map the 2D space of latitude and longitude to points on a 3D
+    /** Map the 2D space of latitude and longitude to points to a 3D
       * surface.  The map is expected to be continuous and smooth
       * within the boundary of latitude in [-90,90] and longitude in
-      * [-180,180]. */
-    public abstract Vector3f mapLL(float latitude, float longitude);
+      * [-180,180].  This is used to draw the wireframe of the
+      * expected shape. */
+    public abstract Vector3f getModelPt(float latitude, float longitude);
 
     /** Return physical positions for all stars as 4D homogeneous
       * coordinates (so points at infinity can be represented). */
-    public abstract Map<String, Vector4f> getStarMap();
+    public abstract Map<String, Vector4f> getModelStarMap();
 
     // ---- Methods ----
     @Override
@@ -31,8 +32,8 @@ public abstract class ManifoldObservations implements WorldObservations {
         float endLatitude, float endLongitude)
     {
         // Get squares for both endpoints.
-        SurfaceSquare startSquare = this.getSquare(startLatitude, startLongitude);
-        SurfaceSquare endSquare = this.getSquare(endLatitude, endLongitude);
+        SurfaceSquare startSquare = this.getModelSquare(startLatitude, startLongitude);
+        SurfaceSquare endSquare = this.getModelSquare(endLatitude, endLongitude);
 
         // Get global travel vectors in each direction.  This does
         // not take into account the possibility of a curved surface
@@ -70,35 +71,36 @@ public abstract class ManifoldObservations implements WorldObservations {
             endToStartHeading);
     }
 
-    /** Get details of a square at a given location, in the mapLL
+    /** Get details of a square at a given location, in the model
       * coordinate system.
       *
       * This square will not become part of the virtual 3D map, I am
-      * just using it as a convenient package for some data. */
-    public SurfaceSquare getSquare(float latitude, float longitude)
+      * just using it as a convenient package for some data about
+      * the theoretical model. */
+    public SurfaceSquare getModelSquare(float latitude, float longitude)
     {
-        // Get the center of the square using mapLL directly.
-        Vector3f center = this.mapLL(latitude, longitude);
+        // Get the center of the square using the model.
+        Vector3f center = this.getModelPt(latitude, longitude);
 
         // Compute North by making a small change to latitude.
         Vector3f north;
         if (latitude >= 0) {
-            Vector3f littleSouth = this.mapLL(latitude - 0.1f, longitude);
+            Vector3f littleSouth = this.getModelPt(latitude - 0.1f, longitude);
             north = center.minus(littleSouth).normalize();
         }
         else {
-            Vector3f littleNorth = this.mapLL(latitude + 0.1f, longitude);
+            Vector3f littleNorth = this.getModelPt(latitude + 0.1f, longitude);
             north = littleNorth.minus(center).normalize();
         }
 
         // And similarly for East.
         Vector3f east;
         if (longitude >= 0) {
-            Vector3f littleWest = this.mapLL(latitude, longitude - 0.1f);
+            Vector3f littleWest = this.getModelPt(latitude, longitude - 0.1f);
             east = center.minus(littleWest).normalize();
         }
         else {
-            Vector3f littleEast = this.mapLL(latitude, longitude + 0.1f);
+            Vector3f littleEast = this.getModelPt(latitude, longitude + 0.1f);
             east = littleEast.minus(center).normalize();
         }
 
@@ -151,7 +153,7 @@ public abstract class ManifoldObservations implements WorldObservations {
     public List<String> getAllStars()
     {
         ArrayList<String> ret = new ArrayList<String>();
-        for (Map.Entry<String, Vector4f> e : this.getStarMap().entrySet()) {
+        for (Map.Entry<String, Vector4f> e : this.getModelStarMap().entrySet()) {
             ret.add(e.getKey());
         }
         return ret;
@@ -164,10 +166,10 @@ public abstract class ManifoldObservations implements WorldObservations {
         float longitude)
     {
         // Get the square at this location.
-        SurfaceSquare square = this.getSquare(latitude, longitude);
+        SurfaceSquare square = this.getModelSquare(latitude, longitude);
 
         // Synthesize observations for it.
-        return CloseStarGenerator.getStarObservations(square, this.getStarMap());
+        return CloseStarGenerator.getStarObservations(square, this.getModelStarMap());
     }
 
 }

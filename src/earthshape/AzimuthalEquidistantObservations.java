@@ -31,7 +31,7 @@ public class AzimuthalEquidistantObservations extends ManifoldObservations {
             cso.getStarObservations(StarObservation.unixTimeOfManualData,
                 latitude, longitude);
         this.starGenerator = CloseStarObservations.buildStarGenerator(
-            referenceObservations, this.getSquare(latitude, longitude));
+            referenceObservations, this.getModelSquare(latitude, longitude));
     }
 
     @Override
@@ -41,7 +41,7 @@ public class AzimuthalEquidistantObservations extends ManifoldObservations {
     }
 
     @Override
-    public Vector3f mapLL(float latitude, float longitude)
+    public Vector3f getModelPt(float latitude, float longitude)
     {
         float distDegrees = 90.0f - latitude;
         float r = FloatUtil.degreesToRadiansf(distDegrees)
@@ -53,7 +53,7 @@ public class AzimuthalEquidistantObservations extends ManifoldObservations {
     }
 
     @Override
-    public Map<String, Vector4f> getStarMap()
+    public Map<String, Vector4f> getModelStarMap()
     {
         return this.starGenerator.starLocations;
     }

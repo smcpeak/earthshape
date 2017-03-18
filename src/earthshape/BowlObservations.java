@@ -20,7 +20,7 @@ public class BowlObservations extends ManifoldObservations {
     }
 
     @Override
-    public Vector3f mapLL(float latitude, float longitude)
+    public Vector3f getModelPt(float latitude, float longitude)
     {
         // This is based on the Azimuthal Equidistant projection,
         // but I added a quadratic curve in the +Y direction.
@@ -35,7 +35,7 @@ public class BowlObservations extends ManifoldObservations {
     }
 
     @Override
-    public Map<String, Vector4f> getStarMap()
+    public Map<String, Vector4f> getModelStarMap()
     {
         HashMap<String, Vector4f> ret = new HashMap<String, Vector4f>();
 

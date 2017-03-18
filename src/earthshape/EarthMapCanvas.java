@@ -684,7 +684,7 @@ public class EarthMapCanvas
             if (!this.surfaceSquares.isEmpty()) {
                 SurfaceSquare firstPlaced = this.surfaceSquares.get(0);
                 SurfaceSquare rootSquare =
-                    mo.getSquare(firstPlaced.latitude, firstPlaced.longitude);
+                    mo.getModelSquare(firstPlaced.latitude, firstPlaced.longitude);
                 rootSquare.sizeKm = firstPlaced.sizeKm;
 
                 // Push a transformation matrix that will align the
@@ -728,7 +728,7 @@ public class EarthMapCanvas
     {
         for (int longitude = -180; longitude <= 180; longitude += 30) {
             for (int latitude = -90; latitude <= 90; latitude += 30) {
-                Vector3f pt = mo.mapLL(latitude, longitude);
+                Vector3f pt = mo.getModelPt(latitude, longitude);
                 if (longitude > -180) {
                     if (latitude == 0) {
                         // Draw the equator in white.
@@ -740,7 +740,7 @@ public class EarthMapCanvas
 
                     gl.glBegin(GL.GL_LINES);
                     glVertex3f(gl, pt);
-                    glVertex3f(gl, mo.mapLL(latitude, longitude - 30));
+                    glVertex3f(gl, mo.getModelPt(latitude, longitude - 30));
                     gl.glEnd();
                 }
                 if (latitude > -90) {
@@ -754,7 +754,7 @@ public class EarthMapCanvas
 
                     gl.glBegin(GL.GL_LINES);
                     glVertex3f(gl, pt);
-                    glVertex3f(gl, mo.mapLL(latitude - 30, longitude));
+                    glVertex3f(gl, mo.getModelPt(latitude - 30, longitude));
                     gl.glEnd();
 
                     // Minor note: Usually the -180 longitude line is
@@ -774,7 +774,7 @@ public class EarthMapCanvas
         final float starFarDistance = 20;
 
         // Draw indicators around the stars.
-        for (Map.Entry<String, Vector4f> e : mo.getStarMap().entrySet()) {
+        for (Map.Entry<String, Vector4f> e : mo.getModelStarMap().entrySet()) {
             Vector4f pt = e.getValue();
             Vector3f pt3 = pt.slice3();
 
