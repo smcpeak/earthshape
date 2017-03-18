@@ -20,7 +20,7 @@ public class CloseStarObservations extends ManifoldObservations {
 
     // ---- Instance data ----
     /** Star physical locations, in thousands of kilometers. */
-    private CloseStarGenerator starGenerator;
+    private StarGenerator starGenerator;
 
     /** Observations this class is based on. */
     private RealWorldObservations rwo = new RealWorldObservations();
@@ -35,7 +35,7 @@ public class CloseStarObservations extends ManifoldObservations {
             this.getModelSquare(REFERENCE_LATITUDE, REFERENCE_LONGITUDE));
     }
 
-    public static CloseStarGenerator buildStarGenerator(
+    public static StarGenerator buildStarGenerator(
         List<StarObservation> referenceObservations, SurfaceSquare referenceSquare)
     {
         // Store the observations in the square.
@@ -44,7 +44,7 @@ public class CloseStarObservations extends ManifoldObservations {
         }
 
         // Build the star generator from that data.
-        return new CloseStarGenerator(referenceSquare);
+        return new StarGenerator(referenceSquare);
     }
 
     @Override

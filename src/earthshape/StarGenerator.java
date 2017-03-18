@@ -1,4 +1,4 @@
-// CloseStarGenerator.java
+// StarGenerator.java
 // See copyright.txt for license and terms of use.
 
 package earthshape;
@@ -14,10 +14,11 @@ import util.Vector3f;
 import util.Vector4f;
 
 /** This class generates star observations, for use by an implementor
-  * of 'WorldObservations', where some of the stars are close, yet
+  * of 'WorldObservations', such that
   * their direction matches some other given observations (e.g.,
-  * real world observations) from a chosen location. */
-public class CloseStarGenerator {
+  * real world observations) from a chosen location, possibly
+  * also giving finite distances to them.. */
+public class StarGenerator {
     // ---- Instance data ----
     /** For some stars, the distance from the reference location to
       * that star, in thousands of kilometers. */
@@ -36,7 +37,7 @@ public class CloseStarGenerator {
     public HashMap<String, Vector4f> starLocations = new HashMap<String, Vector4f>();
 
     // ---- Methods ----
-    public CloseStarGenerator(SurfaceSquare referenceSquare)
+    public StarGenerator(SurfaceSquare referenceSquare)
     {
         this.setStarDistances();
         this.setStarLocations(referenceSquare);
@@ -124,8 +125,8 @@ public class CloseStarGenerator {
             Vector3d dir = targetToStarLocal.normalizeAsVector3d();
 
             // Extract azimuth and elevation from the components of 'dir'.
-            double elevation = CloseStarGenerator.elevationOfLocalDirection(dir);
-            double azimuth = CloseStarGenerator.azimuthOfLocalDirection(dir);
+            double elevation = StarGenerator.elevationOfLocalDirection(dir);
+            double azimuth = StarGenerator.azimuthOfLocalDirection(dir);
 
             // Package this up as an observation.
             ret.add(new StarObservation(
@@ -143,7 +144,7 @@ public class CloseStarGenerator {
       * observations for 'square'. */
     public List<StarObservation> getMyStarObservations(SurfaceSquare square)
     {
-        return CloseStarGenerator.getStarObservations(square, this.starLocations);
+        return StarGenerator.getStarObservations(square, this.starLocations);
     }
 
     /** Given a unit vector in my "nominal" coordinate system, where

@@ -16,7 +16,7 @@ import util.Vector4f;
 public class AzimuthalEquidistantObservations extends ManifoldObservations {
     // ---- Instance data ----
     /** Star info borrowed from CloseStarObservations. */
-    private CloseStarGenerator starGenerator;
+    private StarGenerator starGenerator;
 
     // ---- Methods ----
     public AzimuthalEquidistantObservations()

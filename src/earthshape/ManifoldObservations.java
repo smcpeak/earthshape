@@ -52,9 +52,9 @@ public abstract class ManifoldObservations extends WorldObservations {
             endToStart.orthogonalComponentToUnitVector(localUp);
 
         // Now get headings for both.
-        double startToEndHeading = CloseStarGenerator.azimuthOfLocalDirection(
+        double startToEndHeading = StarGenerator.azimuthOfLocalDirection(
             startToEndHorizontal.normalizeAsVector3d());
-        double endToStartHeading = CloseStarGenerator.azimuthOfLocalDirection(
+        double endToStartHeading = StarGenerator.azimuthOfLocalDirection(
             endToStartHorizontal.normalizeAsVector3d());
 
         // The distance is straightforward (again, ignoring intervening
@@ -89,7 +89,7 @@ public abstract class ManifoldObservations extends WorldObservations {
         SurfaceSquare square = this.getModelSquare(latitude, longitude);
 
         // Synthesize observations for it.
-        return CloseStarGenerator.getStarObservations(square, this.getModelStarMap());
+        return StarGenerator.getStarObservations(square, this.getModelStarMap());
     }
 }
 
