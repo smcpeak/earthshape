@@ -20,10 +20,6 @@ import util.Vector4f;
   * also giving finite distances to them.. */
 public class StarGenerator {
     // ---- Instance data ----
-    /** For some stars, the distance from the reference location to
-      * that star, in thousands of kilometers. */
-    private HashMap<String, Float> distanceToStar = new HashMap<String, Float>();
-
     /** Physical positions of stars such that they have the proper
       * distances and sky positions w.r.t. the reference location.
       * This member is the "output" of the class; clients call the
@@ -37,37 +33,25 @@ public class StarGenerator {
     public HashMap<String, Vector4f> starLocations = new HashMap<String, Vector4f>();
 
     // ---- Methods ----
-    public StarGenerator(SurfaceSquare referenceSquare)
+    /** Generate star positions for observations in the reference
+      * square.  For some stars, 'distanceToStar' can specify the
+      * distance from the reference location to that star, in
+      * whatever units the WorldObservations implementor will be
+      * using.  Any star not mapped will be placed at infinity. */
+    public StarGenerator(SurfaceSquare referenceSquare, Map<String, Float> distanceToStar)
     {
-        this.setStarDistances();
-        this.setStarLocations(referenceSquare);
-    }
-
-    /** Populate 'this.distanceToStar'. */
-    private void setStarDistances()
-    {
-        // These will be about one Earth radius (6300km) away.
-        this.distanceToStar.put("Procyon", 6.0f);
-        this.distanceToStar.put("Betelgeuse", 7.0f);
-        this.distanceToStar.put("Rigel", 8.0f);
-        this.distanceToStar.put("Aldebaran", 9.0f);
-
-        // The next four will be about the Earth-Moon distance (380000km) away
-        this.distanceToStar.put("Sirius", 380.0f);
-        this.distanceToStar.put("Capella", 390.0f);
-        this.distanceToStar.put("Polaris", 400.0f);
-        this.distanceToStar.put("Dubhe", 410.0f);
+        this.setStarLocations(referenceSquare, distanceToStar);
     }
 
     /** Populate 'this.starLocations'. */
-    private void setStarLocations(SurfaceSquare refSquare)
+    private void setStarLocations(SurfaceSquare refSquare, Map<String, Float> distanceToStar)
     {
         // Iterate over the observations in the reference square.
         for (Map.Entry<String, StarObservation> e : refSquare.starObs.entrySet()) {
             StarObservation refObs = e.getValue();
 
             // How far away is the star from the reference location?
-            Float distanceFromRef = this.distanceToStar.get(refObs.name);
+            Float distanceFromRef = distanceToStar.get(refObs.name);
             if (distanceFromRef == null) {
                 continue;      // Skip this star.
             }

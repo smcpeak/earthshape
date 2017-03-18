@@ -3,6 +3,7 @@
 
 package earthshape;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -35,8 +36,28 @@ public class CloseStarObservations extends ManifoldObservations {
             this.getModelSquare(REFERENCE_LATITUDE, REFERENCE_LONGITUDE));
     }
 
+    public static HashMap<String, Float> getStarDistances()
+    {
+        HashMap<String, Float> distanceToStar = new HashMap<String, Float>();
+
+        // These will be about one Earth radius (6300km) away.
+        distanceToStar.put("Procyon", 6.0f);
+        distanceToStar.put("Betelgeuse", 7.0f);
+        distanceToStar.put("Rigel", 8.0f);
+        distanceToStar.put("Aldebaran", 9.0f);
+
+        // The next four will be about the Earth-Moon distance (380000km) away
+        distanceToStar.put("Sirius", 380.0f);
+        distanceToStar.put("Capella", 390.0f);
+        distanceToStar.put("Polaris", 400.0f);
+        distanceToStar.put("Dubhe", 410.0f);
+
+        return distanceToStar;
+    }
+
     public static StarGenerator buildStarGenerator(
-        List<StarObservation> referenceObservations, SurfaceSquare referenceSquare)
+        List<StarObservation> referenceObservations,
+        SurfaceSquare referenceSquare)
     {
         // Store the observations in the square.
         for (StarObservation so : referenceObservations) {
@@ -44,7 +65,8 @@ public class CloseStarObservations extends ManifoldObservations {
         }
 
         // Build the star generator from that data.
-        return new StarGenerator(referenceSquare);
+        return new StarGenerator(referenceSquare,
+            CloseStarObservations.getStarDistances());
     }
 
     @Override
