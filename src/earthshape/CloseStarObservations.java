@@ -53,10 +53,9 @@ public class CloseStarObservations extends ManifoldObservations {
         return "spherical Earth with close stars";
     }
 
-    /** Get details of a square at a given location, in an arbitrary
-      * coordinate system, using a spherical model for the Earth.
-      * This square will not become part of the virtual 3D map, I am
-      * just using it as a convenient package for some data. */
+    // It is not clear that I need to override getModelSquare here, but
+    // for the moment I am doing so to preserve how the code worked
+    // before some refactoring.
     @Override
     public SurfaceSquare getModelSquare(float latitude, float longitude)
     {
@@ -134,6 +133,21 @@ public class CloseStarObservations extends ManifoldObservations {
     }
 
     @Override
+    public StarObservation getSunObservation(
+        double unixTime,
+        float latitude,
+        float longitude)
+    {
+        return rwo.getSunObservation(unixTime, latitude, longitude);
+    }
+
+    @Override
+    public boolean hasModelPoints()
+    {
+        return true;
+    }
+
+    @Override
     public Vector3f getModelPt(float latitude, float longitude)
     {
         // This is backwards from how ManifoldObservations usually works:
@@ -146,15 +160,6 @@ public class CloseStarObservations extends ManifoldObservations {
     public Map<String, Vector4f> getModelStarMap()
     {
         return this.starGenerator.starLocations;
-    }
-
-    @Override
-    public StarObservation getSunObservation(
-        double unixTime,
-        float latitude,
-        float longitude)
-    {
-        return rwo.getSunObservation(unixTime, latitude, longitude);
     }
 }
 

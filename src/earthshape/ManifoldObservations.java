@@ -13,19 +13,15 @@ import util.Vector4f;
 /** Observations for an arbitrary 2D manifold (surface) and set
   * of physical star locations (which can be infinitely far away). */
 public abstract class ManifoldObservations implements WorldObservations {
-    // ---- Abstract methods ----
-    /** Map the 2D space of latitude and longitude to points to a 3D
-      * surface.  The map is expected to be continuous and smooth
-      * within the boundary of latitude in [-90,90] and longitude in
-      * [-180,180].  This is used to draw the wireframe of the
-      * expected shape. */
-    public abstract Vector3f getModelPt(float latitude, float longitude);
-
-    /** Return physical positions for all stars as 4D homogeneous
-      * coordinates (so points at infinity can be represented). */
-    public abstract Map<String, Vector4f> getModelStarMap();
-
     // ---- Methods ----
+    /** In a sense, the defining characteristic of this class is that
+      * derived classes always have an underlying model. */
+    @Override
+    public boolean hasModelPoints()
+    {
+        return true;
+    }
+
     @Override
     public TravelObservation getTravelObservation(
         float startLatitude, float startLongitude,
@@ -171,7 +167,6 @@ public abstract class ManifoldObservations implements WorldObservations {
         // Synthesize observations for it.
         return CloseStarGenerator.getStarObservations(square, this.getModelStarMap());
     }
-
 }
 
 // EOf

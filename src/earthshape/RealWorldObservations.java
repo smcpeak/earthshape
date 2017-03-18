@@ -4,10 +4,14 @@
 package earthshape;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 
 import util.FloatUtil;
+import util.Vector3f;
+import util.Vector4f;
 
 /** Observations for the actual Earth. */
 public class RealWorldObservations implements WorldObservations {
@@ -16,8 +20,8 @@ public class RealWorldObservations implements WorldObservations {
       *
       * Within this class, this value is used to calculate the distance
       * between different surface locations, given their latitude and
-      * longitude, which is something that can also be easily measured
-      * by anyone. */
+      * longitude, which is something that is fairly easy to measure
+      * directly, at least for points on land. */
     public static final float EARTH_RADIUS_KM = 6371.0f;
 
     // ---- Instance data ----
@@ -138,6 +142,30 @@ public class RealWorldObservations implements WorldObservations {
             // I do not have data on the Sun for other times.
             return null;
         }
+    }
+
+    @Override
+    public boolean hasModelPoints()
+    {
+        return false;
+    }
+
+    @Override
+    public Vector3f getModelPt(float latitude, float longitude)
+    {
+        return null;
+    }
+
+    @Override
+    public SurfaceSquare getModelSquare(float latitude, float longitude)
+    {
+        return null;
+    }
+
+    @Override
+    public Map<String, Vector4f> getModelStarMap()
+    {
+        return new HashMap<String, Vector4f>();
     }
 }
 

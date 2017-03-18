@@ -665,10 +665,9 @@ public class EarthMapCanvas
     private void doDrawWorldModel(GL2 gl)
     {
         if ((this.drawWorldWireframe || this.drawWorldStars) &&
-            this.earthShapeFrame.worldObservations instanceof ManifoldObservations)
+            this.earthShapeFrame.worldObservations.hasModelPoints())
         {
-            ManifoldObservations mo =
-                (ManifoldObservations)this.earthShapeFrame.worldObservations;
+            WorldObservations wo = this.earthShapeFrame.worldObservations;
 
             gl.glLineWidth(2);
             gl.glNormal3f(0, 1, 0);
@@ -684,7 +683,7 @@ public class EarthMapCanvas
             if (!this.surfaceSquares.isEmpty()) {
                 SurfaceSquare firstPlaced = this.surfaceSquares.get(0);
                 SurfaceSquare rootSquare =
-                    mo.getModelSquare(firstPlaced.latitude, firstPlaced.longitude);
+                    wo.getModelSquare(firstPlaced.latitude, firstPlaced.longitude);
                 rootSquare.sizeKm = firstPlaced.sizeKm;
 
                 // Push a transformation matrix that will align the
@@ -712,11 +711,11 @@ public class EarthMapCanvas
             }
 
             if (this.drawWorldWireframe) {
-                this.doDrawWorldWireframe(gl, mo);
+                this.doDrawWorldWireframe(gl, wo);
             }
 
             if (this.drawWorldStars) {
-                this.doDrawWorldStars(gl, mo, transformedCamera);
+                this.doDrawWorldStars(gl, wo, transformedCamera);
             }
 
             gl.glPopMatrix();
@@ -724,11 +723,11 @@ public class EarthMapCanvas
     }
 
     /** Draw the world model in 'mo'. */
-    private void doDrawWorldWireframe(GL2 gl, ManifoldObservations mo)
+    private void doDrawWorldWireframe(GL2 gl, WorldObservations wo)
     {
         for (int longitude = -180; longitude <= 180; longitude += 30) {
             for (int latitude = -90; latitude <= 90; latitude += 30) {
-                Vector3f pt = mo.getModelPt(latitude, longitude);
+                Vector3f pt = wo.getModelPt(latitude, longitude);
                 if (longitude > -180) {
                     if (latitude == 0) {
                         // Draw the equator in white.
@@ -740,7 +739,7 @@ public class EarthMapCanvas
 
                     gl.glBegin(GL.GL_LINES);
                     glVertex3f(gl, pt);
-                    glVertex3f(gl, mo.getModelPt(latitude, longitude - 30));
+                    glVertex3f(gl, wo.getModelPt(latitude, longitude - 30));
                     gl.glEnd();
                 }
                 if (latitude > -90) {
@@ -754,7 +753,7 @@ public class EarthMapCanvas
 
                     gl.glBegin(GL.GL_LINES);
                     glVertex3f(gl, pt);
-                    glVertex3f(gl, mo.getModelPt(latitude - 30, longitude));
+                    glVertex3f(gl, wo.getModelPt(latitude - 30, longitude));
                     gl.glEnd();
 
                     // Minor note: Usually the -180 longitude line is
@@ -765,7 +764,7 @@ public class EarthMapCanvas
         }
     }
 
-    private void doDrawWorldStars(GL2 gl, ManifoldObservations mo,
+    private void doDrawWorldStars(GL2 gl, WorldObservations wo,
         Vector3f transformedCamera)
     {
         // When a star is far away, draw it as being this far from
@@ -774,7 +773,7 @@ public class EarthMapCanvas
         final float starFarDistance = 20;
 
         // Draw indicators around the stars.
-        for (Map.Entry<String, Vector4f> e : mo.getModelStarMap().entrySet()) {
+        for (Map.Entry<String, Vector4f> e : wo.getModelStarMap().entrySet()) {
             Vector4f pt = e.getValue();
             Vector3f pt3 = pt.slice3();
 
