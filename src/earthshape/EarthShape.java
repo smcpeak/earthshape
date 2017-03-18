@@ -357,6 +357,11 @@ public class EarthShape
                 EarthShape.this.changeObservations(new BowlObservations());
             }
         });
+        addMenuItem(menu, "Use model: saddle-shaped Earth", null, new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                EarthShape.this.changeObservations(new SaddleObservations());
+            }
+        });
 
         menu.addSeparator();
 
