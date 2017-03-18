@@ -342,30 +342,41 @@ the nearer at a distance of D away, and the objects initially visually separated
 by an angle A, and you move toward the point visually midway
 between them by a distance M, the separation angle changes by
 the inverse sine of M * sin(A/2) / D.  For example, if two
-objects are separated by 45 degrees, and the closer is 1,000,000 km
+objects are separated by 45 degrees, and the closer is 100,000 km
 away, and you move 1000 km toward the point between them, you
-will measure a change B in angular separation of about 0.02 degrees
+will measure a change B in angular separation of about 0.2 degrees
 (about one arc minute).
 On the other hand, with the same A and M, if you measure no such change
-on an instrument with sensitivity of at least 0.02 degrees, then
-both are at least 1,000,000 km away.
+on an instrument with sensitivity of at least 0.2 degrees, then
+both are at least 100,000 km away.
 
 ![Parallax diagram](doc/parallax-diagram.png)
 
 Since even the cheapest sextant can reliably measure an arc minute,
-and 1,000,000 km is vastly larger than any distance on Earth (it is
-about 2.5 times the distance to the Moon), it is safe to assume
-stars are infinitely far away.  (But again, this program does
+refraction is less than five arc minutes (see next section),
+and 100,000 km is considerably larger than any distance on Earth, it is safe to assume
+stars are effectively infinitely far away.  (But again, this program does
 not do so, by default.)
 
 Refraction above 20 degrees
 ---------------------------
 
 We assume that light travels in a straight line to objects
-above 20 degrees above the horizon.  This is primarily justified
-by the same empirical observation above: the visual separation
-angle of distant stars is fixed.  If the atmosphere bent light
-systematically above 20 degrees like it does near the horizon
+above 20 degrees above the horizon.  In fact, there is
+measurable refraction, but it is reliably less than 5 arcminutes
+above 20 degrees, and follows a predictable rule.  See the Wikipedia article on
+[atmospheric refraction](https://en.wikipedia.org/wiki/Atmospheric_refraction)
+for a number of sources.
+
+Since I have assumed measurements only accurate to 0.2 degrees
+(12 arcminutes), the refraction above 20 degrees is within my
+measurement error range, and hence ignored.
+
+But could it be that refraction is actually different than is
+commonly accepted?  Evidently not, based on
+the same empirical observation above: the visual separation
+angle of distant stars is fixed (to within 0.2 degrees).  If the atmosphere bent light
+systematically above 20 degrees by more than 0.2 degrees, like it does near the horizon
 (e.g., in a [mirage](https://en.wikipedia.org/wiki/Mirage)),
 visual separation angles would be affected (as they are near
 the horizon).  Non-uniform bending would distort angles as one
@@ -375,27 +386,19 @@ celestial great circle (e.g., the celestial equator) would add
 up to either more or less than 360 degrees.
 
 The only transformation that preserves all angles is a rotation.
-For the atmosphere to systematically rotate sight lines would
-be (1) a bizarre phenomenon with no
+For the atmosphere to systematically and uniformly rotate sight lines would
+(1) be a bizarre phenomenon with no
 physical explanation, (2) contradict direct measurement of
-high altitude aircraft and weather balloons, and (3) would not change
+high altitude aircraft and weather balloons, and (3) not change
 the conclusions of surface reconstruction anyway since the
 final result would be the same as under a rotated celestial
 sphere with straight sight lines through the atmosphere.
-
-Now, having said all that, we should acknowledge that the
-atmosphere does bend light *non-systematically*, a phenomenon
-known as
-[astronomical seeing](https://en.wikipedia.org/wiki/Astronomical_seeing).
-But that does not affect the technique here, so long as we take
-the position of each object averaged over a short duration like
-one second.
 
 Object permanence for stars
 ---------------------------
 
 Finally, we assume that a given star, such as Polaris, is the same
-object when seen from, say, 38N as it is from 47N.  That is why
+object when seen from, say, (38N, 122W) as it is from (47N, 113W).  That is why
 we insist that their sight lines intersect.
 
 An alternative hypothesis is that the sky we see is the result of
