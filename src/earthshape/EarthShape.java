@@ -790,6 +790,7 @@ public class EarthShape
         StarListDialog d = new StarListDialog(this, this.enabledStars);
         if (d.exec()) {
             this.enabledStars = d.stars;
+            this.updateAndRedraw();
         }
     }
 
@@ -2444,6 +2445,13 @@ public class EarthShape
     {
         this.updateUIState();
         this.emCanvas.redrawCanvas();
+    }
+
+    /** Return true if the named star is enabled. */
+    public boolean isStarEnabled(String starName)
+    {
+        return this.enabledStars.containsKey(starName) &&
+               this.enabledStars.get(starName).equals(true);
     }
 }
 

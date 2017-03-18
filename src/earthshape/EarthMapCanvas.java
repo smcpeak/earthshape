@@ -778,6 +778,11 @@ public class EarthMapCanvas
             Vector4f pt4 = e.getValue();
             Vector3f pt3 = pt4.slice3();
 
+            // Skip stars that are disabled.
+            if (!this.earthShapeFrame.isStarEnabled(starName)) {
+                continue;
+            }
+
             // Distance from camera to the star (when finite).
             double starDistance = transformedCamera.minus(pt3).length();
 
