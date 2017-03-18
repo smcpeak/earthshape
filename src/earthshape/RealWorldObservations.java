@@ -4,17 +4,13 @@
 package earthshape;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 
 import util.FloatUtil;
-import util.Vector3f;
-import util.Vector4f;
 
 /** Observations for the actual Earth. */
-public class RealWorldObservations implements WorldObservations {
+public class RealWorldObservations extends WorldObservations {
     // ---- Constants ----
     /** The average radius of the Earth in kilometers, from Wikipedia.
       *
@@ -142,30 +138,6 @@ public class RealWorldObservations implements WorldObservations {
             // I do not have data on the Sun for other times.
             return null;
         }
-    }
-
-    @Override
-    public boolean hasModelPoints()
-    {
-        return false;
-    }
-
-    @Override
-    public Vector3f getModelPt(float latitude, float longitude)
-    {
-        return null;
-    }
-
-    @Override
-    public SurfaceSquare getModelSquare(float latitude, float longitude)
-    {
-        return null;
-    }
-
-    @Override
-    public Map<String, Vector4f> getModelStarMap()
-    {
-        return new HashMap<String, Vector4f>();
     }
 }
 

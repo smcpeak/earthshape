@@ -77,12 +77,6 @@ public class CloseStarObservations extends ManifoldObservations {
     }
 
     @Override
-    public boolean hasModelPoints()
-    {
-        return true;
-    }
-
-    @Override
     public Vector3f getModelPt(float latitude, float longitude)
     {
         // The coordinate system here has the Earth's center at the
