@@ -774,13 +774,14 @@ public class EarthMapCanvas
 
         // Draw indicators around the stars.
         for (Map.Entry<String, Vector4f> e : wo.getModelStarMap().entrySet()) {
-            Vector4f pt = e.getValue();
-            Vector3f pt3 = pt.slice3();
+            String starName = e.getKey();
+            Vector4f pt4 = e.getValue();
+            Vector3f pt3 = pt4.slice3();
 
             // Distance from camera to the star (when finite).
             double starDistance = transformedCamera.minus(pt3).length();
 
-            if (pt.w() == 0) {
+            if (pt4.w() == 0) {
                 // Point at infinity.  Add the camera's position,
                 // and push it out far enough to appear smallish.
                 glMaterialColor3f(gl, 1,0,0);       // Red
@@ -806,6 +807,15 @@ public class EarthMapCanvas
             gl.glTranslatef(pt3.x(), pt3.y(), pt3.z());
             EarthMapCanvas.drawOctahedron(gl, 0.1f /*radius*/);
             gl.glPopMatrix();
+
+            // Get the current transform matrix from GL.
+            float[] entries = new float[16];
+            gl.glGetFloatv(GL2.GL_MODELVIEW_MATRIX, entries, 0);
+            Matrix4f m = new Matrix4f(entries);
+            Vector4f transformedPt4 = Matrix4f.multiply(pt4, m);
+
+            // Label the star.
+            this.worldLabels.add(new CoordinateLabel(transformedPt4, starName));
         }
     }
 
@@ -1208,8 +1218,10 @@ public class EarthMapCanvas
                 }
             }
 
-            // Label the star.
-            this.worldLabels.add(new CoordinateLabel(starRayDirection, starLabel));
+            // Label the star for the active square.
+            if (s.showAsActive) {
+                this.worldLabels.add(new CoordinateLabel(starRayDirection, starLabel));
+            }
         }
     }
 
