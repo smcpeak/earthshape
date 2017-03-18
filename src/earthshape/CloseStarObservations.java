@@ -53,17 +53,6 @@ public class CloseStarObservations extends ManifoldObservations {
         return "spherical Earth with close stars";
     }
 
-    // TODO: Why is this necessary?  I thought the implementation in
-    // ManifoldObservations would suffice given how I defined
-    // getModelPt.
-    @Override
-    public TravelObservation getTravelObservation(
-        float startLatitude, float startLongitude,
-        float endLatitude, float endLongitude)
-    {
-        return rwo.getTravelObservation(startLatitude, startLongitude, endLatitude, endLongitude);
-    }
-
     @Override
     public List<StarObservation> getStarObservations(
         double unixTime,

@@ -43,11 +43,13 @@ public abstract class ManifoldObservations implements WorldObservations {
         startToEnd = startToEnd.rotateAA(startSquare.rotationFromNominal.times(-1));
         endToStart = endToStart.rotateAA(endSquare.rotationFromNominal.times(-1));
 
-        // Get the components that are orthogonal to local "up".
+        // Get the components that are orthogonal to local "up".  Since we
+        // already rotated them into their local spaces, up is +Y.
+        Vector3f localUp = new Vector3f(0, 1, 0);
         Vector3f startToEndHorizontal =
-            startToEnd.orthogonalComponentToUnitVector(startSquare.up);
+            startToEnd.orthogonalComponentToUnitVector(localUp);
         Vector3f endToStartHorizontal =
-            endToStart.orthogonalComponentToUnitVector(endSquare.up);
+            endToStart.orthogonalComponentToUnitVector(localUp);
 
         // Now get headings for both.
         double startToEndHeading = CloseStarGenerator.azimuthOfLocalDirection(

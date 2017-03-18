@@ -49,6 +49,20 @@ public class TravelObservation {
         this.startToEndHeading = startToEndHeading_;
         this.endToStartHeading = endToStartHeading_;
     }
+
+    @Override
+    public String toString()
+    {
+        return "TObs("+
+            "slat="+startLatitude+
+            ", slng="+startLongitude+
+            ", elat="+endLatitude+
+            ", elng="+endLongitude+
+            ", dist="+distanceKm+
+            ", steh="+startToEndHeading+
+            ", etsh="+endToStartHeading+
+            ")";
+    }
 }
 
 // EOF
