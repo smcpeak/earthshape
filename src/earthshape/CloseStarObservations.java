@@ -79,30 +79,7 @@ public class CloseStarObservations extends ManifoldObservations {
     @Override
     public Vector3f getModelPt(float latitude, float longitude)
     {
-        // The coordinate system here has the Earth's center at the
-        // origin, its spin axis along the Z axis with celestial North
-        // at -Z, and the prime meridian intersecting the +Y axis.
-        // This orientation means that the square at (latitude 0,
-        // longitude 0) is oriented the same way as the output of
-        // Vector3f.azimuthElevationToVector.
-        //
-        // The units of this coordinate system are 1000 kilometers.
-
-        // Start with a vector going from the center of the Earth to
-        // the intersection of the equator and prime meridian.  This
-        // will become the center of the resulting square.
-        Vector3f pt =
-            new Vector3f(0, RealWorldObservations.EARTH_RADIUS_KM / 1000.0f, 0);
-
-        // Then rotate about the X axis (toward one of the
-        // poles) for latitude.
-        pt = pt.rotate(-latitude, new Vector3f(1, 0, 0));
-
-        // Then rotate about the Earth's spin axis to account
-        // for longitude.
-        pt = pt.rotate(-longitude, new Vector3f(0, 0, 1));
-
-        return pt;
+        return rwo.getModelPt(latitude, longitude);
     }
 
     @Override
