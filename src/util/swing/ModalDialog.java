@@ -116,6 +116,13 @@ public class ModalDialog extends JDialog {
             JComponent.WHEN_IN_FOCUSED_WINDOW);
     }
 
+    /** Pack the controls and center the dialog w.r.t. parent. */
+    public void finishBuildingDialog()
+    {
+        this.pack();
+        this.setLocationRelativeTo(this.getParent());
+    }
+
     /** Show an error message. */
     public static void errorBox(Component parent, String message)
     {
