@@ -14,12 +14,12 @@ import javax.swing.SwingWorker;
 /** Modal dialog to show progress of some long-running task
   * while pumping the event queue to keep the UI responsive.
   *
-  * Conceptually this is similar to JProgressDialog.  The main
-  * advantage of this class is it is modal, whereas JProgressDialog
+  * Conceptually this is similar to javax.swing.ProgressMonitor.  The main
+  * advantage of this class is it is modal, whereas ProgressMonitor
   * is not; modality ensures the user can't do other things while
   * the task is running.
   *
-  * Another apparent difference is that JProgressDialog responds
+  * Another apparent difference is that ProgressMonitor responds
   * to the window close button by simply closing itself without
   * delivering a cancelation message.  (I have found a StackOverflow
   * discussion claiming the opposite, but it contradicts my

@@ -6,7 +6,6 @@ package earthshape;
 import java.awt.BorderLayout;
 import java.awt.Cursor;
 import java.awt.Image;
-import java.awt.SecondaryLoop;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -27,9 +26,7 @@ import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPopupMenu;
 import javax.swing.KeyStroke;
-import javax.swing.ProgressMonitor;
 import javax.swing.SwingUtilities;
-import javax.swing.SwingWorker;
 
 import com.jogamp.opengl.GLCapabilities;
 
@@ -38,6 +35,8 @@ import util.Vector3d;
 import util.Vector3f;
 import util.swing.ModalDialog;
 import util.swing.MyJFrame;
+import util.swing.MySwingWorker;
+import util.swing.ProgressDialog;
 
 import static util.swing.SwingUtil.log;
 
@@ -1898,82 +1897,55 @@ public class EarthShape extends MyJFrame {
             return;
         }
 
+        // Prepare a task object in which to run the analysis.
+        AnalysisTask task = new AnalysisTask(this, s);
+
         // Show a progress dialog while this run.
-        //
-        // Unfortunately,
-        // this dialog is *not* modal, so there is currently nothing
-        // stopping the user from messing with the UI while this is
-        // up, which can lead to strange results.  Furthermore, if
-        // the user presses Esc while it is up, that dismisses the
-        // dialog but I am not informed of that fact, and do not see
-        // any straightforward way of learning about it, so in that
-        // case the analysis dialog eventually pops up anyway.  :(
-        ProgressMonitor progressMonitor = new ProgressMonitor(this,
-            "Analyzing rotations of active square...", "Starting...", 0, 100);
-        progressMonitor.setProgress(0);
-        progressMonitor.setMillisToDecideToPopup(0);
-        progressMonitor.setMillisToPopup(0);
+        ProgressDialog<PlotData3D, Void> progressDialog =
+            new ProgressDialog<PlotData3D, Void>(this,
+                "Analyzing rotations of active square...", task);
 
-        // Prepare to pump the event queue.
-        SecondaryLoop secondaryLoop =
-            Toolkit.getDefaultToolkit().getSystemEventQueue().createSecondaryLoop();
+        // Run the dialog and the task.
+        if (progressDialog.exec()) {
+            // Retrieve the computed data.
+            PlotData3D rollPitchYawPlotData;
+            try {
+                rollPitchYawPlotData = task.get();
+            }
+            catch (Exception e) {
+                String msg = "Internal error: solution space analysis failed: "+e.getMessage();
+                log(msg);
+                e.printStackTrace();
+                ModalDialog.errorBox(this, msg);
+                return;
+            }
 
-        // Start this in a task thread.
-        AnalysisTask task = new AnalysisTask(this, s, progressMonitor, secondaryLoop);
-        task.execute();
-
-        // Wait for it to complete, but pump the event queue while waiting.
-        if (!secondaryLoop.enter() ||
-            task.isCancelled() ||
-            progressMonitor.isCanceled())
-        {
-            return;
+            // Plot results.
+            RotationCubeDialog d = new RotationCubeDialog(this,
+                (float)ostats.variance,
+                rollPitchYawPlotData);
+            d.exec();
         }
-        task.progressMonitor.close();
-
-        // Retrieve the computed data.
-        PlotData3D rollPitchYawPlotData;
-        try {
-            rollPitchYawPlotData = task.get();
+        else {
+            log("Analysis canceled.");
         }
-        catch (Exception e) {
-            // No exceptions should not be possible here since I
-            // already waited for completion.
-            return;
-        }
-
-        // Plot them.
-        RotationCubeDialog d = new RotationCubeDialog(this,
-            (float)ostats.variance,
-            rollPitchYawPlotData);
-        d.exec();
     }
 
     /** Task to analyze the solution space near a square, which can take a
       * while if 'solutionAnalysisPointsPerSide' is high. */
-    private static class AnalysisTask extends SwingWorker<PlotData3D, Void> {
+    private static class AnalysisTask extends MySwingWorker<PlotData3D, Void> {
         /** Enclosing EarthShape instance. */
         private EarthShape earthShape;
 
         /** Square whose solution will be analyzed. */
         private SurfaceSquare square;
 
-        /** Progress dialog. */
-        public ProgressMonitor progressMonitor;
-
-        /** Secondary event loop, so we can signal it to stop waiting. */
-        public SecondaryLoop secondaryLoop;
-
         public AnalysisTask(
             EarthShape earthShape_,
-            SurfaceSquare square_,
-            ProgressMonitor progressMonitor_,
-            SecondaryLoop secondaryLoop_)
+            SurfaceSquare square_)
         {
             this.earthShape = earthShape_;
             this.square = square_;
-            this.progressMonitor = progressMonitor_;
-            this.secondaryLoop = secondaryLoop_;
         }
 
         @Override
@@ -1997,9 +1969,7 @@ public class EarthShape extends MyJFrame {
         // Total number of data points per axis, including 0.
         int pointsPerAxis = pointsPerSide * 2 + 1;
 
-        // Now we know how to set the progress range.
-        task.progressMonitor.setMaximum(pointsPerAxis+1);
-
+        // Complete search space cube.
         float[] wData = new float[pointsPerAxis * pointsPerAxis * pointsPerAxis];
 
         Vector3f xAxis = new Vector3f(0, 0, -1);    // Roll
@@ -2014,13 +1984,12 @@ public class EarthShape extends MyJFrame {
         float zLast = pointsPerSide * this.adjustOrientationDegrees;
 
         for (int zIndex=0; zIndex < pointsPerAxis; zIndex++) {
-            if (task.progressMonitor.isCanceled()) {
+            if (task.isCancelled()) {
                 log("analysis canceled");
-                task.secondaryLoop.exit();
                 return null;     // Bail out.
             }
-            task.progressMonitor.setProgress(zIndex);
-            task.progressMonitor.setNote("Analyzing plane "+(zIndex+1)+" of "+pointsPerAxis);
+            task.setProgressFraction(zIndex / (float)pointsPerAxis);
+            task.setStatus("Analyzing plane "+(zIndex+1)+" of "+pointsPerAxis);
 
             for (int yIndex=0; yIndex < pointsPerAxis; yIndex++) {
                 for (int xIndex=0; xIndex < pointsPerAxis; xIndex++) {
@@ -2043,8 +2012,6 @@ public class EarthShape extends MyJFrame {
                 }
             }
         }
-
-        task.secondaryLoop.exit();
 
         return new PlotData3D(
             xFirst, xLast,
