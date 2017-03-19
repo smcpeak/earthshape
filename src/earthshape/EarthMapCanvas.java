@@ -1627,6 +1627,16 @@ public class EarthMapCanvas
     public void mouseMoved(MouseEvent ev) {
         //log("mouse moved: ev="+ev);
         if (this.fpsCameraMode) {
+            if (!this.animator.isAnimating()) {
+                // For reasons I do not understand, if I am in FPS
+                // mode, then press "T" to rebuild the surface, when
+                // it completes, the animator has stopped, even though
+                // I did not tell it to.  It seems to suffice to simply
+                // start it again.
+                log("restarting animator after dialog close");
+                this.animator.start();
+            }
+
             // Get the screen coordinate where mouse is now.
             Point mouseAbsLoc = ev.getLocationOnScreen();
 
