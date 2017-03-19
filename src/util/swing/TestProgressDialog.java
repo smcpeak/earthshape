@@ -31,6 +31,9 @@ public class TestProgressDialog extends MyJFrame {
     /** Let user request that worker be slow to cancel. */
     private JCheckBox slowCancelCB;
 
+    /** Text field for saying how slow to cancel. */
+    private JTextField msCancelDelayTextField;
+
     public TestProgressDialog()
     {
         super("Test Progress Dialog");
@@ -42,79 +45,29 @@ public class TestProgressDialog extends MyJFrame {
 
         {
             VBox vb = new VBox();
-            vb.strut();
-
             vb.add(Box.createHorizontalStrut(400));
 
-            {
-                HBox hb = new HBox();
+            this.msPerTickTextField =
+                this.addTextField(vb, "Milliseconds per tick: ", "20");
+            this.throwExceptionCB =
+                this.addCheckBox(vb, "Throw an exception inside worker", false);
+            this.slowCancelCB =
+                this.addCheckBox(vb, "Worker will respond slowly to cancellation", false);
+            this.msCancelDelayTextField =
+                this.addTextField(vb, "Milliseconds to delay on cancel: ", "1000");
 
-                hb.add(new JLabel("Milliseconds per tick: "));
-                hb.strut();
-                hb.add(this.msPerTickTextField = new JTextField("10"));
-                hb.glue();
+            this.addButton(vb, "Start", new ActionListener() {
+                public void actionPerformed(ActionEvent ev) {
+                    TestProgressDialog.this.startTask();
+                }
+            });
 
-                vb.add(hb);
-            }
-
-            vb.strut();
-
-            {
-                HBox hb = new HBox();
-
-                hb.add(this.throwExceptionCB =
-                    new JCheckBox("Throw an exception inside worker", false));
-                hb.glue();
-
-                vb.add(hb);
-            }
-
-            vb.strut();
-
-            {
-                HBox hb = new HBox();
-
-                hb.add(this.slowCancelCB =
-                    new JCheckBox("Worker will respond slowly to cancellation", false));
-                hb.glue();
-
-                vb.add(hb);
-            }
-
-            vb.strut();
-
-            {
-                HBox hb = new HBox();
-
-                JButton button = new JButton("Start");
-                hb.add(button);
-                button.addActionListener(new ActionListener() {
-                    public void actionPerformed(ActionEvent ev) {
-                        TestProgressDialog.this.startTask();
-                    }
-                });
-
-                hb.glue();
-                vb.add(hb);
-            }
-
-            vb.strut();
-
-            {
-                HBox hb = new HBox();
-
-                JButton button = new JButton("Quit");
-                hb.add(button);
-                button.addActionListener(new ActionListener() {
-                    public void actionPerformed(ActionEvent ev) {
-                        log("closing due to Quit button press");
-                        TestProgressDialog.this.dispose();
-                    }
-                });
-
-                hb.glue();
-                vb.add(hb);
-            }
+            this.addButton(vb, "Quit", new ActionListener() {
+                public void actionPerformed(ActionEvent ev) {
+                    log("closing due to Quit button press");
+                    TestProgressDialog.this.dispose();
+                }
+            });
 
             vb.strut();
             outerHB.add(vb);
@@ -127,20 +80,76 @@ public class TestProgressDialog extends MyJFrame {
         this.setLocationByPlatform(true);
     }
 
+    private JCheckBox addCheckBox(VBox vb, String label, boolean initValue)
+    {
+        vb.strut();
+
+        HBox hb = new HBox();
+
+        JCheckBox ret = new JCheckBox(label, initValue);
+        hb.add(ret);
+        hb.glue();
+
+        vb.add(hb);
+
+        return ret;
+    }
+
+    private JTextField addTextField(VBox vb, String label, String initValue)
+    {
+        vb.strut();
+
+        HBox hb = new HBox();
+
+        hb.add(new JLabel(label));
+        hb.strut();
+
+        JTextField ret = new JTextField(initValue);
+        hb.add(ret);
+
+        hb.glue();
+
+        vb.add(hb);
+
+        return ret;
+    }
+
+    private JButton addButton(VBox vb, String label, ActionListener listener)
+    {
+        vb.strut();
+
+        HBox hb = new HBox();
+
+        JButton button = new JButton(label);
+        hb.add(button);
+        button.addActionListener(listener);
+
+        hb.glue();
+        vb.add(hb);
+
+        return button;
+    }
+
     private static class TestTask extends MySwingWorker<Integer, Void> {
         private int msPerTick;
         private boolean throwException;
         private boolean slowCancel;
+        private int msCancelDelay;
 
         /** This is not set to true until this thread stops executing
           * any task-related code. */
         public boolean stoppedRunning = false;
 
-        public TestTask(int msPerTick_, boolean throwException_, boolean slowCancel_)
+        public TestTask(
+            int msPerTick_,
+            boolean throwException_,
+            boolean slowCancel_,
+            int msCancelDelay_)
         {
             this.msPerTick = msPerTick_;
             this.throwException = throwException_;
             this.slowCancel = slowCancel_;
+            this.msCancelDelay = msCancelDelay_;
         }
 
         protected Integer doTask() throws Exception
@@ -169,7 +178,7 @@ public class TestProgressDialog extends MyJFrame {
             if (this.isCancelled()) {
                 if (this.slowCancel) {
                     log("TestTask: waiting 1 second before actually exiting");
-                    Thread.sleep(1000);
+                    Thread.sleep(this.msCancelDelay);
                     log("TestTask: done with slow cancel delay");
                 }
 
@@ -188,9 +197,10 @@ public class TestProgressDialog extends MyJFrame {
     private void startTask()
     {
         int msPerTick;
+        int msCancelDelay;
         try {
-            String s = this.msPerTickTextField.getText();
-            msPerTick = Integer.valueOf(s);
+            msPerTick = Integer.valueOf(this.msPerTickTextField.getText());
+            msCancelDelay = Integer.valueOf(this.msCancelDelayTextField.getText());
         }
         catch (NumberFormatException e) {
             ModalDialog.errorBox(this, "Invalid integer: "+e.getMessage());
@@ -202,7 +212,7 @@ public class TestProgressDialog extends MyJFrame {
 
         log("startTask: starting new task");
 
-        TestTask task = new TestTask(msPerTick, throwException, slowCancel);
+        TestTask task = new TestTask(msPerTick, throwException, slowCancel, msCancelDelay);
         ProgressDialog<Integer, Void> pd =
             new ProgressDialog<Integer, Void>(this, "Test Progress", task);
 

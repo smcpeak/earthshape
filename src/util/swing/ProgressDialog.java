@@ -245,9 +245,9 @@ public class ProgressDialog<T,V> extends ModalDialog
     }
 
     @Override
-    public void windowClosed(WindowEvent ev)
+    public void windowClosing(WindowEvent ev)
     {
-        log("windowClosed");
+        log("windowClosing");
 
         // Treat a click on the "X" the same as pressing the
         // Cancel button.
@@ -256,7 +256,7 @@ public class ProgressDialog<T,V> extends ModalDialog
 
     // WindowListener events I do not care about.
     @Override public void windowActivated(WindowEvent ev) {}
-    @Override public void windowClosing(WindowEvent ev) {}
+    @Override public void windowClosed(WindowEvent ev) {}
     @Override public void windowDeactivated(WindowEvent ev) {}
     @Override public void windowDeiconified(WindowEvent ev) {}
     @Override public void windowIconified(WindowEvent ev) {}
