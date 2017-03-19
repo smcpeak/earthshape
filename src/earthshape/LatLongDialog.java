@@ -70,8 +70,7 @@ public class LatLongDialog extends ModalDialog {
 
         this.getContentPane().add(outer);
 
-        this.pack();
-        this.setLocationByPlatform(true);
+        this.finishBuildingDialog();
     }
 
     public void okPressed()

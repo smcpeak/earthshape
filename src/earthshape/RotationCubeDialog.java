@@ -148,8 +148,7 @@ public class RotationCubeDialog extends ModalDialog implements ItemListener {
 
         this.getContentPane().add(outer);
 
-        this.pack();
-        this.setLocationByPlatform(true);
+        this.finishBuildingDialog();
     }
 
     /** Construct widgets to show 1D 'plotData'. */
