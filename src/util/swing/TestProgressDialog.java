@@ -18,14 +18,12 @@ import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 
+import static util.swing.SwingUtil.log;
+
 /** Little program to test ProgressDialog. */
 public class TestProgressDialog extends JFrame {
     /** AWT boilerplate. */
     private static final long serialVersionUID = 1770692424967304611L;
-
-    /** The thread that last issued a 'log' command.  This is used to
-      * only log thread names when there is interleaving. */
-    private static Thread lastLoggedThread = null;
 
     /** Text field where user can specify how many milliseconds each
       * worker tick should require. */
@@ -210,23 +208,6 @@ public class TestProgressDialog extends JFrame {
         }
         else {
             log("startTask: task was canceled");
-        }
-    }
-
-    // TODO: Factor a bunch of this commonality with EarthShape.
-    /** Print a message to the console with a timestamp. */
-    public static void log(String msg)
-    {
-        Thread t = Thread.currentThread();
-        if (t != TestProgressDialog.lastLoggedThread) {
-            System.out.println(""+System.currentTimeMillis()+
-                               " ["+t.getName()+"]"+
-                               ": "+msg);
-            TestProgressDialog.lastLoggedThread = t;
-        }
-        else {
-            System.out.println(""+System.currentTimeMillis()+
-                               ": "+msg);
         }
     }
 

@@ -42,6 +42,8 @@ import util.Vector3d;
 import util.Vector3f;
 import util.Vector4f;
 
+import static util.swing.SwingUtil.log;
+
 /** Widget to show a virtual 3D map of a reconstruction of the surface
   * of the Earth based on astronomical observation.  This is just the
   * GL-based canvas along with its mouse and keyboard support; the
@@ -256,12 +258,6 @@ public class EarthMapCanvas
     public void setFocusOnCanvas()
     {
         this.glCanvas.requestFocusInWindow();
-    }
-
-    /** Print a message to the console with a timestamp. */
-    private static void log(String msg)
-    {
-        EarthShape.log(msg);
     }
 
     /** Initialize the GL context. */

@@ -41,6 +41,8 @@ import util.Vector3d;
 import util.Vector3f;
 import util.swing.ModalDialog;
 
+import static util.swing.SwingUtil.log;
+
 /** This application demonstrates a procedure for inferring the shape
   * of a surface (such as the Earth) based on the observed locations of
   * stars from various locations at a fixed point in time.
@@ -72,10 +74,6 @@ public class EarthShape
     private static final float MINIMUM_ADJUST_ORIENTATION_DEGREES = 1e-7f;
 
     // ---------- Class variables ----------
-    /** The thread that last issued a 'log' command.  This is used to
-      * only log thread names when there is interleaving. */
-    private static Thread lastLoggedThread = null;
-
     /** When true, star observations are only compared by their
       * direction.  When false, we also consider the location of the
       * observer, which allows us to handle nearby objects. */
@@ -765,22 +763,6 @@ public class EarthShape
         }
         menu.add(cbItem);
         return cbItem;
-    }
-
-    /** Print a message to the console with a timestamp. */
-    public static void log(String msg)
-    {
-        Thread t = Thread.currentThread();
-        if (t != EarthShape.lastLoggedThread) {
-            System.out.println(""+System.currentTimeMillis()+
-                               " ["+t.getName()+"]"+
-                               ": "+msg);
-            EarthShape.lastLoggedThread = t;
-        }
-        else {
-            System.out.println(""+System.currentTimeMillis()+
-                               ": "+msg);
-        }
     }
 
     /** Choose the set of stars to use.  This only affects new

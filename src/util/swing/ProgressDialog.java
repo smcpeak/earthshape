@@ -13,6 +13,8 @@ import javax.swing.SwingWorker;
 
 import util.FloatUtil;
 
+import static util.swing.SwingUtil.log;
+
 /** Modal dialog to show progress of some activity. */
 public class ProgressDialog<T,V> extends ModalDialog {
     /** AWT boilerplate. */
@@ -44,7 +46,7 @@ public class ProgressDialog<T,V> extends ModalDialog {
                     else if ("progress".equals(ev.getPropertyName())) {
                         Integer i = (Integer)ev.getNewValue();
                         if (i % 10 == 0) {
-                            TestProgressDialog.log("progress dialog received progress event: "+i);
+                            log("progress dialog received progress event: "+i);
                         }
                         ProgressDialog.this.setProgress(i / 100.0f);
                     }
@@ -107,11 +109,6 @@ public class ProgressDialog<T,V> extends ModalDialog {
         this.progressBar.setValue((int)(FloatUtil.clamp(fraction, 0, 1) * 1000));
     }
 
-    public static void log(String msg)
-    {
-        TestProgressDialog.log(msg);
-    }
-
     /** Show the progress dialog and start the task, blocking until
       * the task completes or the user cancels it.  Returns true
       * if the task completed normally, false if it was canceled. */
@@ -145,8 +142,8 @@ public class ProgressDialog<T,V> extends ModalDialog {
     /** Called when the task completes normally. */
     private void taskCompleted()
     {
-        TestProgressDialog.log("ProgressDialog: taskCompleted called; isCancelled is "+
-                               this.swingWorker.isCancelled());
+        log("ProgressDialog: taskCompleted called; isCancelled is "+
+            this.swingWorker.isCancelled());
 
         // We abuse this flag to mean "completed normally".
         if (!this.swingWorker.isCancelled()) {
