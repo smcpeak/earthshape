@@ -139,7 +139,7 @@ public class EarthShape extends MyJFrame {
     // ---------- Methods ----------
     public EarthShape()
     {
-        super("Earth Shape");
+        super("EarthShape");
         this.setName("EarthShape (JFrame)");
 
         this.setLayout(new BorderLayout());
@@ -205,7 +205,7 @@ public class EarthShape extends MyJFrame {
     private void showAboutBox()
     {
         String about =
-            "Earth Shape\n"+
+            "EarthShape\n"+
             "Copyright 2017 Scott McPeak\n"+
             "\n"+
             "Published under the 2-clause BSD license.\n"+
