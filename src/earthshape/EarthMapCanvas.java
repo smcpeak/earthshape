@@ -693,12 +693,12 @@ public class EarthMapCanvas
 
                 // Reverse the transformation's effects on the camera
                 // position.
-                transformedCamera = transformedCamera.rotate(angle, u.toVector3f());
+                transformedCamera = transformedCamera.rotateDeg(angle, u.toVector3f());
                 transformedCamera = transformedCamera.minus(c);
 
                 // Do the same for my desired surface normal.
                 Vector3f transformedNormal = new Vector3f(0, 1, 0);
-                transformedNormal = transformedNormal.rotate(angle, u.toVector3f());
+                transformedNormal = transformedNormal.rotateDeg(angle, u.toVector3f());
                 gl.glNormal3fv(transformedNormal.getArray(), 0);
 
                 // Draw a box around that square.
@@ -1070,7 +1070,7 @@ public class EarthMapCanvas
 
             gl.glVertex3fv(s.center.getArray(), 0);
 
-            Vector3f celestialNorth = s.north.rotate(s.latitude, east);
+            Vector3f celestialNorth = s.north.rotateDeg(s.latitude, east);
             gl.glVertex3fv(s.center.plus(celestialNorth.times(5)).getArray(), 0);
 
             gl.glEnd();
@@ -1330,7 +1330,7 @@ public class EarthMapCanvas
 
                 // Rotate the direction of 'md' according to the
                 // current camera azimuth.
-                Vector3f rd = md.direction.rotate(this.cameraAzimuthDegrees,
+                Vector3f rd = md.direction.rotateDeg(this.cameraAzimuthDegrees,
                     new Vector3f(0, +1, 0));
 
                 // Scale it per camera acceleration and elapsed time.
@@ -1590,11 +1590,11 @@ public class EarthMapCanvas
 
         // Yaw.
         Vector3f up = new Vector3f(0, 1, 0);
-        look = look.rotate(this.cameraAzimuthDegrees, up);
+        look = look.rotateDeg(this.cameraAzimuthDegrees, up);
 
         // Pitch around a vector pointing to the right from the camera.
         Vector3f right = look.cross(up);
-        look = look.rotate(this.cameraPitchDegrees, right);
+        look = look.rotateDeg(this.cameraPitchDegrees, right);
 
         return look;
     }

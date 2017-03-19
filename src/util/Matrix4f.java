@@ -100,9 +100,9 @@ public class Matrix4f {
 
     /** Yield a matrix that, when multiplied by a vector, rotates that
       * vector by 'radians' around 'axis'. */
-    public static Matrix4f rotate(double radians, Vector3f axis)
+    public static Matrix4f rotateRad(double radians, Vector3f axis)
     {
-        return new Matrix4f(Matrix3f.rotate(radians, axis));
+        return new Matrix4f(Matrix3f.rotateRad(radians, axis));
     }
 }
 

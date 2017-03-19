@@ -116,9 +116,9 @@ public class Vector3d {
     /** Return this vector after rotating by 'degrees' about 'axis'.
       * Rotation follows right-hand rule.  The axis vector is not
       * assumed to be normalized yet. */
-    public Vector3d rotate(double degrees, Vector3d axis)
+    public Vector3d rotateDeg(double degrees, Vector3d axis)
     {
-        Matrix3d m = Matrix3d.rotate(FloatUtil.degreesToRadians(degrees), axis);
+        Matrix3d m = Matrix3d.rotateRad(FloatUtil.degreesToRadians(degrees), axis);
         return m.times(this);
     }
 
@@ -130,7 +130,7 @@ public class Vector3d {
         if (degrees == 0) {
             return this;
         }
-        return this.rotate(degrees, axisAndAngle);
+        return this.rotateDeg(degrees, axisAndAngle);
     }
 
     /** Return dot product of 'this' and 'v'. */

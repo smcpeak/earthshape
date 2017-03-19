@@ -55,7 +55,7 @@ public class Matrix3d {
 
     /** Yield a matrix that, when multiplied by a vector, rotates that
       * vector by 'radians' around 'axis'. */
-    public static Matrix3d rotate(double radians, Vector3d axis)
+    public static Matrix3d rotateRad(double radians, Vector3d axis)
     {
         // Normalize the rotation axis.
         if (axis.isZero()) {

@@ -47,6 +47,18 @@ public class Matrix3f {
         return new Vector3f(this.mat.times(v.getUnder()));
     }
 
+    /** Right-multiply matrix 'm' by vector 'v'. */
+    public static Vector3f multiply(Vector3f v, Matrix3f m)
+    {
+        return new Vector3f(Matrixf.multiply(v.getUnder(), m.mat));
+    }
+
+    /** Left-multiply this matrix by matrix 'm' and yield result. */
+    public Matrix3f times(Matrix3f m)
+    {
+        return new Matrix3f(this.mat.times(m.mat));
+    }
+
     /** Return the 3x3 identity matrix. */
     public static Matrix3f identity()
     {
@@ -55,7 +67,7 @@ public class Matrix3f {
 
     /** Yield a matrix that, when multiplied by a vector, rotates that
       * vector by 'radians' around 'axis'. */
-    public static Matrix3f rotate(double radians, Vector3f axis)
+    public static Matrix3f rotateRad(double radians, Vector3f axis)
     {
         // Normalize the rotation axis.
         if (axis.isZero()) {
@@ -81,6 +93,28 @@ public class Matrix3f {
             (float)(z*x*(1-c)-y*s),
             (float)(z*y*(1-c)+x*s),
             (float)(z*z*(1-c)+c));
+    }
+
+    public static void p(String s)
+    {
+        System.out.println(s);
+    }
+
+    public static void main(String[] args)
+    {
+        Vector3f eastCA = new Vector3f(1, 0, 0);
+        Vector3f upCA = new Vector3f(0, 1, 0);
+        Vector3f northCA = new Vector3f(0, 0, -1);
+
+        float dubhe_ca_az = 36.9f;
+        float dubhe_ca_el = 44.8f;
+
+        Vector3f v1 = northCA.rotateDeg(dubhe_ca_el, eastCA);
+        p("v1: "+v1);
+
+        Vector3f dubhe_ca =
+            multiply(northCA, rotateRad(dubhe_ca_el, eastCA).times(rotateRad(-dubhe_ca_az, upCA)));
+        p("dubhe_ca: "+dubhe_ca);
     }
 }
 

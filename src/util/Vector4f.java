@@ -133,9 +133,9 @@ public class Vector4f {
     /** Return this vector after rotating by 'degrees' about 'axis'.
       * Rotation follows right-hand rule.  The axis vector is not
       * assumed to be normalized yet. */
-    public Vector4f rotate(double degrees, Vector3f axis)
+    public Vector4f rotateDeg(double degrees, Vector3f axis)
     {
-        Matrix4f m = Matrix4f.rotate(FloatUtil.degreesToRadians(degrees), axis);
+        Matrix4f m = Matrix4f.rotateRad(FloatUtil.degreesToRadians(degrees), axis);
         return m.times(this);
     }
 

@@ -40,8 +40,8 @@ public abstract class ManifoldObservations extends WorldObservations {
 
         // Translate them into local travel vectors by inverting the
         // rotation for each square.
-        startToEnd = startToEnd.rotateAA(startSquare.rotationFromNominal.times(-1));
-        endToStart = endToStart.rotateAA(endSquare.rotationFromNominal.times(-1));
+        startToEnd = startToEnd.rotateAADeg(startSquare.rotationFromNominal.times(-1));
+        endToStart = endToStart.rotateAADeg(endSquare.rotationFromNominal.times(-1));
 
         // Get the components that are orthogonal to local "up".  Since we
         // already rotated them into their local spaces, up is +Y.

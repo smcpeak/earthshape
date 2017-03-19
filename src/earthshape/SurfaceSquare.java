@@ -116,7 +116,7 @@ public class SurfaceSquare {
     public String toString()
     {
         Vector3f east = this.north.cross(this.up);
-        Vector3f celestialNorth = this.north.rotate(latitude, east);
+        Vector3f celestialNorth = this.north.rotateDeg(latitude, east);
 
         return "Sq(c="+this.center+
             ", n="+this.north+

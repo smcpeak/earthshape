@@ -116,21 +116,21 @@ public class Vector3f {
     /** Return this vector after rotating by 'degrees' about 'axis'.
       * Rotation follows right-hand rule.  The axis vector is not
       * assumed to be normalized yet. */
-    public Vector3f rotate(double degrees, Vector3f axis)
+    public Vector3f rotateDeg(double degrees, Vector3f axis)
     {
-        Matrix3f m = Matrix3f.rotate(FloatUtil.degreesToRadians(degrees), axis);
+        Matrix3f m = Matrix3f.rotateRad(FloatUtil.degreesToRadians(degrees), axis);
         return m.times(this);
     }
 
     /** Rotate about 'axisAndAngle', interpreting its length as
       * the rotation angle in degrees. */
-    public Vector3f rotateAA(Vector3f axisAndAngle)
+    public Vector3f rotateAADeg(Vector3f axisAndAngle)
     {
         double degrees = axisAndAngle.length();
         if (degrees == 0) {
             return this;
         }
-        return this.rotate(degrees, axisAndAngle);
+        return this.rotateDeg(degrees, axisAndAngle);
     }
 
     /** Return dot product of 'this' and 'v'. */
@@ -210,10 +210,10 @@ public class Vector3f {
         Vector3f v = new Vector3f(0, 0, -1);
 
         // Now rotate it up to align with elevation.
-        v = v.rotate(elevation, new Vector3f(1, 0, 0));
+        v = v.rotateDeg(elevation, new Vector3f(1, 0, 0));
 
         // Now rotate it East to align with azimuth.
-        v = v.rotate(-azimuth, new Vector3f(0, 1, 0));
+        v = v.rotateDeg(-azimuth, new Vector3f(0, 1, 0));
 
         return v;
     }

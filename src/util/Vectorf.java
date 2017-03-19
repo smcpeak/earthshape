@@ -37,7 +37,7 @@ public class Vectorf {
         sb.append("(");
         for (int i=0; i < this.dim(); i++) {
             if (i > 0) {
-                sb.append(",");
+                sb.append(", ");
             }
             sb.append(""+this.get(i));
         }

@@ -58,7 +58,7 @@ public class StarGenerator {
             // Convert that to global coordinates rotating it the same way the
             // square's orientation was.
             Vector3f starDirectionGlobal =
-                refToStarLocalUnit.rotateAA(refSquare.rotationFromNominal);
+                refToStarLocalUnit.rotateAADeg(refSquare.rotationFromNominal);
 
             // How far away is the star from the reference location?
             Float distanceFromRef = distanceToStar.get(refObs.name);
@@ -108,7 +108,7 @@ public class StarGenerator {
             // Convert it to the target square's local coordinates by
             // reversing that square's rotation.
             Vector3f targetToStarLocal =
-                targetToStarGlobal.rotateAA(square.rotationFromNominal.times(-1));
+                targetToStarGlobal.rotateAADeg(square.rotationFromNominal.times(-1));
 
             // Normalize to treat it as a direction in local coordinates.
             // Use 'double' due to the sensitivity of normalization.

@@ -190,11 +190,11 @@ public class RealWorldObservations extends WorldObservations {
 
         // Then rotate about the X axis (toward one of the
         // poles) for latitude.
-        pt = pt.rotate(-latitude, new Vector3f(1, 0, 0));
+        pt = pt.rotateDeg(-latitude, new Vector3f(1, 0, 0));
 
         // Then rotate about the Earth's spin axis to account
         // for longitude.
-        pt = pt.rotate(-longitude, new Vector3f(0, 0, 1));
+        pt = pt.rotateDeg(-longitude, new Vector3f(0, 0, 1));
 
         return pt;
     }

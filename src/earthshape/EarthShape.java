@@ -911,7 +911,7 @@ public class EarthShape extends MyJFrame {
         // Calculate celestial North for 'old', which is given by
         // the latitude plus geographic North.
         Vector3f celestialNorth =
-            old.north.rotate(old.latitude, oldEast);
+            old.north.rotateDeg(old.latitude, oldEast);
 
         // Get lat/long deltas.
         float deltaLatitude = newLatitude - old.latitude;
@@ -1136,8 +1136,8 @@ public class EarthShape extends MyJFrame {
 
         // Compute the new orientation vectors by rotating
         // the old ones by the given amount.
-        Vector3f newNorth = old.north.rotateAA(rotation);
-        Vector3f newUp = old.up.rotateAA(rotation);
+        Vector3f newNorth = old.north.rotateAADeg(rotation);
+        Vector3f newUp = old.up.rotateAADeg(rotation);
 
         // Get observed travel details going to the new location.
         TravelObservation tobs = this.worldObservations.getTravelObservation(
@@ -1148,8 +1148,8 @@ public class EarthShape extends MyJFrame {
         // right hand rule for rotation.  The new to old heading is
         // then flipped 180 since I want both to indicate the local
         // direction from old to new.
-        Vector3f oldTravel = old.north.rotate(-tobs.startToEndHeading, old.up);
-        Vector3f newTravel = newNorth.rotate(-tobs.endToStartHeading + 180, newUp);
+        Vector3f oldTravel = old.north.rotateDeg(-tobs.startToEndHeading, old.up);
+        Vector3f newTravel = newNorth.rotateDeg(-tobs.endToStartHeading + 180, newUp);
 
         // Calculate the new square's center by going half the distance
         // according to the old orientation and then half the distance
@@ -1260,14 +1260,14 @@ public class EarthShape extends MyJFrame {
                 // applied to the start surface in its existing orientation,
                 // not the nominal orientation that the star vectors have
                 // before I do this.
-                startVector = startVector.rotateAA(startSquare.rotationFromNominal);
-                endVector = endVector.rotateAA(startSquare.rotationFromNominal);
+                startVector = startVector.rotateAADeg(startSquare.rotationFromNominal);
+                endVector = endVector.rotateAADeg(startSquare.rotationFromNominal);
 
                 // Calculate a difference rotation vector from the
                 // rotated end vector to the start vector.  Rotating
                 // the end star in one direction is like rotating
                 // the start terrain in the opposite direction.
-                Vector3f rot = endVector.rotateAA(currentRotation)
+                Vector3f rot = endVector.rotateAADeg(currentRotation)
                                         .rotationToBecome(startVector);
 
                 // Accumulate it.
@@ -1375,7 +1375,7 @@ public class EarthShape extends MyJFrame {
 
         // Ray to star in world coordinates, taking into account
         // how the surface is rotated.
-        Vector3f worldRay = nominalRay.rotateAA(square.rotationFromNominal);
+        Vector3f worldRay = nominalRay.rotateAADeg(square.rotationFromNominal);
 
         return worldRay;
     }
@@ -1633,7 +1633,7 @@ public class EarthShape extends MyJFrame {
         Vector3f angleAxis = axis.times(adjustDegrees);
 
         // Rotate the axis to align it with the square.
-        angleAxis = angleAxis.rotateAA(derived.rotationFromNominal);
+        angleAxis = angleAxis.rotateAADeg(derived.rotationFromNominal);
 
         // Now add that to the square's existing rotation relative
         // to its base square.
@@ -1676,7 +1676,7 @@ public class EarthShape extends MyJFrame {
         if (base == null) {
             return null;
         }
-        angleAxis = angleAxis.rotateAA(derived.rotationFromNominal);
+        angleAxis = angleAxis.rotateAADeg(derived.rotationFromNominal);
         angleAxis = Vector3f.composeRotations(derived.rotationFromBase, angleAxis);
 
         // Now, create a new square with this new rotation.

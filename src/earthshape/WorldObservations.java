@@ -124,7 +124,7 @@ public abstract class WorldObservations {
         Vector3f rot1 = (new Vector3f(0, 0, -1)).rotationToBecome(north);
 
         // Apply that rotation to nominal East (+X).
-        Vector3f rot1NominalEast = (new Vector3f(1, 0, 0)).rotateAA(rot1);
+        Vector3f rot1NominalEast = (new Vector3f(1, 0, 0)).rotateAADeg(rot1);
 
         // Now get a rotation that gets East into final position.  This
         // will be parallel to local North, hence preserving it, because
