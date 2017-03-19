@@ -236,8 +236,12 @@ public class Vector3d {
           * lines are parallel. */
         public Vector3d line2Closest = null;
 
-        /** Minimum visual separation angle between the lines,
-          * as seen from 'u1', in degrees. */
+        /** Visual separation angle between the lines, as seen from
+          * 'u1', in degrees.
+          *
+          * Note: This is *not* the minimum visual separation angle.
+          * There may be another point where the physical separation
+          * distance is larger but the separation angle is less. */
         public double separationAngleDegrees = 0.0;
 
         /** Set distance only, for when lines are parallel. */
