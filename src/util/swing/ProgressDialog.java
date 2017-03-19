@@ -11,15 +11,29 @@ import javax.swing.JLabel;
 import javax.swing.JProgressBar;
 import javax.swing.SwingWorker;
 
-import util.FloatUtil;
-
-import static util.swing.SwingUtil.log;
-
-/** Modal dialog to show progress of some activity. */
-public class ProgressDialog<T,V> extends ModalDialog {
+/** Modal dialog to show progress of some long-running task
+  * while pumping the event queue to keep the UI responsive.
+  *
+  * Conceptually this is similar to JProgressDialog.  The main
+  * advantage of this class is it is modal, whereas JProgressDialog
+  * is not; modality ensures the user can't do other things while
+  * the task is running.
+  *
+  * Another apparent difference is that JProgressDialog responds
+  * to the window close button by simply closing itself without
+  * delivering a cancelation message.  (I have found a StackOverflow
+  * discussion claiming the opposite, but it contradicts my
+  * experiments.  It might depend on the platform; I am running
+  * on Windows.)
+  *
+  * Finally, this class takes care of some of the state management
+  * that is the same for all of these kinds of tasks. */
+public class ProgressDialog<T,V> extends ModalDialog implements PropertyChangeListener {
+    // ---- Constants ----
     /** AWT boilerplate. */
     private static final long serialVersionUID = 2203629471285652409L;
 
+    // ---- Instance data ----
     /** The object that will perform the work whose progress we monitor. */
     private SwingWorker<T,V> swingWorker;
 
@@ -29,33 +43,13 @@ public class ProgressDialog<T,V> extends ModalDialog {
     /** Bar showing progress. */
     private JProgressBar progressBar;
 
+    // ---- Methods ----
     public ProgressDialog(JFrame parent, String title, SwingWorker<T,V> swingWorker_)
     {
         super(parent, title);
         this.swingWorker = swingWorker_;
 
-        // Monitor for completion of the task.
-        this.swingWorker.addPropertyChangeListener(
-            new PropertyChangeListener() {
-                public void propertyChange(PropertyChangeEvent ev) {
-                    if ("state".equals(ev.getPropertyName())) {
-                        if (SwingWorker.StateValue.DONE == ev.getNewValue()) {
-                            ProgressDialog.this.taskCompleted();
-                        }
-                    }
-                    else if ("progress".equals(ev.getPropertyName())) {
-                        Integer i = (Integer)ev.getNewValue();
-                        if (i % 10 == 0) {
-                            log("progress dialog received progress event: "+i);
-                        }
-                        ProgressDialog.this.setProgress(i / 100.0f);
-                    }
-                    else if ("status".equals(ev.getPropertyName())) {
-                        String s = (String)ev.getNewValue();
-                        ProgressDialog.this.setStatus(s);
-                    }
-                }
-            });
+        this.swingWorker.addPropertyChangeListener(this);
 
         HBox outerHB = new HBox();
         outerHB.strut();
@@ -73,7 +67,7 @@ public class ProgressDialog<T,V> extends ModalDialog {
 
             vb.strut();
 
-            vb.add(this.progressBar = new JProgressBar(0, 1000));
+            vb.add(this.progressBar = new JProgressBar(0, 100));
 
             vb.strut();
 
@@ -97,56 +91,76 @@ public class ProgressDialog<T,V> extends ModalDialog {
         this.finishBuildingDialog();
     }
 
-    /** Change the status label text. */
+    /** Respond to property changes from the worker task. */
+    @Override
+    public void propertyChange(PropertyChangeEvent ev)
+    {
+        Object newValue = ev.getNewValue();
+
+        if ("state".equals(ev.getPropertyName())) {
+            if (SwingWorker.StateValue.DONE == newValue) {
+                ProgressDialog.this.taskStateIsDone();
+            }
+        }
+        else if ("progress".equals(ev.getPropertyName())) {
+            if (newValue instanceof Integer) {
+                ProgressDialog.this.setProgress((Integer)newValue);
+            }
+        }
+        else if ("status".equals(ev.getPropertyName())) {
+            if (newValue instanceof String) {
+                ProgressDialog.this.setStatus((String)newValue);
+            }
+        }
+    }
+
+    /** Change the status label text.  This can also be done by having
+      * the worker fire a "status" property change event. */
     public void setStatus(String text)
     {
         this.statusLabel.setText(text);
     }
 
-    /** Change the amount of progress shown. */
-    public void setProgress(float fraction)
+    /** Change the amount of progress shown, in range [0,100]. */
+    public void setProgress(int progress)
     {
-        this.progressBar.setValue((int)(FloatUtil.clamp(fraction, 0, 1) * 1000));
+        this.progressBar.setValue(progress);
     }
 
     /** Show the progress dialog and start the task, blocking until
       * the task completes or the user cancels it.  Returns true
       * if the task completed normally, false if it was canceled. */
+    @Override
     public boolean exec()
     {
         // Start running the task.
         this.swingWorker.execute();
 
-        log("okWasPressed at start of exec: "+this.okWasPressed);
-        log("ProgressDialog: calling setVisible(true)");
-
-        // This blocks until the dialog is closed.
+        // This blocks until the dialog is closed, which itself is
+        // triggered when the task completes or is canceled.
         this.setVisible(true);
-
-        log("ProgressDialog: setVisible(true) returned; okWasPressed="+this.okWasPressed);
 
         // Clean up.
         this.dispose();
-        log("okWasPressed after dispose: "+this.okWasPressed);
 
         if (!this.okWasPressed) {
             // Notify the thread to stop running.  The thread must
-            // poll for this information.
+            // poll for this information if it wants to not waste
+            // CPU cycles, since asynchronous interruption is
+            // dangerous.
             this.swingWorker.cancel(false /*mayInterrupt*/);
         }
 
-        log("okWasPressed at end of exec: "+this.okWasPressed);
         return this.okWasPressed;
     }
 
-    /** Called when the task completes normally. */
-    private void taskCompleted()
+    /** Called when the task state is "done". */
+    private void taskStateIsDone()
     {
-        log("ProgressDialog: taskCompleted called; isCancelled is "+
-            this.swingWorker.isCancelled());
-
-        // We abuse this flag to mean "completed normally".
         if (!this.swingWorker.isCancelled()) {
+            // We abuse this flag to mean "completed normally".
+            // But note that normal completion could still mean
+            // the worker threw an exception.
             this.okWasPressed = true;
         }
 
