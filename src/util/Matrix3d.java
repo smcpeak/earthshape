@@ -26,6 +26,11 @@ public class Matrix3d {
         this.mat = m;
     }
 
+    public Matrix3d(Matrix3f m)
+    {
+        this.mat = new Matrixd(m.getUnder());
+    }
+
     public double a11() { return this.mat.get(0,0); }
     public double a12() { return this.mat.get(0,1); }
     public double a13() { return this.mat.get(0,2); }
@@ -47,10 +52,40 @@ public class Matrix3d {
         return new Vector3d(this.mat.times(v.getUnder()));
     }
 
+    /** Left-multiply this matrix by matrix 'm'. */
+    public Matrix3d times(Matrix3d m)
+    {
+        return new Matrix3d(this.mat.times(m.mat));
+    }
+
+    /** Multiply this matrix by a scalar. */
+    public Matrix3d times(double x)
+    {
+        return new Matrix3d(this.mat.times(x));
+    }
+
+    /** Add this matrix to matrix 'm'. */
+    public Matrix3d plus(Matrix3d m)
+    {
+        return new Matrix3d(this.mat.plus(m.mat));
+    }
+
     /** Return the 3x3 identity matrix. */
     public static Matrix3d identity()
     {
         return new Matrix3d(Matrixd.identity(3));
+    }
+
+    /** Return the inverse of this matrix, or null if it is not invertible. */
+    public Matrix3d inverse()
+    {
+        Matrixd i = this.mat.inverse();
+        if (i == null) {
+            return null;
+        }
+        else {
+            return new Matrix3d(i);
+        }
     }
 
     /** Yield a matrix that, when multiplied by a vector, rotates that

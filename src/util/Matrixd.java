@@ -27,6 +27,19 @@ public class Matrixd {
         this.vals = vals_;
     }
 
+    /** Create from a float-typed matrix. */
+    public Matrixd(Matrixf m)
+    {
+        this.rows = m.R();
+        this.cols = m.C();
+        this.vals = new double[R() * C()];
+        for (int r = 0; r < this.R(); r++) {
+            for (int c = 0; c < this.C(); c++) {
+                this.vals[r * this.cols + c] = m.get(r, c);
+            }
+        }
+    }
+
     /** Number of rows. */
     public int R()
     {
@@ -45,6 +58,7 @@ public class Matrixd {
         return this.vals[r * this.cols + c];
     }
 
+    @Override
     public String toString()
     {
         StringBuilder sb = new StringBuilder();
@@ -98,7 +112,7 @@ public class Matrixd {
         return new Vectord(ret);
     }
 
-    /** Left-multiply this matrix by matrix 'm' and yield result. */
+    /** Left-multiply this matrix by matrix 'm'. */
     public Matrixd times(Matrixd m)
     {
         assert(this.C() == m.R());
@@ -128,6 +142,36 @@ public class Matrixd {
         return new Matrixd(retRows, retCols, ret);
     }
 
+    /** Multiply this matrix by a scalar. */
+    public Matrixd times(double x)
+    {
+        double[] ret = new double[R() * C()];
+
+        for (int r = 0; r < R(); r++) {
+            for (int c = 0; c < C(); c++) {
+                ret[r * C() + c] = this.get(r, c) * x;
+            }
+        }
+
+        return new Matrixd(R(), C(), ret);
+    }
+
+    /** Add this matrix to matrix 'm'. */
+    public Matrixd plus(Matrixd m)
+    {
+        assert(this.R() == m.R());
+        assert(this.C() == m.C());
+        double[] ret = new double[R() * C()];
+
+        for (int r = 0; r < R(); r++) {
+            for (int c = 0; c < C(); c++) {
+                ret[r * C() + c] = this.get(r, c) + m.get(r, c);
+            }
+        }
+
+        return new Matrixd(R(), C(), ret);
+    }
+
     /** Return the NxN identity matrix. */
     public static Matrixd identity(int n)
     {
@@ -138,6 +182,92 @@ public class Matrixd {
             }
         }
         return new Matrixd(n, n, mat);
+    }
+
+    public double determinant()
+    {
+        assert(R() == C());
+
+        if (R() == 1) {
+            return this.get(0,0);
+        }
+
+        double sum = 0;
+        double plus_or_minus = 1;
+
+        for (int c=0; c < C(); c++) {
+            sum += plus_or_minus * this.get(0, c) * getMinorMatrix(0, c).determinant();
+            plus_or_minus *= -1;
+        }
+
+        return sum;
+    }
+
+    /** Get the matrix obtained by dropping row 'r' and column 'c'. */
+    public Matrixd getMinorMatrix(int r, int c)
+    {
+        assert(R() > 1 && C() > 1);
+
+        // Rows and columns of the minor.
+        int MR = R() - 1;
+        int MC = C() - 1;
+
+        double[] ret = new double[MR * MC];
+        for (int mr=0; mr < MR; mr++) {
+            for (int mc=0; mc < MC; mc++) {
+                ret[mr * MC + mc] =
+                    this.get(mr < r? mr : mr+1,
+                             mc < c? mc : mc+1);
+            }
+        }
+
+        return new Matrixd(MR, MC, ret);
+    }
+
+    public Matrixd cofactorMatrix()
+    {
+        assert(R() == C());
+        double[] ret = new double[R() * C()];
+
+        double plus_or_minus = 1;
+
+        for (int r = 0; r < R(); r++) {
+            for (int c = 0; c < C(); c++) {
+                ret[r * C() + c] = plus_or_minus * this.getMinorMatrix(r, c).determinant();
+                plus_or_minus *= -1;
+            }
+        }
+
+        return new Matrixd(R(), C(), ret);
+    }
+
+    /** Matrix with rows and columns swapped. */
+    public Matrixd transpose()
+    {
+        double[] ret = new double[R() * C()];
+
+        for (int r = 0; r < R(); r++) {
+            for (int c = 0; c < C(); c++) {
+                ret[c * R() + r] = this.get(r, c);
+            }
+        }
+
+        return new Matrixd(C(), R(), ret);
+    }
+
+    public Matrixd adjugate()
+    {
+        return this.cofactorMatrix().transpose();
+    }
+
+    /** Return the inverse of this matrix, or null if it is not invertible. */
+    public Matrixd inverse()
+    {
+        double det = this.determinant();
+        if (det == 0) {
+            return null;
+        }
+        return adjugate().times(1/det);
     }
 }
 

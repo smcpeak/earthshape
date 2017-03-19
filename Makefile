@@ -55,6 +55,7 @@ clean:
 check:
 	java -cp bin -ea util.FloatUtil
 	java -cp bin -ea util.Vector3d
+	java -cp bin -ea util.Matrix3f
 	java -cp bin -ea earthshape.StarCatalog
 
 # EOF
