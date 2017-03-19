@@ -12,8 +12,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -22,7 +20,6 @@ import java.util.Map;
 import java.util.TreeSet;
 
 import javax.swing.JCheckBoxMenuItem;
-import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
@@ -40,6 +37,7 @@ import util.FloatUtil;
 import util.Vector3d;
 import util.Vector3f;
 import util.swing.ModalDialog;
+import util.swing.MyJFrame;
 
 import static util.swing.SwingUtil.log;
 
@@ -51,10 +49,7 @@ import static util.swing.SwingUtil.log;
   * display, such as the menu and status bars.  It also contains all of
   * the code to construct the virtual 3D map using various algorithms.
   * The 3D display, along with its camera controls, is in EarthMapCanvas. */
-public class EarthShape
-    // This is a Swing window.
-    extends JFrame
-{
+public class EarthShape extends MyJFrame {
     // --------- Constants ----------
     /** AWT boilerplate generated serial ID. */
     private static final long serialVersionUID = 3903955302894393226L;
@@ -150,13 +145,6 @@ public class EarthShape
 
         this.setLayout(new BorderLayout());
         this.setIcon();
-
-        // Exit the app when window close button is pressed (AWT boilerplate).
-        this.addWindowListener(new WindowAdapter() {
-            public void windowClosing(WindowEvent we) {
-                EarthShape.this.dispose();
-            }
-        });
 
         for (String starName : this.worldObservations.getAllStars()) {
             // Initially all stars are enabled.

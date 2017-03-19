@@ -5,14 +5,11 @@ package util.swing;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
 import java.util.concurrent.ExecutionException;
 
 import javax.swing.Box;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
-import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
@@ -21,7 +18,7 @@ import javax.swing.SwingWorker;
 import static util.swing.SwingUtil.log;
 
 /** Little program to test ProgressDialog. */
-public class TestProgressDialog extends JFrame {
+public class TestProgressDialog extends MyJFrame {
     /** AWT boilerplate. */
     private static final long serialVersionUID = 1770692424967304611L;
 
@@ -38,14 +35,6 @@ public class TestProgressDialog extends JFrame {
 
         log("in TestProgressDialog ctor");
 
-        // Exit the app when window close button is pressed (AWT boilerplate).
-        this.addWindowListener(new WindowAdapter() {
-            public void windowClosing(WindowEvent we) {
-                log("closing due to window close event");
-                TestProgressDialog.this.dispose();
-            }
-        });
-
         HBox outerHB = new HBox();
         outerHB.strut();
 
@@ -60,7 +49,7 @@ public class TestProgressDialog extends JFrame {
 
                 hb.add(new JLabel("Milliseconds per tick: "));
                 hb.strut();
-                hb.add(this.msPerTickTextField = new JTextField("30"));
+                hb.add(this.msPerTickTextField = new JTextField("10"));
                 hb.glue();
 
                 vb.add(hb);

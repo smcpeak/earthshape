@@ -1,4 +1,4 @@
-// ModalDialog.java
+// SwingUtil.java
 // See copyright.txt for license and terms of use.
 
 package util.swing;
