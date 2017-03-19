@@ -11,6 +11,7 @@ import java.util.concurrent.ExecutionException;
 
 import javax.swing.Box;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JTextField;
@@ -29,6 +30,9 @@ public class TestProgressDialog extends JFrame {
     /** Text field where user can specify how many milliseconds each
       * worker tick should require. */
     private JTextField msPerTickTextField;
+
+    /** Let user request that worker throw an exception. */
+    private JCheckBox throwExceptionCB;
 
     public TestProgressDialog()
     {
@@ -59,6 +63,18 @@ public class TestProgressDialog extends JFrame {
                 hb.add(new JLabel("Milliseconds per tick: "));
                 hb.strut();
                 hb.add(this.msPerTickTextField = new JTextField("30"));
+                hb.glue();
+
+                vb.add(hb);
+            }
+
+            vb.strut();
+
+            {
+                HBox hb = new HBox();
+
+                hb.add(this.throwExceptionCB =
+                    new JCheckBox("Throw an exception inside worker", false));
                 hb.glue();
 
                 vb.add(hb);
@@ -112,10 +128,12 @@ public class TestProgressDialog extends JFrame {
 
     private static class TestTask extends SwingWorker<Integer, Void> {
         private int msPerTick;
+        private boolean throwException;
 
-        public TestTask(int msPerTick_)
+        public TestTask(int msPerTick_, boolean throwException_)
         {
             this.msPerTick = msPerTick_;
+            this.throwException = throwException_;
         }
 
         protected Integer doInBackground() throws Exception
@@ -126,6 +144,11 @@ public class TestProgressDialog extends JFrame {
             this.setProgress(0);
             for (int i=0; i < 100 && !this.isCancelled(); i++) {
                 Thread.sleep(this.msPerTick);
+
+                if (i == 50 && this.throwException) {
+                    log("TestTask: throwing exception");
+                    throw new RuntimeException("Exception thrown from worker");
+                }
 
                 if (i % 10 == 0) {
                     log("TestTask: progress is "+i);
@@ -140,11 +163,11 @@ public class TestProgressDialog extends JFrame {
             }
 
             if (this.isCancelled()) {
-                log("TestTask: canceled");
+                log("TestTask: canceled externally");
                 return null;
             }
             else {
-                log("TestTask: finished");
+                log("TestTask: finished with complete task");
                 return 5;
             }
         }
@@ -162,9 +185,11 @@ public class TestProgressDialog extends JFrame {
             return;
         }
 
+        boolean throwException = this.throwExceptionCB.isSelected();
+
         log("startTask: starting new task");
 
-        TestTask task = new TestTask(msPerTick);
+        TestTask task = new TestTask(msPerTick, throwException);
         ProgressDialog<Integer, Void> pd =
             new ProgressDialog<Integer, Void>(this, "Test Progress", task);
 
@@ -177,7 +202,7 @@ public class TestProgressDialog extends JFrame {
                 log("startTask: computation returned: "+i);
             }
             catch (ExecutionException e) {
-                log("startTask: computation throw exception: "+e.getMessage());
+                log("startTask: computation threw exception: "+e.getMessage());
             }
             catch (InterruptedException e) {
                 log("startTask: computation was interrupted: "+e.getMessage());
