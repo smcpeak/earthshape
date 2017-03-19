@@ -8,7 +8,8 @@ import java.awt.event.WindowEvent;
 
 import javax.swing.JFrame;
 
-/** Like JFrame, but closes in response to window close button. */
+/** Like JFrame, but closes in response to window close button,
+  * plus some other utility methods. */
 public class MyJFrame extends JFrame {
     /** Generated ID. */
     private static final long serialVersionUID = 7425587687068601846L;
@@ -23,6 +24,12 @@ public class MyJFrame extends JFrame {
                 MyJFrame.this.dispose();
             }
         });
+    }
+
+    /** Pop up a modal dialog box with an error message. */
+    public void errorBox(String title)
+    {
+        ModalDialog.errorBox(this, title);
     }
 }
 

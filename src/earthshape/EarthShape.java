@@ -1515,7 +1515,7 @@ public class EarthShape extends MyJFrame {
     private void buildNextSquare()
     {
         if (this.activeSquare == null) {
-            ModalDialog.errorBox(this, "No square is active.");
+            this.errorBox("No square is active.");
             return;
         }
 
@@ -1549,12 +1549,12 @@ public class EarthShape extends MyJFrame {
     {
         SurfaceSquare derived = this.activeSquare;
         if (derived == null) {
-            ModalDialog.errorBox(this, "No active square.");
+            this.errorBox("No active square.");
             return;
         }
         SurfaceSquare base = derived.baseSquare;
         if (base == null) {
-            ModalDialog.errorBox(this, "The active square has no base square.");
+            this.errorBox("The active square has no base square.");
             return;
         }
 
@@ -1673,16 +1673,16 @@ public class EarthShape extends MyJFrame {
     {
         SurfaceSquare s = this.activeSquare;
         if (s == null) {
-            ModalDialog.errorBox(this, "No active square.");
+            this.errorBox("No active square.");
             return;
         }
         ObservationStats ostats = this.fitOfObservations(s);
         if (ostats == null) {
-            ModalDialog.errorBox(this, "Not enough observational data available.");
+            this.errorBox("Not enough observational data available.");
             return;
         }
         if (ostats.variance == 0) {
-            ModalDialog.errorBox(this, "Orientation is already optimal.");
+            this.errorBox("Orientation is already optimal.");
             return;
         }
 
@@ -1691,7 +1691,7 @@ public class EarthShape extends MyJFrame {
             this.adjustOrientationDegrees);
         if (var.bestRC == null) {
             if (this.adjustOrientationDegrees <= MINIMUM_ADJUST_ORIENTATION_DEGREES) {
-                ModalDialog.errorBox(this, "Cannot further improve orientation.");
+                this.errorBox("Cannot further improve orientation.");
                 return;
             }
             else {
@@ -1768,7 +1768,7 @@ public class EarthShape extends MyJFrame {
     private void deleteActiveSquare()
     {
         if (this.activeSquare == null) {
-            ModalDialog.errorBox(this, "No active square.");
+            this.errorBox("No active square.");
             return;
         }
 
@@ -1782,18 +1782,18 @@ public class EarthShape extends MyJFrame {
     {
         SurfaceSquare derived = this.activeSquare;
         if (derived == null) {
-            ModalDialog.errorBox(this, "No active square.");
+            this.errorBox("No active square.");
             return;
         }
         SurfaceSquare base = derived.baseSquare;
         if (base == null) {
-            ModalDialog.errorBox(this, "The active square has no base square.");
+            this.errorBox("The active square has no base square.");
             return;
         }
 
         SurfaceSquare newDerived = automaticallyOrientSquare(derived);
         if (newDerived == null) {
-            ModalDialog.errorBox(this, "Insufficient observations to determine proper orientation.");
+            this.errorBox("Insufficient observations to determine proper orientation.");
         }
         else {
             this.setActiveSquare(newDerived);
@@ -1838,7 +1838,7 @@ public class EarthShape extends MyJFrame {
     {
         SurfaceSquare base = this.activeSquare;
         if (base == null) {
-            ModalDialog.errorBox(this, "There is no active square.");
+            this.errorBox("There is no active square.");
             return;
         }
         SurfaceSquare newSquare = this.createAndAutomaticallyOrientSquare(
@@ -1886,14 +1886,14 @@ public class EarthShape extends MyJFrame {
     private void analyzeSolutionSpace()
     {
         if (this.activeSquare == null) {
-            ModalDialog.errorBox(this, "No active square.");
+            this.errorBox("No active square.");
             return;
         }
         SurfaceSquare s = this.activeSquare;
 
         ObservationStats ostats = this.fitOfObservations(s);
         if (ostats == null) {
-            ModalDialog.errorBox(this, "No observation fitness stats for the active square.");
+            this.errorBox("No observation fitness stats for the active square.");
             return;
         }
 
@@ -1916,7 +1916,7 @@ public class EarthShape extends MyJFrame {
                 String msg = "Internal error: solution space analysis failed: "+e.getMessage();
                 log(msg);
                 e.printStackTrace();
-                ModalDialog.errorBox(this, msg);
+                this.errorBox(msg);
                 return;
             }
 
@@ -2034,18 +2034,18 @@ public class EarthShape extends MyJFrame {
             try {
                 int c = Integer.valueOf(choice);
                 if (c < 1) {
-                    ModalDialog.errorBox(this, "The minimum number of points is 1.");
+                    this.errorBox("The minimum number of points is 1.");
                 }
                 else if (c > 100) {
                     // At 100, it will take about a minute to complete.
-                    ModalDialog.errorBox(this, "The maximum number of points is 100.");
+                    this.errorBox("The maximum number of points is 100.");
                 }
                 else {
                     this.solutionAnalysisPointsPerSide = c;
                 }
             }
             catch (NumberFormatException e) {
-                ModalDialog.errorBox(this, "Invalid integer syntax: "+e.getMessage());
+                this.errorBox("Invalid integer syntax: "+e.getMessage());
             }
         }
     }
@@ -2062,7 +2062,7 @@ public class EarthShape extends MyJFrame {
                 this.maximumSunElevation = Float.valueOf(choice);
             }
             catch (NumberFormatException e) {
-                ModalDialog.errorBox(this, "Invalid float syntax: "+e.getMessage());
+                this.errorBox("Invalid float syntax: "+e.getMessage());
             }
         }
     }
@@ -2114,7 +2114,7 @@ public class EarthShape extends MyJFrame {
     public void toggleDrawStarRays()
     {
         if (this.activeSquare == null) {
-            ModalDialog.errorBox(this, "No square is active");
+            this.errorBox("No square is active");
         }
         else {
             this.activeSquare.drawStarRays = !this.activeSquare.drawStarRays;
@@ -2144,7 +2144,7 @@ public class EarthShape extends MyJFrame {
     private void goToActiveSquareCenter()
     {
         if (this.activeSquare == null) {
-            ModalDialog.errorBox(this, "No active square.");
+            this.errorBox("No active square.");
         }
         else {
             this.moveCamera(this.activeSquare.center);
