@@ -40,7 +40,8 @@ Currently, EarthShape is only known to run on 64-bit Windows.
 EarthShape requires a Java compiler.  It probably requires
 Java 8 (I have not tested older versions).  A Java compiler
 is included in the Java Development Kit available from Oracle.
-Google for "jdk download".
+Google for "jdk download".  When you install it, add its
+"javac" and "java" programs to your command line PATH.
 
 The EarthShape build process is written using GNU Make.  GNU
 Make is part of [Cygwin](https://www.cygwin.com/).  When you
@@ -306,7 +307,9 @@ heading information can be kept to a minimum by exclusively
 joining squares along cardinal directions (N/S/E/W) and, again,
 keeping the distances short.  When you tell EarthShape to
 reconstruct the whole surface at once, it in fact only joins
-along cardinal directions, and uses squares 1000 km apart.
+along cardinal directions, and uses squares 1000 km apart.  (But
+you can manually construct adjacent squares at any direction and
+distance.)
 
 Finally, while the distance formula used does globally imply that the Earth's
 surface is a spherical shell, leaving undetermined only whether we are living on the
@@ -345,7 +348,7 @@ the inverse sine of M * sin(A/2) / D.  For example, if two
 objects are separated by 45 degrees, and the closer is 100,000 km
 away, and you move 1000 km toward the point between them, you
 will measure a change B in angular separation of about 0.2 degrees
-(about one arc minute).
+(12 arc minutes).
 On the other hand, with the same A and M, if you measure no such change
 on an instrument with sensitivity of at least 0.2 degrees, then
 both are at least 100,000 km away.
@@ -372,7 +375,7 @@ Since I have assumed measurements only accurate to 0.2 degrees
 (12 arcminutes), the refraction above 20 degrees is within my
 measurement error range, and hence ignored.
 
-But could it be that refraction is actually different than is
+But could it be that refraction above 20 degrees is actually much larger than is
 commonly accepted?  Evidently not, based on
 the same empirical observation above: the visual separation
 angle of distant stars is fixed (to within 0.2 degrees).  If the atmosphere bent light
@@ -430,4 +433,5 @@ not a falsifiable hypothesis.
 Lacking any falsifiable (and not already contradicted!) hypothesis
 to the contrary, we maximize predictive utility by assuming that a given star (identified
 by its brightness, color, and geometric relation to other stars),
-when observed from different locations, is the same physical object.
+when observed from different locations, is the same, permanent
+physical object.
