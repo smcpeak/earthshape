@@ -13,7 +13,6 @@ import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
-import javax.swing.SwingWorker;
 
 import static util.swing.SwingUtil.log;
 
@@ -113,7 +112,7 @@ public class TestProgressDialog extends MyJFrame {
         this.setLocationByPlatform(true);
     }
 
-    private static class TestTask extends SwingWorker<Integer, Void> {
+    private static class TestTask extends MySwingWorker<Integer, Void> {
         private int msPerTick;
         private boolean throwException;
 
@@ -125,8 +124,6 @@ public class TestProgressDialog extends MyJFrame {
 
         protected Integer doInBackground() throws Exception
         {
-            String oldStatus = null;
-
             log("TestTask: starting");
             this.setProgress(0);
             for (int i=0; i < 100 && !this.isCancelled(); i++) {
@@ -141,9 +138,7 @@ public class TestProgressDialog extends MyJFrame {
                     log("TestTask: progress is "+i);
 
                     if (i != 0) {
-                        String newStatus = "Passed "+i+"%";
-                        this.firePropertyChange("status", oldStatus, newStatus);
-                        oldStatus = newStatus;
+                        this.setStatus("Passed "+i+"%");
                     }
                 }
                 this.setProgress(i);
