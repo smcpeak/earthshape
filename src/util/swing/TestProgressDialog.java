@@ -28,6 +28,9 @@ public class TestProgressDialog extends MyJFrame {
     /** Let user request that worker throw an exception. */
     private JCheckBox throwExceptionCB;
 
+    /** Let user request that worker be slow to cancel. */
+    private JCheckBox slowCancelCB;
+
     public TestProgressDialog()
     {
         super("Test Progress Dialog");
@@ -61,6 +64,18 @@ public class TestProgressDialog extends MyJFrame {
 
                 hb.add(this.throwExceptionCB =
                     new JCheckBox("Throw an exception inside worker", false));
+                hb.glue();
+
+                vb.add(hb);
+            }
+
+            vb.strut();
+
+            {
+                HBox hb = new HBox();
+
+                hb.add(this.slowCancelCB =
+                    new JCheckBox("Worker will respond slowly to cancellation", false));
                 hb.glue();
 
                 vb.add(hb);
@@ -115,14 +130,20 @@ public class TestProgressDialog extends MyJFrame {
     private static class TestTask extends MySwingWorker<Integer, Void> {
         private int msPerTick;
         private boolean throwException;
+        private boolean slowCancel;
 
-        public TestTask(int msPerTick_, boolean throwException_)
+        /** This is not set to true until this thread stops executing
+          * any task-related code. */
+        public boolean stoppedRunning = false;
+
+        public TestTask(int msPerTick_, boolean throwException_, boolean slowCancel_)
         {
             this.msPerTick = msPerTick_;
             this.throwException = throwException_;
+            this.slowCancel = slowCancel_;
         }
 
-        protected Integer doInBackground() throws Exception
+        protected Integer doTask() throws Exception
         {
             log("TestTask: starting");
             this.setProgress(0);
@@ -131,6 +152,7 @@ public class TestProgressDialog extends MyJFrame {
 
                 if (i == 50 && this.throwException) {
                     log("TestTask: throwing exception");
+                    this.stoppedRunning = true;
                     throw new RuntimeException("Exception thrown from worker");
                 }
 
@@ -145,11 +167,19 @@ public class TestProgressDialog extends MyJFrame {
             }
 
             if (this.isCancelled()) {
-                log("TestTask: canceled externally");
+                if (this.slowCancel) {
+                    log("TestTask: waiting 1 second before actually exiting");
+                    Thread.sleep(1000);
+                    log("TestTask: done with slow cancel delay");
+                }
+
+                log("TestTask: canceled externally, shutting down");
+                this.stoppedRunning = true;
                 return null;
             }
             else {
                 log("TestTask: finished with complete task");
+                this.stoppedRunning = true;
                 return 5;
             }
         }
@@ -168,14 +198,22 @@ public class TestProgressDialog extends MyJFrame {
         }
 
         boolean throwException = this.throwExceptionCB.isSelected();
+        boolean slowCancel = this.slowCancelCB.isSelected();
 
         log("startTask: starting new task");
 
-        TestTask task = new TestTask(msPerTick, throwException);
+        TestTask task = new TestTask(msPerTick, throwException, slowCancel);
         ProgressDialog<Integer, Void> pd =
             new ProgressDialog<Integer, Void>(this, "Test Progress", task);
 
         boolean res = pd.exec();
+
+        if (!task.stoppedRunning) {
+            // This would be bad because the task might be modifying
+            // state that is shared with the client code.
+            log("startTask: **** BUG: exec returned before task stopped completely!");
+        }
+
         if (res) {
             log("startTask: task finished normally");
 

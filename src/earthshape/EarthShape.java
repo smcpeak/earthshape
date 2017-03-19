@@ -945,16 +945,42 @@ public class EarthShape extends MyJFrame {
         Cursor oldCursor = this.getCursor();
         this.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
         try {
-            this.buildEarthSurfaceFromStarDataInner();
+            ProgressDialog<Void, Void> pd =
+                new ProgressDialog<Void, Void>(this,
+                    "Building Surface with model: "+this.worldObservations.getDescription(),
+                    new BuildSurfaceTask(EarthShape.this));
+            pd.exec();
         }
         finally {
             this.setCursor(oldCursor);
+        }
+        this.emCanvas.redrawCanvas();
+    }
+
+    /** Task to manage construction of surface.
+      *
+      * I have to use a class rather than a simple closure so I have
+      * something to pass to the build routines so they can set the
+      * status and progress as the algorithm runs. */
+    private static class BuildSurfaceTask extends MySwingWorker<Void, Void>
+    {
+        private EarthShape earthShape;
+
+        public BuildSurfaceTask(EarthShape earthShape_)
+        {
+            this.earthShape = earthShape_;
+        }
+
+        protected Void doTask() throws Exception
+        {
+            this.earthShape.buildEarthSurfaceFromStarDataInner(this);
+            return null;
         }
     }
 
     /** Core of 'buildEarthSurfaceFromStarData', so I can more easily
       * wrap computation around it. */
-    public void buildEarthSurfaceFromStarDataInner()
+    public void buildEarthSurfaceFromStarDataInner(BuildSurfaceTask task)
     {
         log("building Earth using star data: "+this.worldObservations.getDescription());
         this.clearSurfaceSquares();
@@ -985,30 +1011,38 @@ public class EarthShape extends MyJFrame {
         this.emCanvas.addSurfaceSquare(square);
         this.addMatchingData(square);
 
-        // From here, explore in all directions until all points on
-        // the surface have been explored (to within 9 degrees).
+        // Go East and West.
+        task.setStatus("Initial latitude strip at "+square.latitude);
         this.buildLatitudeStrip(square, +9);
         this.buildLatitudeStrip(square, -9);
-        this.buildLongitudeStrip(square, +9);
-        this.buildLongitudeStrip(square, -9);
+
+        // Explore in all directions until all points on
+        // the surface have been explored (to within 9 degrees).
+        this.buildLongitudeStrip(square, +9, task);
+        this.buildLongitudeStrip(square, -9, task);
 
         // Reset the adjustment angle.
         this.adjustOrientationDegrees = EarthShape.DEFAULT_ADJUST_ORIENTATION_DEGREES;
 
-        this.emCanvas.redrawCanvas();
         log("buildEarth: finished using star data; nSquares="+this.emCanvas.numSurfaceSquares());
     }
 
     /** Build squares by going North or South from a starting square
       * until we add 20 or we can't add any more.  At each spot, also
       * build latitude strips in both directions. */
-    private void buildLongitudeStrip(SurfaceSquare startSquare, float deltaLatitude)
+    private void buildLongitudeStrip(SurfaceSquare startSquare, float deltaLatitude,
+        BuildSurfaceTask task)
     {
         float curLatitude = startSquare.latitude;
         float curLongitude = startSquare.longitude;
         SurfaceSquare curSquare = startSquare;
 
-        while (true) {
+        if (task.isCancelled()) {
+            // Bail now, rather than repeat the cancellation log message.
+            return;
+        }
+
+        while (!task.isCancelled()) {
             float newLatitude = curLatitude + deltaLatitude;
             if (!( -90 < newLatitude && newLatitude < 90 )) {
                 // Do not go past the poles.
@@ -1017,6 +1051,24 @@ public class EarthShape extends MyJFrame {
             float newLongitude = curLongitude;
 
             log("buildEarth: building lat="+newLatitude+" long="+newLongitude);
+
+            // Report progress.
+            task.setStatus("Latitude strip at "+newLatitude);
+            {
+                // +1 since we did one strip before the first call to
+                // buildLongitudeStrip.
+                float totalStrips = 180 / (float)Math.abs(deltaLatitude) + 1;
+                float completedStrips;
+                if (deltaLatitude > 0) {
+                    completedStrips = (newLatitude - startSquare.latitude) / deltaLatitude + 1;
+                }
+                else {
+                    completedStrips = (90 - newLatitude) / -deltaLatitude + 1;
+                }
+                float fraction = completedStrips / totalStrips;
+                log("progress fraction: "+fraction);
+                task.setProgressFraction(fraction);
+            }
 
             curSquare = this.createAndAutomaticallyOrientSquare(curSquare,
                 newLatitude, newLongitude);
@@ -1031,6 +1083,10 @@ public class EarthShape extends MyJFrame {
             // Also build strips in each direction.
             this.buildLatitudeStrip(curSquare, +9);
             this.buildLatitudeStrip(curSquare, -9);
+        }
+
+        if (task.isCancelled()) {
+            log("surface construction canceled");
         }
     }
 
@@ -1949,7 +2005,7 @@ public class EarthShape extends MyJFrame {
         }
 
         @Override
-        protected PlotData3D doInBackground() throws Exception
+        protected PlotData3D doTask() throws Exception
         {
             return this.earthShape.getThreeRotationAxisPlotData(this.square, this);
         }
