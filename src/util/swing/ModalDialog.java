@@ -49,6 +49,12 @@ public class ModalDialog extends JDialog {
         // This blocks until the dialog is dismissed.
         this.setVisible(true);
 
+        // This does not happen automatically, or at least not right
+        // away, based on watching Window.getOwnedWindows().  Anyway,
+        // I am done with the dialog, and this does not appear to cause
+        // problems, so it seems like a good thing to do.
+        this.dispose();
+
         return this.okWasPressed;
     }
 
