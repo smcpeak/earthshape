@@ -124,11 +124,11 @@ public class EarthMapCanvas
     /** Azimuth angle in which the camera is looking, in degrees
       * to the left of the -Z axis.  It is kept in [0,360), wrapping
       * as it gets to either extreme. */
-    private float cameraAzimuthDegrees = 0;
+    public float cameraAzimuthDegrees = 0;
 
     /** Camera pitch angle, in degrees.  In [-90,90], where +90 is
       * straight up. */
-    private float cameraPitchDegrees = 0;
+    public float cameraPitchDegrees = 0;
 
     /** Velocity of camera movement, in world coordinates.  The magnitude
       * is units per second. */
@@ -1201,6 +1201,10 @@ public class EarthMapCanvas
 
             gl.glEnd();
 
+            if (this.drawUnitStarRays) {
+                this.drawDottedLineToXZPlane(gl, starRaysOrigin.plus(starRay));
+            }
+
             String starLabel = so.name;
 
             // Calculate the deviation of this observation from that of
@@ -1248,6 +1252,22 @@ public class EarthMapCanvas
                 this.worldLabels.add(new CoordinateLabel(starRayDirection, starLabel));
             }
         }
+    }
+
+    /** Draw a thin dotted line from 'pt' to the XZ plane. */
+    private void drawDottedLineToXZPlane(GL2 gl, Vector3f pt)
+    {
+        gl.glPushAttrib(GL2.GL_ALL_ATTRIB_BITS);
+        gl.glLineWidth(1);
+        gl.glEnable(GL2.GL_LINE_STIPPLE);
+        gl.glLineStipple(1, (short)0xF0F0);
+
+        gl.glBegin(GL.GL_LINES);
+        glVertex3f(gl, pt);
+        glVertex3f(gl, new Vector3f(pt.x(), 0, pt.z()));
+        gl.glEnd();
+
+        gl.glPopAttrib();
     }
 
     /** Add a vertex from a Vector3f. */

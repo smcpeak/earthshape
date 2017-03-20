@@ -450,14 +450,14 @@ public class EarthShape extends MyJFrame {
             KeyStroke.getKeyStroke('h'),
             new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
-                    EarthShape.this.buildEarthSurfaceWithLatLong();
+                    EarthShape.this.buildSphericalEarthSurfaceWithLatLong();
                 }
             });
         addMenuItem(buildMenu, "Build partial Earth using assumed sphere and random walk",
             KeyStroke.getKeyStroke('r'),
             new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
-                    EarthShape.this.randomWalkEarthSurface();
+                    EarthShape.this.buildSphericalEarthWithRandomWalk();
                 }
             });
         addMenuItem(buildMenu, "Start a new surface using star data",
@@ -507,6 +507,16 @@ public class EarthShape extends MyJFrame {
                 public void actionPerformed(ActionEvent e) {
                     EarthShape.this.createAndAutomaticallyOrientActiveSquare(
                         -9 /*deltLatitude*/, 0 /*deltaLongitude*/);
+                }
+            });
+
+        buildMenu.addSeparator();
+
+        addMenuItem(buildMenu, "Do some canned setup for debugging",
+            KeyStroke.getKeyStroke(KeyEvent.VK_INSERT, 0),
+            new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    EarthShape.this.doCannedSetup();
                 }
             });
 
@@ -790,10 +800,11 @@ public class EarthShape extends MyJFrame {
 
     /** Build a portion of the Earth's surface.  Adds squares to
       * 'surfaceSquares'.  This works by iterating over latitude
-      * and longitude pairs and assuming a spherical Earth. */
-    public void buildEarthSurfaceWithLatLong()
+      * and longitude pairs and assuming a spherical Earth.  It
+      * assumes the Earth is a sphere. */
+    public void buildSphericalEarthSurfaceWithLatLong()
     {
-        log("building Earth");
+        log("building spherical Earth");
         this.clearSurfaceSquares();
 
         // Size of squares to build, in km.
@@ -821,7 +832,7 @@ public class EarthShape extends MyJFrame {
              latitude += 9)
         {
             // Go North another step.
-            outer = this.addAdjacentSquare(outer, latitude, startLongitude);
+            outer = this.addSphericallyAdjacentSquare(outer, latitude, startLongitude);
 
             // Inner loop: Walk East until we get back to
             // the same longitude.
@@ -829,7 +840,7 @@ public class EarthShape extends MyJFrame {
             float prevLongitude = longitude;
             SurfaceSquare inner = outer;
             while (true) {
-                inner = this.addAdjacentSquare(inner, latitude, longitude);
+                inner = this.addSphericallyAdjacentSquare(inner, latitude, longitude);
                 if (prevLongitude < outer.longitude &&
                                     outer.longitude <= longitude) {
                     break;
@@ -846,7 +857,7 @@ public class EarthShape extends MyJFrame {
              latitude -= 9)
         {
             // Go North another step.
-            outer = this.addAdjacentSquare(outer, latitude, startLongitude);
+            outer = this.addSphericallyAdjacentSquare(outer, latitude, startLongitude);
 
             // Inner loop: Walk East until we get back to
             // the same longitude.
@@ -854,7 +865,7 @@ public class EarthShape extends MyJFrame {
             float prevLongitude = longitude;
             SurfaceSquare inner = outer;
             while (true) {
-                inner = this.addAdjacentSquare(inner, latitude, longitude);
+                inner = this.addSphericallyAdjacentSquare(inner, latitude, longitude);
                 if (prevLongitude < outer.longitude &&
                                     outer.longitude <= longitude) {
                     break;
@@ -868,10 +879,11 @@ public class EarthShape extends MyJFrame {
         log("finished building Earth; nsquares="+this.emCanvas.numSurfaceSquares());
     }
 
-    /** Build the surface by walking randomly from a starting location. */
-    public void randomWalkEarthSurface()
+    /** Build the surface by walking randomly from a starting location,
+      * assuming a Earth is a sphere. */
+    public void buildSphericalEarthWithRandomWalk()
     {
-        log("building Earth by random walk");
+        log("building spherical Earth by random walk");
         this.clearSurfaceSquares();
 
         // Size of squares to build, in km.
@@ -902,7 +914,7 @@ public class EarthShape extends MyJFrame {
             // Walk in that direction, keeping latitude and longitude
             // within their usual ranges.  Also stay away from the poles
             // since the rounding errors cause problems there.
-            square = this.addAdjacentSquare(square,
+            square = this.addSphericallyAdjacentSquare(square,
                 FloatUtil.clampf(square.latitude + deltaLatitude, -80, 80),
                 FloatUtil.modulus2f(square.longitude + deltaLongitude, -180, 180));
         }
@@ -914,11 +926,12 @@ public class EarthShape extends MyJFrame {
     /** Given square 'old', add an adjacent square at the given
       * latitude and longitude.  The relative orientation of the
       * new square will determined using the latitude and longitude,
-      * at this stage as a proxy for star observation data.  The size
-      * will be the same as the old square.
-      * This works best when the squares are nearby since this
-      * procedure assumes the surface is locally flat. */
-    private SurfaceSquare addAdjacentSquare(
+      * assuming a spherical shape for the Earth.
+      *
+      * This is used by the routines that build the surface using
+      * the sphere assumption, not those that use star observation
+      * data. */
+    private SurfaceSquare addSphericallyAdjacentSquare(
         SurfaceSquare old,
         float newLatitude,
         float newLongitude)
@@ -1552,22 +1565,27 @@ public class EarthShape extends MyJFrame {
     {
         LatLongDialog d = new LatLongDialog(this, 38, -122);
         if (d.exec()) {
-            log("starting new surface at lat="+d.finalLatitude+
-                ", lng="+d.finalLongitude);
-            this.clearSurfaceSquares();
-            this.setActiveSquare(new SurfaceSquare(
-                new Vector3f(0,0,0),      // center
-                new Vector3f(0,0,-1),     // north
-                new Vector3f(0,1,0),      // up
-                INITIAL_SQUARE_SIZE_KM,
-                d.finalLatitude,
-                d.finalLongitude,
-                null /*base*/, null /*midpoint*/,
-                new Vector3f(0,0,0)));
-            this.addMatchingData(this.activeSquare);
-            this.emCanvas.addSurfaceSquare(this.activeSquare);
-            this.emCanvas.redrawCanvas();
+            this.startNewSurfaceAt(d.finalLatitude, d.finalLongitude);
         }
+    }
+
+    /** Same as 'startNewSurface' but at a specified location. */
+    public void startNewSurfaceAt(float latitude, float longitude)
+    {
+        log("starting new surface at lat="+latitude+", lng="+longitude);
+        this.clearSurfaceSquares();
+        this.setActiveSquare(new SurfaceSquare(
+            new Vector3f(0,0,0),      // center
+            new Vector3f(0,0,-1),     // north
+            new Vector3f(0,1,0),      // up
+            INITIAL_SQUARE_SIZE_KM,
+            latitude,
+            longitude,
+            null /*base*/, null /*midpoint*/,
+            new Vector3f(0,0,0)));
+        this.addMatchingData(this.activeSquare);
+        this.emCanvas.addSurfaceSquare(this.activeSquare);
+        this.emCanvas.redrawCanvas();
     }
 
     /** Change which square is active. */
@@ -1593,25 +1611,31 @@ public class EarthShape extends MyJFrame {
             return;
         }
 
-        // The new square should draw star rays if the old did.
-        boolean drawStarRays = this.activeSquare.drawStarRays;
-
         LatLongDialog d = new LatLongDialog(this,
             this.activeSquare.latitude, this.activeSquare.longitude + 9);
         if (d.exec()) {
-            // Add it initially with no rotation.  My plan is to add
-            // the rotation interactively afterward.
-            this.setActiveSquare(
-                this.addRotatedAdjacentSquare(this.activeSquare,
-                    d.finalLatitude, d.finalLongitude, new Vector3f(0,0,0)));
-            this.activeSquare.drawStarRays = drawStarRays;
-
-            // Reset the rotation angle after adding a square.
-            this.adjustOrientationDegrees = DEFAULT_ADJUST_ORIENTATION_DEGREES;
-
-            this.addMatchingData(this.activeSquare);
-            this.emCanvas.redrawCanvas();
+            this.buildNextSquareAt(d.finalLatitude, d.finalLongitude);
         }
+    }
+
+    /** Same as 'buildNextSquare' except at a specified location. */
+    private void buildNextSquareAt(float latitude, float longitude)
+    {
+        // The new square should draw star rays if the old did.
+        boolean drawStarRays = this.activeSquare.drawStarRays;
+
+        // Add it initially with no rotation.  My plan is to add
+        // the rotation interactively afterward.
+        this.setActiveSquare(
+            this.addRotatedAdjacentSquare(this.activeSquare,
+                latitude, longitude, new Vector3f(0,0,0)));
+        this.activeSquare.drawStarRays = drawStarRays;
+
+        // Reset the rotation angle after adding a square.
+        this.adjustOrientationDegrees = DEFAULT_ADJUST_ORIENTATION_DEGREES;
+
+        this.addMatchingData(this.activeSquare);
+        this.emCanvas.redrawCanvas();
     }
 
     /** If there is an active square, assume we just built it, and now
@@ -2477,6 +2501,45 @@ public class EarthShape extends MyJFrame {
     {
         return this.enabledStars.containsKey(starName) &&
                this.enabledStars.get(starName).equals(true);
+    }
+
+    /** Do some initial steps so I do not have to do them manually each
+      * time I start the program when I'm working on a certain feature.
+      * The exact setup here will vary over time as I work on different
+      * things; it is only meant for use while testing or debugging. */
+    private void doCannedSetup()
+    {
+        // Disable all stars except for Sirius and Dubhe.
+        this.enabledStars.clear();
+        for (String starName : this.worldObservations.getAllStars()) {
+            boolean en = (starName.equals("Sirius") || starName.equals("Dubhe"));
+            this.enabledStars.put(starName, en);
+        }
+
+        // Build first square in SF as usual.
+        this.startNewSurfaceAt(38, -122);
+
+        // Build next near Washington, DC.
+        this.buildNextSquareAt(38, -77);
+
+        // The plan is to align with just two stars, so we need this.
+        this.assumeInfiniteStarDistance = true;
+
+        // Position the camera to see DC square.
+        this.emCanvas.cameraPosition = new Vector3f(3.51f, 0.51f, 1.25f);
+        this.emCanvas.cameraAzimuthDegrees = 348.5f;
+        this.emCanvas.cameraPitchDegrees = -25.5f;
+
+        // Use map texture and no world wirefram.
+        this.emCanvas.drawCompasses = false;
+        this.emCanvas.drawWorldWireframe = false;
+
+        // Show its star rays, and those at SF, as unit vectors.
+        this.activeSquare.drawStarRays = true;
+        this.emCanvas.drawBaseSquareStarRays = true;
+        this.emCanvas.drawUnitStarRays = true;
+
+        this.updateAndRedraw();
     }
 }
 
