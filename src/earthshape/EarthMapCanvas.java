@@ -1444,6 +1444,13 @@ public class EarthMapCanvas
         if (state == 4) {
             // Animating.
         }
+
+        if (state == 5) {
+            // Draw a unit circle in the plane perpendicular to 'baseDubhe'.
+            // This is the plane in which we will rotate to align Sirius.
+            glMaterialColor3f(gl, 0, 0, 1);
+            this.drawPerpendiculuarCircle(gl, square.center, baseDubhe, 1.0f, 80);
+        }
     }
 
     /** Draw an arc centered at 'center', with 'radius', that goes
@@ -1495,6 +1502,23 @@ public class EarthMapCanvas
         gl.glEnd();
 
         this.drawDottedLineToXZPlane(gl, s.center.plus(ray));
+    }
+
+    /** Draw a circle with 'radius' and 'center', in a plane
+      * perpendicular to 'axis', which should be a unit vector. */
+    private void drawPerpendiculuarCircle(GL2 gl, Vector3f center, Vector3f axis,
+                                          float radius, int numSegments)
+    {
+        // Obtain a vector that is orthogonal to 'axis'.
+        Vector3f orthogonal = axis.orthogonalVector();
+
+        // Sweep it around the axis.
+        gl.glBegin(GL.GL_LINE_LOOP);
+        for (int i=0; i < numSegments; i++) {
+            double angle = i * 360.0 / numSegments;
+            glVertex3f(gl, center.plus(orthogonal.rotateDeg(angle, axis)));
+        }
+        gl.glEnd();
     }
 
     /** Add a vertex from a Vector3f. */

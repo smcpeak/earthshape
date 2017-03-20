@@ -224,6 +224,25 @@ public class Vector3f {
         return this.minus(this.projectOntoUnitVector(u));
     }
 
+    /** Return a unit vector orthogonal to 'this', which must
+      * not be zero length. */
+    public Vector3f orthogonalVector()
+    {
+        assert(!this.isZero());
+
+        Vector3f v = this.cross(new Vector3f(1, 0, 0));
+        if (!v.isZero()) {
+            return v.normalize();
+        }
+
+        v = this.cross(new Vector3f(0, 1, 0));
+        if (!v.isZero()) {
+            return v.normalize();
+        }
+
+        // Maybe assertions are disabled?
+        throw new RuntimeException("orthogonalVector: input vector is zero");
+    }
 }
 
 // EOF
