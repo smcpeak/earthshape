@@ -37,6 +37,7 @@ import com.jogamp.opengl.util.texture.TextureData;
 import com.jogamp.opengl.util.texture.TextureIO;
 
 import util.FloatUtil;
+import util.Matrix3f;
 import util.Matrix4f;
 import util.Vector3d;
 import util.Vector3f;
@@ -1395,18 +1396,64 @@ public class EarthMapCanvas
         if (state == 0) {
             // Draw nothing.
         }
-        else if (state == 1) {
-            // Compute and draw the cross product of this square's
-            // Dubhe observation and that of the base square.
-            Vector3f derivedDubhe =
-                EarthShape.rayToStar(square, square.starObs.get("Dubhe"));
-            Vector3f baseDubhe =
-                EarthShape.rayToStar(base, base.starObs.get("Dubhe"));
-            Vector3f derivedCrossBaseDubhe = derivedDubhe.cross(baseDubhe);
-            logOnce("derivedCrossBaseDubhe: "+derivedCrossBaseDubhe);
 
+        // Compute and draw the cross product of this square's
+        // Dubhe observation and that of the base square.
+        Vector3f derivedDubhe =
+            EarthShape.rayToStar(square, square.starObs.get("Dubhe"));
+        Vector3f baseDubhe =
+            EarthShape.rayToStar(base, base.starObs.get("Dubhe"));
+        Vector3f derivedCrossBaseDubhe = derivedDubhe.cross(baseDubhe);
+        if (state == 1) {
             this.drawRayFromSquare(gl, square, derivedCrossBaseDubhe, 1, 0, 0);
+            logOnce("derivedCrossBaseDubhe: "+derivedCrossBaseDubhe);
         }
+
+        // Compute rot1, an angle and axis to rotate 'derivedDubhe' on top
+        // of 'baseDubhe'.
+        double derivedCrossBaseDubheLen = derivedCrossBaseDubhe.length();
+        double rot1Angle = FloatUtil.asinDeg(derivedCrossBaseDubheLen);
+        if (state == 2) {
+            logOnce("derivedCrossBaseDubheLen: "+derivedCrossBaseDubheLen);
+            logOnce("rot1Angle: "+rot1Angle);
+
+            if (derivedCrossBaseDubheLen != 0) {
+                Vector3f rot1Axis = derivedCrossBaseDubhe.times((float)(1/derivedCrossBaseDubheLen));
+                logOnce("rot1Axis: "+rot1Axis);
+                this.drawRayFromSquare(gl, square, rot1Axis, 1, 0, 0);
+
+                glMaterialColor3f(gl, 1, 0, 0);
+                this.drawAngleArc(gl, square.center, derivedDubhe, baseDubhe, 0.5f);
+
+                Matrix3f rot1 = Matrix3f.rotateDeg(rot1Angle, rot1Axis);
+                logOnce("rot1: "+rot1);
+            }
+        }
+    }
+
+    /** Draw an arc centered at 'center', with 'radius', that goes
+      * from direction 'dir1' to 'dir2'. */
+    private void drawAngleArc(GL2 gl, Vector3f center, Vector3f dir1, Vector3f dir2, float radius)
+    {
+        // Ensure both inputs are normal.
+        dir1 = dir1.normalize();
+        dir2 = dir2.normalize();
+
+        // Compute axis and angle to rotate 'dir1' to 'dir2'.
+        Vector3f axis = dir1.cross(dir2);
+        if (axis.isZero()) {
+            return;
+        }
+        double degrees = FloatUtil.asinDeg(axis.length());
+        axis = axis.normalize();
+
+        // Draw a 10-segment arc of 'radius' from 'dir1' to 'dir2'.
+        gl.glBegin(GL.GL_LINE_STRIP);
+        Vector3f dir = dir1.times(radius);
+        for (int i=0; i <= 10; i++) {
+            glVertex3f(gl, center.plus(dir.rotateDeg(degrees * i / 10.0, axis)));
+        }
+        gl.glEnd();
     }
 
     /** Log a message just once per animation state, to avoid spamming
