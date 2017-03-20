@@ -130,6 +130,7 @@ public class EarthShape extends MyJFrame {
     private JCheckBoxMenuItem drawStarRaysCBItem;
     private JCheckBoxMenuItem drawUnitStarRaysCBItem;
     private JCheckBoxMenuItem drawBaseSquareStarRaysCBItem;
+    private JCheckBoxMenuItem drawActiveSquareAtOriginCBItem;
     private JCheckBoxMenuItem useSunElevationCBItem;
     private JCheckBoxMenuItem invertHorizontalCameraMovementCBItem;
     private JCheckBoxMenuItem invertVerticalCameraMovementCBItem;
@@ -302,6 +303,7 @@ public class EarthShape extends MyJFrame {
         //   Delete - Delete active square
         //   Enter  - enter FPS mode
         //   Esc    - leave FPS mode
+        //   Ins    - canned commands
         //   Ctrl+E - build and orient to the East
         //   Ctrl+W - build and orient to the West
         //   Ctrl+N - build and orient to the North
@@ -409,6 +411,14 @@ public class EarthShape extends MyJFrame {
                 new ActionListener() {
                     public void actionPerformed(ActionEvent e) {
                         EarthShape.this.toggleDrawBaseSquareStarRays();
+                    }
+                });
+        this.drawActiveSquareAtOriginCBItem =
+            addCBMenuItem(drawMenu, "Draw the active square at the 3D coordinate origin", null,
+                this.emCanvas.drawActiveSquareAtOrigin,
+                new ActionListener() {
+                    public void actionPerformed(ActionEvent e) {
+                        EarthShape.this.toggleDrawActiveSquareAtOrigin();
                     }
                 });
         this.drawWorldWireframeCBItem =
@@ -1588,6 +1598,12 @@ public class EarthShape extends MyJFrame {
         this.emCanvas.redrawCanvas();
     }
 
+    /** Get the active square, or null if none. */
+    public SurfaceSquare getActiveSquare()
+    {
+        return this.activeSquare;
+    }
+
     /** Change which square is active. */
     public void setActiveSquare(SurfaceSquare sq)
     {
@@ -2232,6 +2248,12 @@ public class EarthShape extends MyJFrame {
         this.updateAndRedraw();
     }
 
+    private void toggleDrawActiveSquareAtOrigin()
+    {
+        this.emCanvas.drawActiveSquareAtOrigin = !this.emCanvas.drawActiveSquareAtOrigin;
+        this.updateAndRedraw();
+    }
+
     private void toggleDrawWorldWireframe()
     {
         this.emCanvas.drawWorldWireframe = !this.emCanvas.drawWorldWireframe;
@@ -2295,6 +2317,7 @@ public class EarthShape extends MyJFrame {
         this.drawStarRaysCBItem.setSelected(this.activeSquareDrawsStarRays());
         this.drawUnitStarRaysCBItem.setSelected(this.emCanvas.drawUnitStarRays);
         this.drawBaseSquareStarRaysCBItem.setSelected(this.emCanvas.drawBaseSquareStarRays);
+        this.drawActiveSquareAtOriginCBItem.setSelected(this.emCanvas.drawActiveSquareAtOrigin);
         this.drawWorldWireframeCBItem.setSelected(this.emCanvas.drawWorldWireframe);
         this.drawWorldStarsCBItem.setSelected(this.emCanvas.drawWorldStars);
 
@@ -2526,13 +2549,15 @@ public class EarthShape extends MyJFrame {
         this.assumeInfiniteStarDistance = true;
 
         // Position the camera to see DC square.
-        this.emCanvas.cameraPosition = new Vector3f(3.51f, 0.51f, 1.25f);
-        this.emCanvas.cameraAzimuthDegrees = 348.5f;
-        this.emCanvas.cameraPitchDegrees = -25.5f;
+        this.emCanvas.drawActiveSquareAtOrigin = true;
+        this.emCanvas.cameraPosition = new Vector3f(-0.19f, 0.56f, 1.20f);
+        this.emCanvas.cameraAzimuthDegrees = 0.0f;
+        this.emCanvas.cameraPitchDegrees = -11.0f;
 
-        // Use map texture and no world wirefram.
+        // Use map texture, no world wireframe, but add surface normals.
         this.emCanvas.drawCompasses = false;
         this.emCanvas.drawWorldWireframe = false;
+        this.emCanvas.drawSurfaceNormals = true;
 
         // Show its star rays, and those at SF, as unit vectors.
         this.activeSquare.drawStarRays = true;

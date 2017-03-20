@@ -182,6 +182,15 @@ public class EarthMapCanvas
       * observation lines for its base square. */
     public boolean drawBaseSquareStarRays = false;
 
+    /** If true, place the active square at the center of the
+      * 3D coordinate system.
+      *
+      * Note: At the moment, this has some bugs.  For example,
+      * stars reported by the model are drawn in the wrong place,
+      * and selecting a square by clicking on it does not work
+      * properly. */
+    public boolean drawActiveSquareAtOrigin = false;
+
     /** If true, draw the active world model if we are using one. */
     public boolean drawWorldWireframe = true;
 
@@ -417,11 +426,27 @@ public class EarthMapCanvas
 
         this.drawAxes(gl);
 
+        // Save matrix in case we translate to the active square.
+        gl.glPushMatrix();
+
+        if (this.drawActiveSquareAtOrigin &&
+            this.earthShapeFrame.getActiveSquare() != null)
+        {
+            // Translate the coordinate system so the active square is
+            // at the origin.  This does not work perfectly at the moment,
+            // but is good enough to use for a specific demonstration I
+            // have in mind.
+            Vector3f c = this.earthShapeFrame.getActiveSquare().center;
+            gl.glTranslatef(-c.x(), -c.y(), -c.z());
+        }
+
         this.doDrawWorldModel(gl);
 
         this.drawEarthSurface(gl);
 
         this.drawLabels(drawable, gl);
+
+        gl.glPopMatrix();
 
         if (this.fpsCameraMode) {
             this.drawCrosshair(gl);
@@ -1262,9 +1287,19 @@ public class EarthMapCanvas
         gl.glEnable(GL2.GL_LINE_STIPPLE);
         gl.glLineStipple(1, (short)0xF0F0);
 
+        // What Y coordinate is on the XZ plane?
+        float yCoord = 0;
+        if (this.drawActiveSquareAtOrigin &&
+            this.earthShapeFrame.getActiveSquare() != null)
+        {
+            // Hack: We translated the coordinate system so the XZ plane
+            // intersects this square's center, so use its Y coordinate.
+            yCoord = this.earthShapeFrame.getActiveSquare().center.y();
+        }
+
         gl.glBegin(GL.GL_LINES);
         glVertex3f(gl, pt);
-        glVertex3f(gl, new Vector3f(pt.x(), 0, pt.z()));
+        glVertex3f(gl, new Vector3f(pt.x(), yCoord, pt.z()));
         gl.glEnd();
 
         gl.glPopAttrib();
