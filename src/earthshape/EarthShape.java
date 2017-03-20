@@ -128,6 +128,8 @@ public class EarthShape extends MyJFrame {
     private JCheckBoxMenuItem drawSurfaceNormalsCBItem;
     private JCheckBoxMenuItem drawCelestialNorthCBItem;
     private JCheckBoxMenuItem drawStarRaysCBItem;
+    private JCheckBoxMenuItem drawUnitStarRaysCBItem;
+    private JCheckBoxMenuItem drawBaseSquareStarRaysCBItem;
     private JCheckBoxMenuItem useSunElevationCBItem;
     private JCheckBoxMenuItem invertHorizontalCameraMovementCBItem;
     private JCheckBoxMenuItem invertVerticalCameraMovementCBItem;
@@ -391,6 +393,22 @@ public class EarthShape extends MyJFrame {
                 new ActionListener() {
                     public void actionPerformed(ActionEvent e) {
                         EarthShape.this.toggleDrawStarRays();
+                    }
+                });
+        this.drawUnitStarRaysCBItem =
+            addCBMenuItem(drawMenu, "Draw star rays as unit vectors", null,
+                this.emCanvas.drawUnitStarRays,
+                new ActionListener() {
+                    public void actionPerformed(ActionEvent e) {
+                        EarthShape.this.toggleDrawUnitStarRays();
+                    }
+                });
+        this.drawBaseSquareStarRaysCBItem =
+            addCBMenuItem(drawMenu, "Draw star rays for the base square too, on the active square", null,
+                this.emCanvas.drawBaseSquareStarRays,
+                new ActionListener() {
+                    public void actionPerformed(ActionEvent e) {
+                        EarthShape.this.toggleDrawBaseSquareStarRays();
                     }
                 });
         this.drawWorldWireframeCBItem =
@@ -2178,6 +2196,18 @@ public class EarthShape extends MyJFrame {
         this.emCanvas.redrawCanvas();
     }
 
+    private void toggleDrawUnitStarRays()
+    {
+        this.emCanvas.drawUnitStarRays = !this.emCanvas.drawUnitStarRays;
+        this.updateAndRedraw();
+    }
+
+    private void toggleDrawBaseSquareStarRays()
+    {
+        this.emCanvas.drawBaseSquareStarRays = !this.emCanvas.drawBaseSquareStarRays;
+        this.updateAndRedraw();
+    }
+
     private void toggleDrawWorldWireframe()
     {
         this.emCanvas.drawWorldWireframe = !this.emCanvas.drawWorldWireframe;
@@ -2239,6 +2269,8 @@ public class EarthShape extends MyJFrame {
         this.drawSurfaceNormalsCBItem.setSelected(this.emCanvas.drawSurfaceNormals);
         this.drawCelestialNorthCBItem.setSelected(this.emCanvas.drawCelestialNorth);
         this.drawStarRaysCBItem.setSelected(this.activeSquareDrawsStarRays());
+        this.drawUnitStarRaysCBItem.setSelected(this.emCanvas.drawUnitStarRays);
+        this.drawBaseSquareStarRaysCBItem.setSelected(this.emCanvas.drawBaseSquareStarRays);
         this.drawWorldWireframeCBItem.setSelected(this.emCanvas.drawWorldWireframe);
         this.drawWorldStarsCBItem.setSelected(this.emCanvas.drawWorldStars);
 

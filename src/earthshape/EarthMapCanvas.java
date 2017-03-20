@@ -175,6 +175,13 @@ public class EarthMapCanvas
     /** If true, draw celestial North vectors on each square. */
     public boolean drawCelestialNorth = false;
 
+    /** If true, draw rays to stars as unit vectors. */
+    public boolean drawUnitStarRays = false;
+
+    /** If true, then for the active square, also draw star
+      * observation lines for its base square. */
+    public boolean drawBaseSquareStarRays = false;
+
     /** If true, draw the active world model if we are using one. */
     public boolean drawWorldWireframe = true;
 
@@ -702,8 +709,10 @@ public class EarthMapCanvas
                 gl.glNormal3fv(transformedNormal.getArray(), 0);
 
                 // Draw a box around that square.
-                glMaterialColor3f(gl, 0,1,0);       // Green
-                this.drawActiveBoxAround(gl, rootSquare, 0.02f);
+                if (this.drawWorldWireframe) {
+                    glMaterialColor3f(gl, 0,1,0);       // Green
+                    this.drawActiveBoxAround(gl, rootSquare, 0.02f);
+                }
             }
 
             if (this.drawWorldWireframe) {
@@ -1084,7 +1093,11 @@ public class EarthMapCanvas
 
         // Also draw rays to the stars observed here.
         if (s.drawStarRays) {
-            this.drawStarRays(gl, s);
+            this.drawStarRays(gl, s, s.center);
+
+            if (this.drawBaseSquareStarRays && s.baseSquare != null) {
+                this.drawStarRays(gl, s.baseSquare, s.center);
+            }
         }
     }
 
@@ -1145,8 +1158,11 @@ public class EarthMapCanvas
     }
 
     /** Draw rays from the center of 's' to each of its associated
-      * star observations. */
-    private void drawStarRays(GL2 gl, SurfaceSquare s)
+      * star observations.  'starRaysOrigin' says where to draw the
+      * base of each ray.  Normally it is 's.center', but it is
+      * instead the center of a derived square when we are drawing
+      * a base square's observation on the derived square. */
+    private void drawStarRays(GL2 gl, SurfaceSquare s, Vector3f starRaysOrigin)
     {
         gl.glDisable(GL.GL_TEXTURE_2D);
         gl.glNormal3f(0,1,0);
@@ -1163,7 +1179,7 @@ public class EarthMapCanvas
             gl.glBegin(GL.GL_LINES);
             glMaterialColor3f(gl, rayBrightness, rayBrightness, rayBrightness);
 
-            glVertex3f(gl, s.center);
+            glVertex3f(gl, starRaysOrigin);
 
             // The observation is just a direction, so we draw
             // the ray as infinitely long (except it will be
@@ -1173,7 +1189,15 @@ public class EarthMapCanvas
             // along this line.
             Vector4f starRayDirection = new Vector4f(
                 starRay.x(), starRay.y(), starRay.z(), 0);
-            gl.glVertex4fv(starRayDirection.getArray(), 0);
+
+            if (this.drawUnitStarRays) {
+                // Draw the star ray as a unit vector.
+                glVertex3f(gl, starRaysOrigin.plus(starRay));
+            }
+            else {
+                // Draw it as a line to a point at infinity.
+                gl.glVertex4fv(starRayDirection.getArray(), 0);
+            }
 
             gl.glEnd();
 
