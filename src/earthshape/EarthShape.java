@@ -1651,8 +1651,8 @@ public class EarthShape extends MyJFrame {
         return this.activeSquare;
     }
 
-    /** Change which square is active. */
-    public void setActiveSquare(SurfaceSquare sq)
+    /** Change which square is active, but do not trigger a redraw. */
+    public void setActiveSquareNoRedraw(SurfaceSquare sq)
     {
         if (this.activeSquare != null) {
             this.activeSquare.showAsActive = false;
@@ -1661,7 +1661,12 @@ public class EarthShape extends MyJFrame {
         if (this.activeSquare != null) {
             this.activeSquare.showAsActive = true;
         }
+    }
 
+    /** Change which square is active. */
+    public void setActiveSquare(SurfaceSquare sq)
+    {
+        this.setActiveSquareNoRedraw(sq);
         this.updateAndRedraw();
     }
 
@@ -2613,10 +2618,16 @@ public class EarthShape extends MyJFrame {
         this.assumeInfiniteStarDistance = true;
 
         // Position the camera to see DC square.
-        this.emCanvas.drawActiveSquareAtOrigin = true;
-        this.emCanvas.cameraPosition = new Vector3f(-0.19f, 0.56f, 1.20f);
-        this.emCanvas.cameraAzimuthDegrees = 0.0f;
-        this.emCanvas.cameraPitchDegrees = -11.0f;
+        if (this.emCanvas.drawActiveSquareAtOrigin) {
+            // This is a canned command in the middle of a session.
+            // Do not reposition the camera.
+        }
+        else {
+            this.emCanvas.drawActiveSquareAtOrigin = true;
+            this.emCanvas.cameraPosition = new Vector3f(-0.19f, 0.56f, 1.20f);
+            this.emCanvas.cameraAzimuthDegrees = 0.0f;
+            this.emCanvas.cameraPitchDegrees = -11.0f;
+        }
 
         // Use wireframes for squares, no world wireframe, but add surface normals.
         this.emCanvas.drawWireframeSquares = true;
@@ -2627,6 +2638,9 @@ public class EarthShape extends MyJFrame {
         this.activeSquare.drawStarRays = true;
         this.emCanvas.drawBaseSquareStarRays = true;
         this.emCanvas.drawUnitStarRays = true;
+
+        // Reset the animation.
+        this.emCanvas.activeSquareAnimationState = 0;
 
         this.updateAndRedraw();
     }
@@ -2642,6 +2656,83 @@ public class EarthShape extends MyJFrame {
             this.emCanvas.activeSquareAnimationState += s;
         }
         this.updateAndRedraw();
+    }
+
+    // ------------------------------- Animation --------------------------------
+    /** When animation begins, this is the rotation of the active
+      * square relative to its base. */
+    private Vector3f animatedRotationStartRotation;
+
+    /** Angle through which to rotate the active square. */
+    private double animatedRotationAngle;
+
+    /** Axis about which to rotate the active square. */
+    private Vector3f animatedRotationAxis;
+
+    /** Seconds the animation should take to complete. */
+    private float animatedRotationSeconds;
+
+    /** How many seconds have elapsed since we started animating.
+      * This is clamped to 'animatedRotationSeconds', and when
+      * it is equal, the animation is complete. */
+    private float animatedRotationElapsed;
+
+    /** Start a new rotation animation of the active square by
+      * 'angle' degrees about 'axis' for 'seconds'. */
+    public void beginAnimatedRotation(double angle, Vector3f axis, float seconds)
+    {
+        if (this.activeSquare != null &&
+            this.activeSquare.baseSquare != null)
+        {
+            log("starting rotation animation");
+            this.animatedRotationStartRotation = this.activeSquare.rotationFromBase;
+            this.animatedRotationAngle = angle;
+            this.animatedRotationAxis = axis;
+            this.animatedRotationSeconds = seconds;
+            this.animatedRotationElapsed = 0;
+        }
+    }
+
+    /** If animating, advance to the next frame, based on 'deltaSeconds'
+      * having elapsed since the last animated frame.
+      *
+      * This should *not* trigger a redraw, since that will cause this
+      * function to be called again during the same frame. */
+    public void nextAnimatedRotationFrame(float deltaSeconds)
+    {
+        if (this.animatedRotationElapsed < this.animatedRotationSeconds &&
+            this.activeSquare != null &&
+            this.activeSquare.baseSquare != null)
+        {
+            this.animatedRotationElapsed = FloatUtil.clampf(
+                this.animatedRotationElapsed + deltaSeconds, 0, this.animatedRotationSeconds);
+
+            // How much do we want the square to be rotated,
+            // relative to its orientation at the start of
+            // the animation?
+            double rotFraction = this.animatedRotationElapsed / this.animatedRotationSeconds;
+            Vector3f partialRot = this.animatedRotationAxis.timesd(
+                this.animatedRotationAngle * rotFraction);
+
+            // Compose with the original orientation.
+            Vector3f newRotationFromBase =
+                Vector3f.composeRotations(this.animatedRotationStartRotation, partialRot);
+
+            SurfaceSquare s = replaceWithNewRotation(
+                this.activeSquare.baseSquare, this.activeSquare, newRotationFromBase);
+            this.setActiveSquareNoRedraw(s);
+
+            if (this.animatedRotationElapsed >= this.animatedRotationSeconds) {
+                log("rotation animation finished");
+            }
+        }
+    }
+
+    /** Do any "physics" world updates.  This is invoked prior to
+      * rendering a frame in the GL canvas. */
+    public void updatePhysics(float elapsedSeconds)
+    {
+        this.nextAnimatedRotationFrame(elapsedSeconds);
     }
 }
 

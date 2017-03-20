@@ -1363,7 +1363,7 @@ public class EarthMapCanvas
         gl.glPushAttrib(GL2.GL_ALL_ATTRIB_BITS);
         gl.glLineWidth(1);
         gl.glEnable(GL2.GL_LINE_STIPPLE);
-        gl.glLineStipple(1, (short)0xF0F0);
+        gl.glLineStipple(1, (short)0xF000);
 
         // What Y coordinate is on the XZ plane?
         float yCoord = 0;
@@ -1416,18 +1416,33 @@ public class EarthMapCanvas
         if (state == 2) {
             logOnce("derivedCrossBaseDubheLen: "+derivedCrossBaseDubheLen);
             logOnce("rot1Angle: "+rot1Angle);
+        }
 
-            if (derivedCrossBaseDubheLen != 0) {
-                Vector3f rot1Axis = derivedCrossBaseDubhe.times((float)(1/derivedCrossBaseDubheLen));
-                logOnce("rot1Axis: "+rot1Axis);
-                this.drawRayFromSquare(gl, square, rot1Axis, 1, 0, 0);
+        Vector3f rot1Axis = new Vector3f(1, 0, 0);   // Harmless for degenerate case.
+        if (derivedCrossBaseDubheLen != 0) {
+            rot1Axis = derivedCrossBaseDubhe.times((float)(1/derivedCrossBaseDubheLen));
+        }
 
-                glMaterialColor3f(gl, 1, 0, 0);
-                this.drawAngleArc(gl, square.center, derivedDubhe, baseDubhe, 0.5f);
+        if (state == 2) {
+            logOnce("rot1Axis: "+rot1Axis);
+            this.drawRayFromSquare(gl, square, rot1Axis, 1, 0, 0);
 
-                Matrix3f rot1 = Matrix3f.rotateDeg(rot1Angle, rot1Axis);
-                logOnce("rot1: "+rot1);
-            }
+            glMaterialColor3f(gl, 1, 0, 0);
+            this.drawAngleArc(gl, square.center, derivedDubhe, baseDubhe, 0.5f);
+        }
+
+        Matrix3f rot1 = Matrix3f.rotateDeg(rot1Angle, rot1Axis);
+        if (state == 2) {
+            logOnce("rot1: "+rot1);
+        }
+
+        if (state == 3) {
+            this.earthShapeFrame.beginAnimatedRotation(rot1Angle, rot1Axis, 3 /*sec*/);
+            this.activeSquareAnimationState = 4;
+        }
+
+        if (state == 4) {
+            // Animating.
         }
     }
 
@@ -1577,6 +1592,7 @@ public class EarthMapCanvas
         // second varies.
         long newMillis = System.currentTimeMillis();
         float elapsedSeconds = (newMillis - this.lastPhysicsUpdateMillis) / 1000.0f;
+        this.lastPhysicsUpdateMillis = newMillis;
 
         // Update camera velocity based on move keys.
         boolean moving = false;
@@ -1620,8 +1636,9 @@ public class EarthMapCanvas
             }
         }
 
+        this.earthShapeFrame.updatePhysics(elapsedSeconds);
+
         this.earthShapeFrame.updateUIState();
-        this.lastPhysicsUpdateMillis = newMillis;
     }
 
     /** Get the square after 'sq' in 'surfaceSquares'.  This behaves like
