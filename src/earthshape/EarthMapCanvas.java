@@ -1499,13 +1499,66 @@ public class EarthMapCanvas
         // Normalize the projections.
         Vector3f baseBProjNorm = baseBProj.normalize();
         Vector3f derivedBRot1ProjNorm = derivedBRot1Proj.normalize();
-        if (state == 7) {
+        if (7 <= state && state <= 9) {
             logOnce("baseBProjNorm: "+baseBProjNorm);
             logOnce("derivedBRot1ProjNorm: "+derivedBRot1ProjNorm);
 
             this.drawRayFromSquare(gl, square, baseBProjNorm, 62.0f/255, 100.0f/255, 126.0f/255);
             this.drawRayFromSquare(gl, square, derivedBRot1ProjNorm, 0.5f, 204.0f/255, 1);
         }
+
+        // Compute and draw the cross product of the projected,
+        // normalized B observations.
+        Vector3f derivedCrossBaseB = derivedBRot1ProjNorm.cross(baseBProjNorm);
+        if (state == 8) {
+            this.drawRayFromSquare(gl, square, derivedCrossBaseB, 1, 0, 0);
+            logOnce("derivedCrossBaseB: "+derivedCrossBaseB);
+        }
+
+        // Compute rot2, an angle and axis to rotate the projection of
+        // the derived B observation (after rot1) onto the projection
+        // of the base B observation.
+        double derivedCrossBaseBLen = derivedCrossBaseB.length();
+        double rot2Angle = FloatUtil.asinDeg(derivedCrossBaseBLen);
+        Vector3f rot2Axis = new Vector3f(1, 0, 0);   // Harmless for degenerate case.
+        if (derivedCrossBaseBLen != 0) {
+            rot2Axis = derivedCrossBaseB.times((float)(1/derivedCrossBaseBLen));
+        }
+        Matrix3f rot2 = Matrix3f.rotateDeg(rot2Angle, rot2Axis);
+
+        // Compute the effect of that rotation on the derived
+        // observation vectors as already rotated by rot1, and
+        // on their projection of B.  Note that the effect on
+        // A should be nothing since it is on the rotation axis.
+        Vector3f derivedARot2 = rot2.times(derivedARot1);
+        Vector3f derivedBRot2 = rot2.times(derivedBRot1);
+        Vector3f derivedBRot1ProjNormRot2 = rot2.times(derivedBRot1ProjNorm);
+
+        if (state == 9) {
+            logOnce("derivedCrossBaseBLen: "+derivedCrossBaseBLen);
+            logOnce("rot2Angle: "+rot2Angle);
+            logOnce("rot2Axis: "+rot2Axis);
+            this.drawRayFromSquare(gl, square, rot2Axis, 1, 0, 0);
+
+            glMaterialColor3f(gl, 1, 0, 0);
+            this.drawAngleArc(gl, square.center, derivedBRot1ProjNorm, baseBProjNorm, 0.5f);
+
+            logOnce("rot2: "+rot2);
+
+            logOnce("derivedARot2: "+derivedARot2);
+            logOnce("derivedBRot2: "+derivedBRot2);
+            logOnce("derivedBRot1ProjNormRot2: "+derivedBRot1ProjNormRot2);
+        }
+
+        if (state == 10) {
+            this.earthShapeFrame.beginAnimatedRotation(rot2Angle, rot2Axis, 2 /*sec*/);
+            this.activeSquareAnimationState = 11;
+        }
+
+        if (state == 11) {
+            // Animating.
+        }
+
     }
 
     /** Draw an arc centered at 'center', with 'radius', that goes
