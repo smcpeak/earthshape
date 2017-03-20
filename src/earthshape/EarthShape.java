@@ -1765,7 +1765,7 @@ public class EarthShape extends MyJFrame {
     /** Replace the square 'derived', with a new square that
       * is computed from 'base' by applying 'newRotation'.
       * Return the new square. */
-    private SurfaceSquare replaceWithNewRotation(
+    public SurfaceSquare replaceWithNewRotation(
         SurfaceSquare base, SurfaceSquare derived, Vector3f newRotation)
     {
         // Replace the derived square with a new one created by

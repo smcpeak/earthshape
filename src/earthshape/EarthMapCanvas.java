@@ -1559,6 +1559,53 @@ public class EarthMapCanvas
             // Animating.
         }
 
+        if (state == 12) {
+            // Reset the rotation state of the square.
+            square = this.earthShapeFrame.replaceWithNewRotation(base, square, new Vector3f(0,0,0));
+            this.earthShapeFrame.setActiveSquareNoRedraw(square);
+        }
+
+        // Compute the composed rotation.
+        Matrix3f rot = rot2.times(rot1);
+
+        // Compute celestial North in the base square.
+        Vector3f baseCelestialNorth =
+            (new Vector3f(0, 0, -1)).rotateDeg(square.latitude, new Vector3f(1, 0, 0));
+
+        // Apply the rotation to it, which should not change it, thereby
+        // demonstrating it is an eigenvector.
+        Vector3f baseCelestialNorthRot = rot.times(baseCelestialNorth);
+
+        // Get the angle of rot.
+        double rotAngle;
+        {
+            Vector3f orthogonal = baseCelestialNorth.orthogonalVector();
+            Vector3f orthogonalRot = rot.times(orthogonal);
+            rotAngle = orthogonal.separationAngleDegrees(orthogonalRot);
+        }
+
+        if (state == 13) {
+            logOnce("rot: "+rot);
+            logOnce("baseCelestialNorth: "+baseCelestialNorth);
+            logOnce("baseCelestialNorthRot: "+baseCelestialNorthRot+
+                    ", diff="+(baseCelestialNorth.minus(baseCelestialNorthRot).length()));
+            logOnce("rotAngle: "+rotAngle);
+        }
+
+        if (13 <= state && state <= 15) {
+            this.drawRayFromSquare(gl, square, baseCelestialNorth, 1, 108.0f/255, 155.0f/255);
+        }
+
+        if (state == 14) {
+            this.earthShapeFrame.beginAnimatedRotation(rotAngle, baseCelestialNorth, 2 /*sec*/);
+            this.activeSquareAnimationState = 15;
+        }
+
+        if (state == 15) {
+            // Animating.
+        }
+
+
     }
 
     /** Draw an arc centered at 'center', with 'radius', that goes
