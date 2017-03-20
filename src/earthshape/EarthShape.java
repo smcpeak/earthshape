@@ -131,6 +131,7 @@ public class EarthShape extends MyJFrame {
     private JCheckBoxMenuItem drawStarRaysCBItem;
     private JCheckBoxMenuItem drawUnitStarRaysCBItem;
     private JCheckBoxMenuItem drawBaseSquareStarRaysCBItem;
+    private JCheckBoxMenuItem drawTravelPathCBItem;
     private JCheckBoxMenuItem drawActiveSquareAtOriginCBItem;
     private JCheckBoxMenuItem useSunElevationCBItem;
     private JCheckBoxMenuItem invertHorizontalCameraMovementCBItem;
@@ -429,6 +430,14 @@ public class EarthShape extends MyJFrame {
                 new ActionListener() {
                     public void actionPerformed(ActionEvent e) {
                         EarthShape.this.toggleDrawBaseSquareStarRays();
+                    }
+                });
+        this.drawTravelPathCBItem =
+            addCBMenuItem(drawMenu, "Draw the travel path from base square to active square", null,
+                this.emCanvas.drawTravelPath,
+                new ActionListener() {
+                    public void actionPerformed(ActionEvent e) {
+                        EarthShape.this.toggleDrawTravelPath();
                     }
                 });
         this.drawActiveSquareAtOriginCBItem =
@@ -2312,6 +2321,12 @@ public class EarthShape extends MyJFrame {
         this.updateAndRedraw();
     }
 
+    private void toggleDrawTravelPath()
+    {
+        this.emCanvas.drawTravelPath  = !this.emCanvas.drawTravelPath;
+        this.updateAndRedraw();
+    }
+
     private void toggleDrawActiveSquareAtOrigin()
     {
         this.emCanvas.drawActiveSquareAtOrigin = !this.emCanvas.drawActiveSquareAtOrigin;
@@ -2382,6 +2397,7 @@ public class EarthShape extends MyJFrame {
         this.drawStarRaysCBItem.setSelected(this.activeSquareDrawsStarRays());
         this.drawUnitStarRaysCBItem.setSelected(this.emCanvas.drawUnitStarRays);
         this.drawBaseSquareStarRaysCBItem.setSelected(this.emCanvas.drawBaseSquareStarRays);
+        this.drawTravelPathCBItem.setSelected(this.emCanvas.drawTravelPath);
         this.drawActiveSquareAtOriginCBItem.setSelected(this.emCanvas.drawActiveSquareAtOrigin);
         this.drawWorldWireframeCBItem.setSelected(this.emCanvas.drawWorldWireframe);
         this.drawWorldStarsCBItem.setSelected(this.emCanvas.drawWorldStars);
@@ -2624,15 +2640,19 @@ public class EarthShape extends MyJFrame {
         }
         else {
             this.emCanvas.drawActiveSquareAtOrigin = true;
-            this.emCanvas.cameraPosition = new Vector3f(-0.19f, 0.56f, 1.20f);
-            this.emCanvas.cameraAzimuthDegrees = 0.0f;
-            this.emCanvas.cameraPitchDegrees = -11.0f;
+//            this.emCanvas.cameraPosition = new Vector3f(-0.19f, 0.56f, 1.20f);
+//            this.emCanvas.cameraAzimuthDegrees = 0.0f;
+//            this.emCanvas.cameraPitchDegrees = -11.0f;
+            this.emCanvas.cameraPosition = new Vector3f(-0.89f, 0.52f, -1.06f);
+            this.emCanvas.cameraAzimuthDegrees = 214.0f;
+            this.emCanvas.cameraPitchDegrees = 1.0f;
         }
 
         // Use wireframes for squares, no world wireframe, but add surface normals.
         this.emCanvas.drawWireframeSquares = true;
         this.emCanvas.drawWorldWireframe = false;
         this.emCanvas.drawSurfaceNormals = true;
+        this.emCanvas.drawTravelPath = false;
 
         // Show its star rays, and those at SF, as unit vectors.
         this.activeSquare.drawStarRays = true;

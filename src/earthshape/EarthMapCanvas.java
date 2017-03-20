@@ -187,6 +187,11 @@ public class EarthMapCanvas
       * observation lines for its base square. */
     public boolean drawBaseSquareStarRays = false;
 
+    /** If true, for the active square, draw the line segments
+      * connecting it to the old square that represent the
+      * shortest travel path between them. */
+    public boolean drawTravelPath = true;
+
     /** If true, place the active square at the center of the
       * 3D coordinate system.
       *
@@ -1252,7 +1257,9 @@ public class EarthMapCanvas
 
         // Also draw two line segments showing the translational
         // path from the base square.
-        if (s.baseSquare != null && s.baseMidpoint != null) {
+        if (this.drawTravelPath &&
+            s.baseSquare != null && s.baseMidpoint != null)
+        {
             gl.glBegin(GL.GL_LINE_STRIP);
             glMaterialColor3f(gl, 0, 1, 0);    // Green
 
@@ -1467,7 +1474,7 @@ public class EarthMapCanvas
             // Animating.
         }
 
-        if (state == 5 || state == 6) {
+        if (5 <= state && state <= 7) {
             // Draw a unit circle in the plane perpendicular to 'baseA'.
             // This is the plane in which we will rotate to align B.
             glMaterialColor3f(gl, 0, 0, 1);
@@ -1487,6 +1494,17 @@ public class EarthMapCanvas
 
             this.drawRayFromSquare(gl, square, baseBProj, 62.0f/255, 100.0f/255, 126.0f/255);
             this.drawRayFromSquare(gl, square, derivedBRot1Proj, 0.5f, 204.0f/255, 1);
+        }
+
+        // Normalize the projections.
+        Vector3f baseBProjNorm = baseBProj.normalize();
+        Vector3f derivedBRot1ProjNorm = derivedBRot1Proj.normalize();
+        if (state == 7) {
+            logOnce("baseBProjNorm: "+baseBProjNorm);
+            logOnce("derivedBRot1ProjNorm: "+derivedBRot1ProjNorm);
+
+            this.drawRayFromSquare(gl, square, baseBProjNorm, 62.0f/255, 100.0f/255, 126.0f/255);
+            this.drawRayFromSquare(gl, square, derivedBRot1ProjNorm, 0.5f, 204.0f/255, 1);
         }
     }
 
