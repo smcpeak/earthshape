@@ -100,7 +100,7 @@ public class EarthMapCanvas
     // ---------- Instance variables ----------
     /** EarthShape application frame into which we are embedded.  That
       * frame provides some UI support, including the status bar. */
-    EarthShape earthShapeFrame;
+    private EarthShape earthShapeFrame;
 
     // ---- Textures ----
     /** Compass rose texture.  This is only valid between 'init' and
@@ -165,6 +165,10 @@ public class EarthMapCanvas
     public boolean invertVerticalCameraMovement = true;
 
     // ---- Draw options ----
+    /** If true, draw surfaces as simple wireframes.  This takes
+      * precedence over 'drawCompasses'. */
+    public boolean drawWireframeSquares = false;
+
     /** If true, draw surfaces using the abstract compass texture.
       * Otherwise, draw them using the EarthMap texture. */
     public boolean drawCompasses = true;
@@ -190,6 +194,15 @@ public class EarthMapCanvas
       * and selecting a square by clicking on it does not work
       * properly. */
     public boolean drawActiveSquareAtOrigin = false;
+
+    /** Which of several frames, of an ad-hoc animation I am
+      * creating, to draw.  0 means do not draw anything extra. */
+    public int activeSquareAnimationState = 0;
+
+    /** The animation state during the previous drawn frame.  This
+      * is used to limit certain log messages to once per animation
+      * state instead of once per frame. */
+    private int lastAnimationStateLogged = 0;
 
     /** If true, draw the active world model if we are using one. */
     public boolean drawWorldWireframe = true;
@@ -453,6 +466,8 @@ public class EarthMapCanvas
         }
 
         gl.glFlush();
+
+        this.lastAnimationStateLogged = this.activeSquareAnimationState;
     }
 
     /** Draw a crosshair in the middle of the canvas. */
@@ -899,6 +914,51 @@ public class EarthMapCanvas
             new float[] { r,g,b,1 }, 0);
     }
 
+    private static void glMaterialColor4f(GL2 gl, float r, float g, float b, float a)
+    {
+        gl.glMaterialfv(GL.GL_FRONT_AND_BACK, GL2.GL_AMBIENT_AND_DIFFUSE,
+            new float[] { r,g,b,a }, 0);
+    }
+
+    /** Draw a rectangle as a wireframe. */
+    private void drawWireframeSquare(
+        GL2 gl,
+        Vector3f nw,
+        Vector3f sw,
+        Vector3f ne,
+        Vector3f se)
+    {
+        gl.glPushAttrib(GL2.GL_ALL_ATTRIB_BITS);
+        gl.glDisable(GL.GL_TEXTURE_2D);
+
+        // Dark green with some transparency.
+        glMaterialColor4f(gl, 0, 0.5f, 0, 0.2f);
+        gl.glNormal3f(0, 1, 0);
+
+        // Draw an opaque bounding square (blending is
+        // not yet enabled here, so the alpha is ignored).
+        gl.glBegin(GL.GL_LINE_LOOP);
+        gl.glVertex3fv(nw.getArray(), 0);
+        gl.glVertex3fv(sw.getArray(), 0);
+        gl.glVertex3fv(se.getArray(), 0);
+        gl.glVertex3fv(ne.getArray(), 0);
+        gl.glEnd();
+
+        // Now enable blending.
+        gl.glEnable(GL.GL_BLEND);
+        gl.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA);
+
+        // Draw a translucent green square.
+        gl.glBegin(GL.GL_TRIANGLE_STRIP);
+        gl.glVertex3fv(nw.getArray(), 0);
+        gl.glVertex3fv(sw.getArray(), 0);
+        gl.glVertex3fv(ne.getArray(), 0);
+        gl.glVertex3fv(se.getArray(), 0);
+        gl.glEnd();
+
+        gl.glPopAttrib();
+    }
+
     /** Draw a rectangle with the compass texture. */
     private void drawCompassRect(
         GL2 gl,
@@ -1077,7 +1137,12 @@ public class EarthMapCanvas
         Vector3f ne = s.center.plus(n).plus(e);
         Vector3f se = s.center.minus(n).plus(e);
 
-        if (this.drawCompasses) {
+        if (this.drawWireframeSquares) {
+            // Don't actually draw anything yet.  The square uses
+            // the GL "blend" feature to simulate translucency,
+            // which requires that I draw the opaque elements first.
+        }
+        else if (this.drawCompasses) {
             this.drawCompassRect(gl, nw, sw, ne, se);
         }
         else {
@@ -1120,9 +1185,21 @@ public class EarthMapCanvas
         if (s.drawStarRays) {
             this.drawStarRays(gl, s, s.center);
 
-            if (this.drawBaseSquareStarRays && s.baseSquare != null) {
+            if (this.drawBaseSquareStarRays && s.showAsActive && s.baseSquare != null) {
                 this.drawStarRays(gl, s.baseSquare, s.center);
+
+                this.drawActiveSquareAnimationState(gl, s);
             }
+        }
+
+        // Finally, draw the translucent square, if enabled.
+        //
+        // Note: I'm not really doing this right, since I do not
+        // globally order my draw commands in the way needed to
+        // get translucency for everything.  Currently, my goal
+        // is just to make it look right for one square.
+        if (this.drawWireframeSquares) {
+            this.drawWireframeSquare(gl, nw, sw, ne, se);
         }
     }
 
@@ -1303,6 +1380,59 @@ public class EarthMapCanvas
         gl.glEnd();
 
         gl.glPopAttrib();
+    }
+
+    /** Draw one of a number scenes for an animation I am creating,
+      * depending on the 'activeSquareAnimationState'. */
+    private void drawActiveSquareAnimationState(GL2 gl, SurfaceSquare square)
+    {
+        SurfaceSquare base = square.baseSquare;
+        if (base == null) {
+            return;     // Defensive.
+        }
+
+        int state = this.activeSquareAnimationState;
+        if (state == 0) {
+            // Draw nothing.
+        }
+        else if (state == 1) {
+            // Compute and draw the cross product of this square's
+            // Dubhe observation and that of the base square.
+            Vector3f derivedDubhe =
+                EarthShape.rayToStar(square, square.starObs.get("Dubhe"));
+            Vector3f baseDubhe =
+                EarthShape.rayToStar(base, base.starObs.get("Dubhe"));
+            Vector3f derivedCrossBaseDubhe = derivedDubhe.cross(baseDubhe);
+            logOnce("derivedCrossBaseDubhe: "+derivedCrossBaseDubhe);
+
+            this.drawRayFromSquare(gl, square, derivedCrossBaseDubhe, 1, 0, 0);
+        }
+    }
+
+    /** Log a message just once per animation state, to avoid spamming
+      * the console with the same information over and over. */
+    private void logOnce(String msg)
+    {
+        if (this.lastAnimationStateLogged == this.activeSquareAnimationState) {
+            // Do nothing, we already logged this message.
+        }
+        else {
+            log(msg);
+        }
+    }
+
+    /** Draw 'ray' from the center of 's' in given color. */
+    private void drawRayFromSquare(GL2 gl, SurfaceSquare s, Vector3f ray,
+                                   float r, float g, float b)
+    {
+        glMaterialColor3f(gl, r, g, b);
+
+        gl.glBegin(GL.GL_LINES);
+        glVertex3f(gl, s.center);
+        glVertex3f(gl, s.center.plus(ray));
+        gl.glEnd();
+
+        this.drawDottedLineToXZPlane(gl, s.center.plus(ray));
     }
 
     /** Add a vertex from a Vector3f. */

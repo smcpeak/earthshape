@@ -124,6 +124,7 @@ public class EarthShape extends MyJFrame {
     private InfoPanel infoPanel;
 
     // Menu items to toggle various options.
+    private JCheckBoxMenuItem drawWireframeSquaresCBItem;
     private JCheckBoxMenuItem drawCompassesCBItem;
     private JCheckBoxMenuItem drawSurfaceNormalsCBItem;
     private JCheckBoxMenuItem drawCelestialNorthCBItem;
@@ -237,6 +238,7 @@ public class EarthShape extends MyJFrame {
             "U/O - Roll active square left or right.\n"+
             "I/K - Pitch active square down or up.\n"+
             "J/L - Yaw active square left or right.\n"+
+            "1   - Reset adjustment amount to 1 degree.\n"+
             "-/= - Decrease or increase adjustment amount.\n"+
             "; (semicolon) - Make recommended active square adjustment.\n"+
             "/ (slash) - Automatically orient active square.\n"+
@@ -248,6 +250,8 @@ public class EarthShape extends MyJFrame {
             ", (comma) - Move to previous active square.\n"+
             ". (period) - Move to next active square.\n"+
             "Delete - Delete active square.\n"+
+            "\n"+
+            "0/PgUp/PgDn - Change animation state (not for general use)\n"+
             "";
         JOptionPane.showMessageDialog(this, bindings, "Bindings", JOptionPane.INFORMATION_MESSAGE);
     }
@@ -292,6 +296,8 @@ public class EarthShape extends MyJFrame {
         //   x
         //   y
         //   z - Move camera down
+        //   0 - Reset animation state to 0
+        //   1 - Reset adjustment amount to 1
         //   - - Decrease adjustment amount
         //   = - Increase adjustment amount
         //   ; - One recommended rotation adjustment
@@ -304,6 +310,8 @@ public class EarthShape extends MyJFrame {
         //   Enter  - enter FPS mode
         //   Esc    - leave FPS mode
         //   Ins    - canned commands
+        //   PgUp   - Decrement animation state
+        //   PgDn   - Increment animation state
         //   Ctrl+E - build and orient to the East
         //   Ctrl+W - build and orient to the West
         //   Ctrl+N - build and orient to the North
@@ -315,6 +323,7 @@ public class EarthShape extends MyJFrame {
         menuBar.add(this.buildSelectMenu());
         menuBar.add(this.buildEditMenu());
         menuBar.add(this.buildNavigateMenu());
+        menuBar.add(this.buildAnimateMenu());
         menuBar.add(this.buildOptionsMenu());
         menuBar.add(this.buildHelpMenu());
     }
@@ -366,8 +375,17 @@ public class EarthShape extends MyJFrame {
     private JMenu buildDrawMenu()
     {
         JMenu drawMenu = new JMenu("Draw");
+        this.drawWireframeSquaresCBItem =
+            addCBMenuItem(drawMenu, "Draw squares as wireframes with translucent squares", null,
+                this.emCanvas.drawWireframeSquares,
+                new ActionListener() {
+                    public void actionPerformed(ActionEvent e) {
+                        EarthShape.this.toggleDrawWireframeSquares();
+                    }
+                });
         this.drawCompassesCBItem =
-            addCBMenuItem(drawMenu, "Draw squares with compasses", KeyStroke.getKeyStroke('c'),
+            addCBMenuItem(drawMenu, "Draw squares with compass texture (vs. world map)",
+                KeyStroke.getKeyStroke('c'),
                 this.emCanvas.drawCompasses,
                 new ActionListener() {
                     public void actionPerformed(ActionEvent e) {
@@ -654,6 +672,35 @@ public class EarthShape extends MyJFrame {
                 }
             });
         return navigateMenu;
+    }
+
+    private JMenu buildAnimateMenu()
+    {
+        JMenu menu = new JMenu("Animate");
+
+        addMenuItem(menu, "Reset to animation state 0",
+            KeyStroke.getKeyStroke('0'),
+            new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    EarthShape.this.setAnimationState(0);
+                }
+            });
+        addMenuItem(menu, "Increment animation state",
+            KeyStroke.getKeyStroke(KeyEvent.VK_PAGE_DOWN, 0),
+            new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    EarthShape.this.setAnimationState(+1);
+                }
+            });
+        addMenuItem(menu, "Decrement animation state",
+            KeyStroke.getKeyStroke(KeyEvent.VK_PAGE_UP, 0),
+            new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    EarthShape.this.setAnimationState(-1);
+                }
+            });
+
+        return menu;
     }
 
     private JMenu buildOptionsMenu()
@@ -2202,10 +2249,22 @@ public class EarthShape extends MyJFrame {
         });
     }
 
+    /** Toggle the 'drawWireframeSquares' flag. */
+    public void toggleDrawWireframeSquares()
+    {
+        this.emCanvas.drawWireframeSquares = !this.emCanvas.drawWireframeSquares;
+        this.updateAndRedraw();
+    }
+
     /** Toggle the 'drawCompasses' flag, then update state and redraw. */
     public void toggleDrawCompasses()
     {
         log("toggleDrawCompasses");
+
+        // The compass flag is ignored when wireframe is true, so if
+        // we are toggling compass, also clear wireframe.
+        this.emCanvas.drawWireframeSquares = false;
+
         this.emCanvas.drawCompasses = !this.emCanvas.drawCompasses;
         this.updateAndRedraw();
     }
@@ -2311,6 +2370,7 @@ public class EarthShape extends MyJFrame {
     /** Set the state of stateful menu items. */
     private void setMenuState()
     {
+        this.drawWireframeSquaresCBItem.setSelected(this.emCanvas.drawWireframeSquares);
         this.drawCompassesCBItem.setSelected(this.emCanvas.drawCompasses);
         this.drawSurfaceNormalsCBItem.setSelected(this.emCanvas.drawSurfaceNormals);
         this.drawCelestialNorthCBItem.setSelected(this.emCanvas.drawCelestialNorth);
@@ -2337,6 +2397,10 @@ public class EarthShape extends MyJFrame {
     private void setInfoPanel()
     {
         StringBuilder sb = new StringBuilder();
+
+        if (this.emCanvas.activeSquareAnimationState != 0) {
+            sb.append("Animation state: "+this.emCanvas.activeSquareAnimationState+"\n");
+        }
 
         if (this.activeSquare == null) {
             sb.append("No active square.\n");
@@ -2554,8 +2618,8 @@ public class EarthShape extends MyJFrame {
         this.emCanvas.cameraAzimuthDegrees = 0.0f;
         this.emCanvas.cameraPitchDegrees = -11.0f;
 
-        // Use map texture, no world wireframe, but add surface normals.
-        this.emCanvas.drawCompasses = false;
+        // Use wireframes for squares, no world wireframe, but add surface normals.
+        this.emCanvas.drawWireframeSquares = true;
         this.emCanvas.drawWorldWireframe = false;
         this.emCanvas.drawSurfaceNormals = true;
 
@@ -2564,6 +2628,19 @@ public class EarthShape extends MyJFrame {
         this.emCanvas.drawBaseSquareStarRays = true;
         this.emCanvas.drawUnitStarRays = true;
 
+        this.updateAndRedraw();
+    }
+
+    /** Set the animation state either to 0, or to an amount
+      * offset by 's'. */
+    private void setAnimationState(int s)
+    {
+        if (s == 0) {
+            this.emCanvas.activeSquareAnimationState = 0;
+        }
+        else {
+            this.emCanvas.activeSquareAnimationState += s;
+        }
         this.updateAndRedraw();
     }
 }
