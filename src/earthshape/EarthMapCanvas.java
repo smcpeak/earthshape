@@ -1150,6 +1150,10 @@ public class EarthMapCanvas
             this.drawEarthMapRect(gl, nw, sw, ne, se, s.latitude, s.longitude, s.sizeKm);
         }
 
+        // Done with textures for this square.
+        gl.glDisable(GL.GL_TEXTURE_2D);
+        gl.glNormal3f(0,1,0);
+
         // Also draw a surface normal.
         if (this.drawSurfaceNormals) {
             gl.glDisable(GL.GL_TEXTURE_2D);
@@ -1397,47 +1401,65 @@ public class EarthMapCanvas
             // Draw nothing.
         }
 
+        // Actual names of stars to use.
+        String starNameA = "Dubhe";
+        String starNameB = "Betelgeuse";
+
+        // Get observation vectors for both stars for both locations.
+        Vector3f baseA =
+            EarthShape.rayToStar(base, base.starObs.get(starNameA));
+        Vector3f derivedA =
+            EarthShape.rayToStar(square, square.starObs.get(starNameA));
+        Vector3f baseB =
+            EarthShape.rayToStar(base, base.starObs.get(starNameB));
+        Vector3f derivedB =
+            EarthShape.rayToStar(square, square.starObs.get(starNameB));
+
         // Compute and draw the cross product of this square's
-        // Dubhe observation and that of the base square.
-        Vector3f derivedDubhe =
-            EarthShape.rayToStar(square, square.starObs.get("Dubhe"));
-        Vector3f baseDubhe =
-            EarthShape.rayToStar(base, base.starObs.get("Dubhe"));
-        Vector3f derivedCrossBaseDubhe = derivedDubhe.cross(baseDubhe);
+        // A observation and that of the base square.
+        Vector3f derivedCrossBaseA = derivedA.cross(baseA);
         if (state == 1) {
-            this.drawRayFromSquare(gl, square, derivedCrossBaseDubhe, 1, 0, 0);
-            logOnce("derivedCrossBaseDubhe: "+derivedCrossBaseDubhe);
+            logOnce("derivedA: "+derivedA);
+            logOnce("baseA: "+baseA);
+            logOnce("derivedB: "+derivedB);
+            logOnce("baseB: "+baseB);
+
+            this.drawRayFromSquare(gl, square, derivedCrossBaseA, 1, 0, 0);
+            logOnce("derivedCrossBaseA: "+derivedCrossBaseA);
         }
 
-        // Compute rot1, an angle and axis to rotate 'derivedDubhe' on top
-        // of 'baseDubhe'.
-        double derivedCrossBaseDubheLen = derivedCrossBaseDubhe.length();
-        double rot1Angle = FloatUtil.asinDeg(derivedCrossBaseDubheLen);
-        if (state == 2) {
-            logOnce("derivedCrossBaseDubheLen: "+derivedCrossBaseDubheLen);
-            logOnce("rot1Angle: "+rot1Angle);
-        }
-
+        // Compute rot1, an angle and axis to rotate 'derivedA' on top
+        // of 'baseA'.
+        double derivedCrossBaseALen = derivedCrossBaseA.length();
+        double rot1Angle = FloatUtil.asinDeg(derivedCrossBaseALen);
         Vector3f rot1Axis = new Vector3f(1, 0, 0);   // Harmless for degenerate case.
-        if (derivedCrossBaseDubheLen != 0) {
-            rot1Axis = derivedCrossBaseDubhe.times((float)(1/derivedCrossBaseDubheLen));
+        if (derivedCrossBaseALen != 0) {
+            rot1Axis = derivedCrossBaseA.times((float)(1/derivedCrossBaseALen));
         }
+        Matrix3f rot1 = Matrix3f.rotateDeg(rot1Angle, rot1Axis);
+
+        // Compute the effect of that rotation on the derived
+        // observation vectors.
+        Vector3f derivedARot1 = rot1.times(derivedA);
+        Vector3f derivedBRot1 = rot1.times(derivedB);
 
         if (state == 2) {
+            logOnce("derivedCrossBaseALen: "+derivedCrossBaseALen);
+            logOnce("rot1Angle: "+rot1Angle);
             logOnce("rot1Axis: "+rot1Axis);
             this.drawRayFromSquare(gl, square, rot1Axis, 1, 0, 0);
 
             glMaterialColor3f(gl, 1, 0, 0);
-            this.drawAngleArc(gl, square.center, derivedDubhe, baseDubhe, 0.5f);
-        }
+            this.drawAngleArc(gl, square.center, derivedA, baseA, 0.5f);
 
-        Matrix3f rot1 = Matrix3f.rotateDeg(rot1Angle, rot1Axis);
-        if (state == 2) {
             logOnce("rot1: "+rot1);
+
+            logOnce("derivedARot1: "+derivedARot1);
+            logOnce("derivedBRot1: "+derivedBRot1);
         }
 
         if (state == 3) {
-            this.earthShapeFrame.beginAnimatedRotation(rot1Angle, rot1Axis, 3 /*sec*/);
+            this.earthShapeFrame.beginAnimatedRotation(rot1Angle, rot1Axis, 2 /*sec*/);
             this.activeSquareAnimationState = 4;
         }
 
@@ -1445,11 +1467,26 @@ public class EarthMapCanvas
             // Animating.
         }
 
-        if (state == 5) {
-            // Draw a unit circle in the plane perpendicular to 'baseDubhe'.
-            // This is the plane in which we will rotate to align Sirius.
+        if (state == 5 || state == 6) {
+            // Draw a unit circle in the plane perpendicular to 'baseA'.
+            // This is the plane in which we will rotate to align B.
             glMaterialColor3f(gl, 0, 0, 1);
-            this.drawPerpendiculuarCircle(gl, square.center, baseDubhe, 1.0f, 80);
+            this.drawPerpendiculuarCircle(gl, square.center, baseA, 1.0f, 80);
+        }
+
+        // Project the rotated B observations onto the plane
+        // perpendicular to 'baseA'.
+        Vector3f baseBProj =
+            baseB.orthogonalComponentToUnitVector(baseA);
+        Vector3f derivedBRot1Proj =
+            derivedBRot1.orthogonalComponentToUnitVector(baseA);
+
+        if (state == 6) {
+            logOnce("baseBProj: "+baseBProj);
+            logOnce("derivedBRot1Proj: "+derivedBRot1Proj);
+
+            this.drawRayFromSquare(gl, square, baseBProj, 62.0f/255, 100.0f/255, 126.0f/255);
+            this.drawRayFromSquare(gl, square, derivedBRot1Proj, 0.5f, 204.0f/255, 1);
         }
     }
 

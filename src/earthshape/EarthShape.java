@@ -2601,10 +2601,10 @@ public class EarthShape extends MyJFrame {
       * things; it is only meant for use while testing or debugging. */
     private void doCannedSetup()
     {
-        // Disable all stars except for Sirius and Dubhe.
+        // Disable all stars except for Betelgeuse and Dubhe.
         this.enabledStars.clear();
         for (String starName : this.worldObservations.getAllStars()) {
-            boolean en = (starName.equals("Sirius") || starName.equals("Dubhe"));
+            boolean en = (starName.equals("Betelgeuse") || starName.equals("Dubhe"));
             this.enabledStars.put(starName, en);
         }
 
