@@ -1,7 +1,6 @@
 package Jama.test;
 import Jama.*;
 import java.io.*;
-import java.util.zip.GZIPInputStream;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.Locale;
@@ -34,7 +33,7 @@ public class TestMatrix {
       // Locale.setDefault(Locale.GERMAN);
       int errorCount=0;
       int warningCount=0;
-      double tmp, s;
+      double tmp;
       double[] columnwise = {1.,2.,3.,4.,5.,6.,7.,8.,9.,10.,11.,12.};
       double[] rowwise = {1.,4.,7.,10.,2.,5.,8.,11.,3.,6.,9.,12.};
       double[][] avals = {{1.,4.,7.,10.},{2.,5.,8.,11.},{3.,6.,9.,12.}};
@@ -637,12 +636,14 @@ public class TestMatrix {
             PrintWriter FILE = new PrintWriter(new FileOutputStream("JamaTestMatrix.out"));
             A.print(FILE,fmt,10);
             FILE.close();
-            R = Matrix.read(new BufferedReader(new FileReader("JamaTestMatrix.out")));
+            FileReader fileReader = new FileReader("JamaTestMatrix.out");
+            R = Matrix.read(new BufferedReader(fileReader));
             if (A.minus(R).norm1() < .001 ) {
                try_success("print()/read()...","");
             } else {
                errorCount = try_failure(errorCount,"print()/read()...","Matrix read from file does not match Matrix printed to file");
             }
+            fileReader.close();
          } catch ( java.io.IOException ioe ) {
            warningCount = try_warning(warningCount,"print()/read()...","unexpected I/O error, unable to run print/read test;  check write permission in current directory and retry");
          } catch(Exception e) {
@@ -653,24 +654,29 @@ public class TestMatrix {
                PrintWriter FILE = new PrintWriter(new FileOutputStream("JamaTestMatrix.out"));
                A.print(FILE,fmt,10);
                FILE.close();
-               R = Matrix.read(new BufferedReader(new FileReader("JamaTestMatrix.out")));
+               FileReader fileReader = new FileReader("JamaTestMatrix.out");
+               R = Matrix.read(new BufferedReader(fileReader));
                if (A.minus(R).norm1() < .001 ) {
                   try_success("print()/read()...","");
                } else {
                   errorCount = try_failure(errorCount,"print()/read() (2nd attempt) ...","Matrix read from file does not match Matrix printed to file");
                }
+               fileReader.close();
             } catch ( java.io.IOException ioe ) {
               warningCount = try_warning(warningCount,"print()/read()...","unexpected I/O error, unable to run print/read test;  check write permission in current directory and retry");
          }
       }
+      (new File("JamaTestMatrix.out")).delete();
 
       R = Matrix.random(A.getRowDimension(),A.getColumnDimension());
       String tmpname = "TMPMATRIX.serial";
       try {
          ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(tmpname));
          out.writeObject(R);
+         out.close();
          ObjectInputStream sin = new ObjectInputStream(new FileInputStream(tmpname));
          A = (Matrix) sin.readObject();
+         sin.close();
  
          try {
             check(A,R);
@@ -678,6 +684,8 @@ public class TestMatrix {
          } catch ( java.lang.RuntimeException e ) {
            errorCount = try_failure(errorCount,"writeObject(Matrix)/readObject(Matrix)...","Matrix not serialized correctly");
          }
+
+         new File(tmpname).delete();
       } catch ( java.io.IOException ioe ) {
          warningCount = try_warning(warningCount,"writeObject()/readObject()...","unexpected I/O error, unable to run serialization test;  check write permission in current directory and retry");
       } catch(Exception e) {
@@ -860,7 +868,7 @@ public class TestMatrix {
       try {
 	  print("\nTesting Eigenvalue; If this hangs, we've failed\n");
 	  Matrix bA = new Matrix(badeigs);
-	  EigenvalueDecomposition bEig = bA.eig();
+	  bA.eig();
 	  try_success("EigenvalueDecomposition (hang)...","");
       } catch ( java.lang.RuntimeException e ) {
          errorCount = try_failure(errorCount,"EigenvalueDecomposition (hang)...",
@@ -944,14 +952,4 @@ public class TestMatrix {
       print(">    " + s + "*** warning ***\n>      Message: " + e + "\n");
       return ++count;
    }
-
-   /** Print a row vector. **/
-
-   private static void print(double[] x, int w, int d) {
-      // Use format Fw.d for all elements.
-      System.out.print("\n");
-      new Matrix(x,1).print(w,d);
-      print("\n");
-   }
-
 }
