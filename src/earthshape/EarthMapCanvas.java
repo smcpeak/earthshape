@@ -1193,10 +1193,10 @@ public class EarthMapCanvas
 
         // Also draw rays to the stars observed here.
         if (s.drawStarRays) {
-            this.drawStarRays(gl, s, s.center);
+            this.drawStarRays(gl, s, s.center, s.starObs);
 
             if (this.drawBaseSquareStarRays && s.showAsActive && s.baseSquare != null) {
-                this.drawStarRays(gl, s.baseSquare, s.center);
+                this.drawStarRays(gl, s.baseSquare, s.center, s.starObs);
 
                 this.drawActiveSquareAnimationState(gl, s);
             }
@@ -1275,14 +1275,24 @@ public class EarthMapCanvas
       * star observations.  'starRaysOrigin' says where to draw the
       * base of each ray.  Normally it is 's.center', but it is
       * instead the center of a derived square when we are drawing
-      * a base square's observation on the derived square. */
-    private void drawStarRays(GL2 gl, SurfaceSquare s, Vector3f starRaysOrigin)
+      * a base square's observation on the derived square.
+      *
+      * Only draw stars that are in 'filterMap'.  This is also
+      * normally the map in 's', making it redundant, but in the
+      * alternate mode it is used to avoid drawing base stars that
+      * are not visible at the derived square. */
+    private void drawStarRays(GL2 gl, SurfaceSquare s, Vector3f starRaysOrigin,
+                              Map<String, StarObservation> filterMap)
     {
         gl.glDisable(GL.GL_TEXTURE_2D);
         gl.glNormal3f(0,1,0);
 
         for (Map.Entry<String, StarObservation> entry : s.starObs.entrySet()) {
+            String starName = entry.getKey();
             StarObservation so = entry.getValue();
+            if (!filterMap.containsKey(starName)) {
+                continue;
+            }
 
             // Bright line for rays at active square.
             float rayBrightness = (s.showAsActive? 1.0f : 0.4f);
@@ -1568,44 +1578,62 @@ public class EarthMapCanvas
         // Compute the composed rotation.
         Matrix3f rot = rot2.times(rot1);
 
+        // And its eigenvector (rotation axis).
+        Vector3f eigenvector = rot.largestRealEigenvector();
+
         // Compute celestial North in the base square.
         Vector3f baseCelestialNorth =
             (new Vector3f(0, 0, -1)).rotateDeg(square.latitude, new Vector3f(1, 0, 0));
 
         // Apply the rotation to it, which should not change it, thereby
-        // demonstrating it is an eigenvector.
+        // demonstrating it is an eigenvector, *if* the derived square
+        // was obtained by going East or West.
         Vector3f baseCelestialNorthRot = rot.times(baseCelestialNorth);
 
-        // Get the angle of rot.
+        // Get the axis and angle of rot by doing a trial rotation of
+        // an orthogonal vector.  (We do not just take 'eigenvector' as
+        // the axis since we don't know whether to make the angle
+        // positive or negative.)
         double rotAngle;
+        Vector3f rotAxis;
         {
-            Vector3f orthogonal = baseCelestialNorth.orthogonalVector();
+            Vector3f orthogonal = eigenvector.orthogonalVector();
             Vector3f orthogonalRot = rot.times(orthogonal);
-            rotAngle = orthogonal.separationAngleDegrees(orthogonalRot);
+            Vector3f cross = orthogonal.cross(orthogonalRot);
+            double crossLen = cross.length();
+            rotAngle = FloatUtil.asinDeg(crossLen);
+            rotAxis = cross.times((float)(1/crossLen));
         }
 
         if (state == 13) {
             logOnce("rot: "+rot);
+            logOnce("eigenvector: "+eigenvector);
+            logOnce("rotAxis: "+rotAxis);
+            logOnce("rotAngle: "+rotAngle);
+            logOnce("rot.times(rotAxis): "+rot.times(rotAxis));
             logOnce("baseCelestialNorth: "+baseCelestialNorth);
             logOnce("baseCelestialNorthRot: "+baseCelestialNorthRot+
                     ", diff="+(baseCelestialNorth.minus(baseCelestialNorthRot).length()));
-            logOnce("rotAngle: "+rotAngle);
+            logOnce("rotAxis diff from East: "+rotAxis.minus(new Vector3f(1, 0, 0)).length());
         }
 
-        if (13 <= state && state <= 15) {
-            this.drawRayFromSquare(gl, square, baseCelestialNorth, 1, 108.0f/255, 155.0f/255);
+        // If I continue to show this in state 15, then right at the end
+        // it jumps to a different place because the stars are aligned
+        // and hence the needed rotation is essentially indeterminate.
+        // (The same thing happens to the previous rotations when they
+        // finish animating.)
+        if (13 <= state && state <= 14) {
+            this.drawRayFromSquare(gl, square, rotAxis, 1, 108.0f/255, 155.0f/255);
         }
 
         if (state == 14) {
-            this.earthShapeFrame.beginAnimatedRotation(rotAngle, baseCelestialNorth, 2 /*sec*/);
+            this.earthShapeFrame.beginAnimatedRotation(rotAngle, rotAxis, 2 /*sec*/);
             this.activeSquareAnimationState = 15;
         }
 
         if (state == 15) {
             // Animating.
         }
-
-
     }
 
     /** Draw an arc centered at 'center', with 'radius', that goes

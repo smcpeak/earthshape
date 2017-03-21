@@ -5,7 +5,11 @@ package util;
 
 /** Represent an immutable 3x3 matrix of double. */
 public class Matrix3d {
-    // ---- Instance data. ----
+    // ---- Constants ----
+    /** How close the result must be for a test to pass. */
+    private static final double TEST_THRESHOLD = 0.0001;
+
+    // ---- Instance data ----
     /** Underlying matrix data. */
     private Matrixd mat;
 
@@ -44,6 +48,13 @@ public class Matrix3d {
     public String toString()
     {
         return this.mat.toString();
+    }
+
+    /** True if 'm' has the same dimensions, and all entries have
+      * an absolute value difference of 'threshold' or less. */
+    public boolean equalsWithin(Matrix3d m, double threshold)
+    {
+        return this.mat.equalsWithin(m.mat, threshold);
     }
 
     /** Left-multiply this matrix by 'v' and yield the result. */
@@ -117,6 +128,119 @@ public class Matrix3d {
             z*x*(1-c)-y*s,
             z*y*(1-c)+x*s,
             z*z*(1-c)+c);
+    }
+
+    /** Return the eigenvector with real eigenvalue and largest
+      * eigenvalue.  This might be zero if there are no such
+      * eigenvectors. */
+    public Vector3d largestRealEigenvector()
+    {
+        return new Vector3d(this.mat.largestRealEigenvector());
+    }
+
+    // --------------------------- Test code ------------------------------
+    private static void testOneMatrixInverse(Matrix3d m)
+    {
+        Matrix3d I = Matrix3d.identity();
+        Matrix3d inv = m.inverse();
+
+        Matrix3d prod = inv.times(m);
+        if (!prod.equalsWithin(I, TEST_THRESHOLD)) {
+            System.err.println("m: "+m);
+            System.err.println("inv: "+inv);
+            System.err.println("prod: "+prod);
+            throw new RuntimeException("matrix inverse test 1 failed");
+        }
+
+        prod = m.times(inv);
+        if (!prod.equalsWithin(I, TEST_THRESHOLD)) {
+            System.err.println("m: "+m);
+            System.err.println("inv: "+inv);
+            System.err.println("prod: "+prod);
+            throw new RuntimeException("matrix inverse test 2 failed");
+        }
+
+        Matrix3d invInv = inv.inverse();
+        prod = inv.times(invInv);
+        if (!prod.equalsWithin(I, TEST_THRESHOLD)) {
+            System.err.println("m: "+m);
+            System.err.println("inv: "+inv);
+            System.err.println("invInv: "+invInv);
+            System.err.println("prod: "+prod);
+            throw new RuntimeException("matrix inverse test 3 failed");
+        }
+
+        prod = invInv.times(inv);
+        if (!prod.equalsWithin(I, TEST_THRESHOLD)) {
+            System.err.println("m: "+m);
+            System.err.println("inv: "+inv);
+            System.err.println("invInv: "+invInv);
+            System.err.println("prod: "+prod);
+            throw new RuntimeException("matrix inverse test 4 failed");
+        }
+    }
+
+    private static void testMatrixInverse()
+    {
+        testOneMatrixInverse(Matrix3d.identity());
+        testOneMatrixInverse(Matrix3d.identity().times(2));
+
+        double angle = Math.PI/2;
+        testOneMatrixInverse(Matrix3d.rotateRad(angle, new Vector3d(1, 0, 0)));
+        testOneMatrixInverse(Matrix3d.rotateRad(angle, new Vector3d(0, 1, 0)));
+        testOneMatrixInverse(Matrix3d.rotateRad(angle, new Vector3d(0, 0, 1)));
+
+        angle = Math.PI/4;
+        testOneMatrixInverse(Matrix3d.rotateRad(angle, new Vector3d(1, 0, 0)));
+        testOneMatrixInverse(Matrix3d.rotateRad(angle, new Vector3d(0, 1, 0)));
+        testOneMatrixInverse(Matrix3d.rotateRad(angle, new Vector3d(0, 0, 1)));
+
+        // This is just some matrix that arose while doing stuff
+        // with EarthShape.
+        testOneMatrixInverse(new Matrix3d(
+            -0.29275739192962646, 0.5579640865325928, 0.434147447347641,
+            -0.5590898990631104, -0.18272608518600464, -0.1395774930715561,
+            -0.4326966404914856, -0.14401228725910187, -0.11003702878952026));
+
+        // This is ostensibly the inverse of a matrix close to the above
+        // matrix that an online calculator came up with, but I did not
+        // feed it all of the digits.
+        testOneMatrixInverse(new Matrix3d(
+            -0.5025125628140716, -3.517587939698681, 2.512562814070593,
+            0.7537688442209383, -544.7236180904614, 696.2311557789062,
+            1.0050251256283578, 707.0351758794089, -905.025125628156));
+    }
+
+    private static void testOneEigenvector(Matrix3d m)
+    {
+        System.out.println("m: "+m);
+
+        Vector3d v = m.largestRealEigenvector();
+        System.out.println("v: "+v);
+
+        Vector3d v2 = m.times(v);
+        System.out.println("v2: "+v2);
+
+        if (v2.minus(v).length() > TEST_THRESHOLD) {
+            throw new RuntimeException("testOneEigenvector failed");
+        }
+    }
+
+    private static void testEigenvalues()
+    {
+        testOneEigenvector(Matrix3d.identity());
+
+        double angle = Math.PI/2;
+        testOneEigenvector(Matrix3d.rotateRad(angle, new Vector3d(1, 0, 0)));
+        testOneEigenvector(Matrix3d.rotateRad(angle, new Vector3d(0, 1, 0)));
+        testOneEigenvector(Matrix3d.rotateRad(angle, new Vector3d(0, 0, 1)));
+    }
+
+    public static void main(String[] args)
+    {
+        testMatrixInverse();
+        testEigenvalues();
+        System.out.println("Matrix3d tests passed");
     }
 }
 

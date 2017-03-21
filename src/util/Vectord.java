@@ -171,6 +171,16 @@ public class Vectord {
 
         return FloatUtil.acosDeg(dot);
     }
+
+    /** Return the zero vector of specified dimension. */
+    public static Vectord zero(int entries)
+    {
+        double[] vals = new double[entries];
+        for (int i=0; i < entries; i++) {
+            vals[i] = 0;
+        }
+        return new Vectord(vals);
+    }
 }
 
 // EOF

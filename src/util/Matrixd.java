@@ -3,6 +3,9 @@
 
 package util;
 
+import Jama.EigenvalueDecomposition;
+import Jama.Matrix;
+
 /** Arbitrary-size immutable matrix of double. */
 public class Matrixd {
     // ---- Instance data. ----
@@ -78,6 +81,25 @@ public class Matrixd {
         }
         sb.append("]");
         return sb.toString();
+    }
+
+    /** True if 'm' has the same dimensions, and all entries have
+      * an absolute value difference of 'threshold' or less. */
+    public boolean equalsWithin(Matrixd m, double threshold)
+    {
+        if (this.C() == m.C() && this.R() == m.R()) {
+            for (int r=0; r < m.R(); r++) {
+                for (int c=0; c < m.C(); c++) {
+                    if (Math.abs(this.get(r,c) - m.get(r,c)) > threshold) {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+        else {
+            return false;      // differing dimensions
+        }
     }
 
     /** Left-multiply this matrix by vector 'v' and yield the result. */
@@ -260,14 +282,78 @@ public class Matrixd {
         return this.cofactorMatrix().transpose();
     }
 
+    /** Convert 'this' to a Jama Matrix. */
+    private Matrix toJamaMatrix()
+    {
+        Matrix m = new Matrix(R(), C());
+        for (int r = 0; r < R(); r++) {
+            for (int c = 0; c < C(); c++) {
+                m.set(r, c, this.get(r, c));
+            }
+        }
+        return m;
+    }
+
+    /** Convert from a Jama Matrix. */
+    private Matrixd(Matrix m)
+    {
+        this.rows = m.getRowDimension();
+        this.cols = m.getColumnDimension();
+        this.vals = new double[R() * C()];
+        for (int r = 0; r < R(); r++) {
+            for (int c = 0; c < C(); c++) {
+                this.vals[r * C() + c] = m.get(r, c);
+            }
+        }
+    }
+
     /** Return the inverse of this matrix, or null if it is not invertible. */
     public Matrixd inverse()
+    {
+        return new Matrixd(this.toJamaMatrix().inverse());
+    }
+
+    /** This is the textbook algorithm, but suffers from numerical
+      * instability. */
+    public Matrixd inverseViaTextbookAlgorithm()
     {
         double det = this.determinant();
         if (det == 0) {
             return null;
         }
         return adjugate().times(1/det);
+    }
+
+    /** Return the eigenvector with real eigenvalue and largest
+      * eigenvalue.  This might be zero if there are no such
+      * eigenvectors. */
+    public Vectord largestRealEigenvector()
+    {
+        EigenvalueDecomposition ed = this.toJamaMatrix().eig();
+        Matrix V = ed.getV();
+        double[] e = ed.getImagEigenvalues();
+
+        Vectord ret = Vectord.zero(R());
+        double retLen = 0;
+
+        for (int c=0; c < C(); c++) {
+            if (e[c] != 0) {
+                continue;      // Complex eigenvalue
+            }
+
+            double[] vals = new double[R()];
+            for (int r=0; r < R(); r++) {
+                vals[r] = V.get(r, c);
+            }
+            Vectord vec = new Vectord(vals);
+            double vecLen = vec.length();
+            if (vecLen > retLen) {
+                ret = vec;
+                retLen = vecLen;
+            }
+        }
+
+        return ret;
     }
 }
 

@@ -152,7 +152,15 @@ public class Matrix3f {
         return b.toVector3f();
     }
 
-    public static void main(String[] args)
+    /** Return the eigenvector with real eigenvalue and largest
+      * eigenvalue.  This might be zero if there are no such
+      * eigenvectors. */
+    public Vector3f largestRealEigenvector()
+    {
+        return (new Matrix3d(this)).largestRealEigenvector().toVector3f();
+    }
+
+    private static void testAligningSquares()
     {
         Vector3f eastCA = new Vector3f(1, 0, 0);
         Vector3f upCA = new Vector3f(0, 1, 0);
@@ -339,6 +347,11 @@ public class Matrix3f {
         p("circumference: "+circumference);
 
         // OBSERVATION: Inferred circumference agrees with prediction.
+    }
+
+    public static void main(String[] args)
+    {
+        testAligningSquares();
     }
 }
 
