@@ -2801,7 +2801,7 @@ public class EarthShape extends MyJFrame {
             this.setActiveSquareNoRedraw(s);
 
             if (this.animatedRotationElapsed >= this.animatedRotationSeconds) {
-                log("rotation animation finished");
+                log("rotation animation finished; normal: "+s.up);
             }
         }
     }
@@ -2836,8 +2836,12 @@ public class EarthShape extends MyJFrame {
             SurfaceSquare end = this.activeSquare;
             List<String> common = getCommonStars(start, end);
             if (common.size() >= 2) {
-                String A = common.get(0);
-                String B = common.get(1);
+                // When Dubhe and Betelgeuse are the only ones, I want
+                // Dubhe first so the calculation agrees with the ad-hoc
+                // animation, and doing them in this order accomplishes
+                // that.
+                String A = common.get(1);
+                String B = common.get(0);
                 log("initializing curvature dialog with "+A+" and "+B);
                 c.start_A_az = start.findObservation(A).azimuth;
                 c.start_A_el = start.findObservation(A).elevation;
