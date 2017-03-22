@@ -2480,6 +2480,23 @@ public class EarthShape extends MyJFrame {
         sb.append("\n");
         sb.append("adjDeg: "+this.adjustOrientationDegrees+"\n");
 
+        // Compute average curvature from base.
+        if (this.activeSquare != null && this.activeSquare.baseSquare != null) {
+            sb.append("\n");
+            sb.append("Base at: ("+this.activeSquare.baseSquare.latitude+
+                      ","+this.activeSquare.baseSquare.longitude+")\n");
+
+            double curvature = this.computeAverageCurvature(this.activeSquare);
+            sb.append("Curvature: "+(float)curvature+" km^-1\n");
+
+            if (curvature != 0) {
+                sb.append("Radius: "+(float)(1/curvature)+" km\n");
+            }
+            else {
+                sb.append("Radius: Infinite\n");
+            }
+        }
+
         // Also show star observation data.
         if (this.activeSquare != null) {
             sb.append("\n");
@@ -2494,6 +2511,44 @@ public class EarthShape extends MyJFrame {
         }
 
         this.infoPanel.setText(sb.toString());
+    }
+
+    /** Compute the average curvature on a path from the base square
+      * of 's' to 's'. */
+    private double computeAverageCurvature(SurfaceSquare s)
+    {
+        // Angle separating normals.
+        double angle = FloatUtil.acosDeg(
+            s.up.normalizeAsVector3d().dot(s.baseSquare.up.normalizeAsVector3d()));
+        if (angle == 0) {
+            return 0;
+        }
+
+        // Travel distance and heading.
+        TravelObservation tobs = this.worldObservations.getTravelObservation(
+            s.baseSquare.latitude, s.baseSquare.longitude,
+            s.latitude, s.longitude);
+
+        // Circumference of curvature.
+        double circumference = tobs.distanceKm * 360.0 / angle;
+
+        // Radius of curvature.
+        double radius = circumference / (2 * Math.PI);
+
+        // Curvature absolute value.
+        double curvature = 1 / radius;
+
+        // Unit travel vector in base square coordinate system.
+        Vector3f t = (new Vector3f(0,0,-1)).rotateDeg(-tobs.startToEndHeading, new Vector3f(0,1,0));
+        t = t.rotateAADeg(s.baseSquare.rotationFromNominal);
+
+        // If the new surface normal is in the same direction as the
+        // travel vector, curvature is positive.  Otherwise negative.
+        if (t.dot(s.up) < 0) {
+            curvature = -curvature;
+        }
+
+        return curvature;
     }
 
     /** Result of call to 'getVarianceAfterRotations'. */
