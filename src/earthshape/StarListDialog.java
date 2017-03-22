@@ -8,7 +8,7 @@ import java.util.Map;
 
 import javax.swing.JCheckBox;
 import javax.swing.JFrame;
-import javax.swing.JLabel;
+import javax.swing.SwingUtilities;
 
 import util.swing.HBox;
 import util.swing.ModalDialog;
@@ -32,19 +32,16 @@ public class StarListDialog extends ModalDialog {
         VBox vb = new VBox();
         vb.strut();
 
-        // The layout of this dialog is screwy and I do not know why.
-
-        vb.add(new JLabel("Choose which stars to use"));
-        vb.strut();
+        this.makeLabel(vb, "Choose which stars to use:");
 
         for (Map.Entry<String, Boolean> e : stars_.entrySet())  {
             String k = e.getKey();
             Boolean v = e.getValue();
-            JCheckBox cb = new JCheckBox(k, v);
-            vb.add(cb);
+            JCheckBox cb = this.makeCheckBox(vb, k, v);
             this.checkboxes.put(k, cb);
         }
 
+        vb.strut();
         vb.strut();
 
         HBox hb3 = new HBox();
@@ -70,6 +67,34 @@ public class StarListDialog extends ModalDialog {
         }
 
         super.okPressed();
+    }
+
+    private static void testDialog()
+    {
+        LinkedHashMap<String, Boolean> stars = new LinkedHashMap<String, Boolean>();
+        stars.put("A", true);
+        stars.put("B", false);
+        stars.put("C", true);
+
+        StarListDialog d = new StarListDialog(null /*parent*/, stars);
+        if (d.exec()) {
+            for (Map.Entry<String, Boolean> e : d.stars.entrySet()) {
+                System.out.println(e.getKey()+": "+e.getValue());
+            }
+        }
+        else {
+            System.out.println("Canceled.");
+        }
+    }
+
+    /** Test this one dialog. */
+    public static void main(String[] args)
+    {
+        SwingUtilities.invokeLater(new Runnable() {
+            public void run() {
+                testDialog();
+            }
+        });
     }
 }
 

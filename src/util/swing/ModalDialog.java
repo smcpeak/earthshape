@@ -11,6 +11,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
@@ -132,6 +133,29 @@ public class ModalDialog extends JDialog {
         vb.strut();
 
         return textField;
+    }
+
+    /** Create a checkbox control and add it to 'vb'. */
+    public JCheckBox makeCheckBox(VBox vb, String label, boolean initValue)
+    {
+        HBox hb = new HBox();
+        JCheckBox cb = new JCheckBox(label, initValue);
+        hb.add(cb);
+        hb.glue();
+        vb.add(hb);
+        return cb;
+    }
+
+    /** Create a label control on its own line, add it to 'vb'. */
+    public JLabel makeLabel(VBox vb, String text)
+    {
+        HBox hb = new HBox();
+        JLabel label = new JLabel(text);
+        hb.add(label);
+        hb.glue();
+        vb.add(hb);
+        vb.strut();
+        return label;
     }
 
     /** Arrange to close a dialog when Escape is pressed.

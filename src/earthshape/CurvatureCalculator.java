@@ -46,6 +46,9 @@ public class CurvatureCalculator {
       * in degrees per km. */
     public double twistRate;
 
+    /** A list of explanations of each step of the calculations. */
+    public ArrayList<String> steps = new ArrayList<String>();
+
     /** List of warnings generated during calculation that may
       * affect reliability of the results.  Each warning is a
       * string without any newlines. */
@@ -71,16 +74,29 @@ public class CurvatureCalculator {
         Vector3f end_A = Vector3f.azimuthElevationToVector(this.end_A_az, this.end_A_el);
         Vector3f end_B = Vector3f.azimuthElevationToVector(this.end_B_az, this.end_B_el);
 
+        this.steps.add("start_A: "+start_A);
+        this.steps.add("start_B: "+start_B);
+        this.steps.add("end_A: "+end_A);
+        this.steps.add("end_B: "+end_B);
+
         // Calculate rotation that aligns A.
         Vector3f u = end_A.cross(start_A);
+        this.steps.add("end_A cross start_A: "+u);
         double theta1 = FloatUtil.asinDeg(u.length());
         u = u.normalize();
         Matrix3f rot1 = Matrix3f.rotateDeg(theta1, u);
+
+        this.steps.add("u: "+u);
+        this.steps.add("theta1: "+theta1);
+        this.steps.add("rot1: "+rot1);
 
         // Apply that rotation to end B and starting surface normal.
         Vector3f end_B_rot1 = rot1.times(end_B);
         Vector3f normal = new Vector3f(0,1,0);
         Vector3f normal_rot1 = rot1.times(normal);
+
+        this.steps.add("end_B_rot1: "+end_B_rot1);
+        this.steps.add("normal_rot1: "+normal_rot1);
 
         // Project the B observations into the plane perpendicular
         // to the now-aligned A observations, then normalize those
@@ -88,17 +104,28 @@ public class CurvatureCalculator {
         Vector3f start_B_proj = start_B.orthogonalComponentToUnitVector(start_A).normalize();
         Vector3f end_B_rot1_proj = end_B_rot1.orthogonalComponentToUnitVector(start_A).normalize();
 
+        this.steps.add("start_B_proj: "+start_B_proj);
+        this.steps.add("end_B_rot1_proj: "+end_B_rot1_proj);
+
         // Calculate rotation about start A axis that aligns the
         // projected B observations.
         Vector3f v = end_B_rot1_proj.cross(start_B_proj);
+        this.steps.add("end_B_rot1_proj cross start_B_proj: "+v);
         double theta2 = FloatUtil.asinDeg(v.length());
         v = v.normalize();
         Matrix3f rot2 = Matrix3f.rotateDeg(theta2, v);
+
+        this.steps.add("v: "+v);
+        this.steps.add("theta2: "+theta2);
+        this.steps.add("rot2: "+rot2);
 
         // Apply that rotation to rotated end B and start up
         // (surface normal).
         Vector3f end_B_rot12 = rot2.times(end_B_rot1);
         Vector3f normal_rot12 = rot2.times(normal_rot1);
+
+        this.steps.add("end_B_rot12: "+end_B_rot12);
+        this.steps.add("normal_rot12: "+normal_rot12);
 
         // Check alignment of B.
         this.deviationBDegrees = FloatUtil.acosDeg(end_B_rot12.dot(start_B));
@@ -109,6 +136,8 @@ public class CurvatureCalculator {
         // Unit travel vector in start coordinate system.
         Vector3f start_north = new Vector3f(0,0,-1);
         Vector3f travel_forward = start_north.rotateDeg(-this.heading, normal);
+
+        this.steps.add("travel_forward: "+travel_forward);
 
         this.computeFromNormals(normal, normal_rot12, travel_forward);
     }
@@ -122,14 +151,22 @@ public class CurvatureCalculator {
         // cross product is aligned with this, curvature is positive.
         Vector3f travel_left = normal.cross(travel_forward);
 
+        this.steps.add("travel_left: "+travel_left);
+
         // Express the normal rotation as an angle/axis vector.
         Vector3f normal_rot_axis = normal.cross(normal_rot12).normalize();
         double normal_rot_angle = FloatUtil.acosDeg(normal.dot(normal_rot12));
         Vector3f normal_rot_AA = normal_rot_axis.timesd(normal_rot_angle);
 
+        this.steps.add("normal_rot_axis: "+normal_rot_axis);
+        this.steps.add("normal_rot_angle: "+normal_rot_angle);
+        this.steps.add("normal_rot_AA: "+normal_rot_AA);
+
         // Component of normal rotation that is not twisted.
         Vector3f normal_rot_AA_straight =
             normal_rot_AA.projectOntoUnitVector(travel_left);
+
+        this.steps.add("normal_rot_AA_straight: "+normal_rot_AA_straight);
 
         // Calculate the angle through which the normal was rotated
         // forward without twisting.
@@ -144,6 +181,8 @@ public class CurvatureCalculator {
             curvatureAngle = -curvatureAngle;
         }
 
+        this.steps.add("curvatureAngle: "+curvatureAngle);
+
         // Calculate resulting curvature in km^-1.
         this.curvature = (2 * Math.PI * curvatureAngle) / (this.distanceKm * 360.0);
 
@@ -151,12 +190,16 @@ public class CurvatureCalculator {
         Vector3f normal_rot_AA_twist =
             normal_rot_AA.projectOntoUnitVector(travel_forward);
 
+        this.steps.add("normal_rot_AA_twist: "+normal_rot_AA_twist);
+
         // Calculate twist angle to the right, so it follows the
         // right hand rule w.r.t. the forward travel direction.
         double twistAngle = normal_rot_AA_twist.length();
         if (normal_rot_AA_twist.dot(travel_forward) < 0) {
             twistAngle = -twistAngle;
         }
+
+        this.steps.add("twistAngle: "+twistAngle);
 
         // Twist per distance.
         this.twistRate = twistAngle / this.distanceKm;

@@ -9,6 +9,7 @@ import java.awt.event.ActionListener;
 
 import javax.swing.Box;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JFrame;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
@@ -27,6 +28,7 @@ public class CurvatureCalculatorDialog extends ModalDialog {
     /** Generated ID. */
     private static final long serialVersionUID = 1776587184367621482L;
 
+    // Text fields for all of the inputs.
     private JTextField start_A_az_tf;
     private JTextField start_A_el_tf;
     private JTextField start_B_az_tf;
@@ -37,6 +39,8 @@ public class CurvatureCalculatorDialog extends ModalDialog {
     private JTextField end_B_el_tf;
     private JTextField heading_tf;
     private JTextField distance_tf;
+
+    private JCheckBox showStepsCB;
 
     /** Uneditable output text. */
     private JTextArea text;
@@ -88,6 +92,14 @@ public class CurvatureCalculatorDialog extends ModalDialog {
             (float)(arcAngleDegrees / 180.0 * Math.PI * RealWorldObservations.EARTH_RADIUS_KM);
         this.distance_tf = this.makeTextField(vb, "Start to end distance (km)",
             String.format("%.3g", distanceKm));
+
+        this.showStepsCB = this.makeCheckBox(vb, "Show calculation steps", false);
+        this.showStepsCB.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent ev) {
+                CurvatureCalculatorDialog.this.calculate();
+            }
+        });
+        vb.strut();
 
         // Output area.
         this.text = new JTextArea("No info set");
@@ -173,6 +185,12 @@ public class CurvatureCalculatorDialog extends ModalDialog {
         c.distanceKm = parseFloat(this.distance_tf.getText());
 
         c.calculate();
+
+        if (this.showStepsCB.isSelected()) {
+            for (String s : c.steps) {
+                sb.append(s+"\n");
+            }
+        }
 
         for (String w : c.warnings) {
             sb.append(w+"\n");
