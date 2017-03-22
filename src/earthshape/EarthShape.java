@@ -2429,14 +2429,9 @@ public class EarthShape extends MyJFrame {
         else {
             sb.append("Active square:\n");
             SurfaceSquare s = this.activeSquare;
-            sb.append("  lat: "+s.latitude+"\n");
-            sb.append("  lng: "+s.longitude+"\n");
-            sb.append("  x: "+s.center.x()+"\n");
-            sb.append("  y: "+s.center.y()+"\n");
-            sb.append("  z: "+s.center.z()+"\n");
-            sb.append("  rotx: "+s.rotationFromNominal.x()+"\n");
-            sb.append("  roty: "+s.rotationFromNominal.y()+"\n");
-            sb.append("  rotz: "+s.rotationFromNominal.z()+"\n");
+            sb.append("  lat/lng: ("+s.latitude+","+s.longitude+")\n");
+            sb.append("  pos: "+s.center+"\n");
+            sb.append("  rot: "+s.rotationFromNominal+"\n");
 
             ObservationStats ostats = this.fitOfObservations(s);
             if (ostats == null) {
