@@ -12,6 +12,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -686,7 +687,7 @@ public class EarthShape extends MyJFrame {
         addMenuItem(menu, "Curvature calculator...", null,
             new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
-                    (new CurvatureCalculatorDialog(EarthShape.this)).exec();
+                    EarthShape.this.showCurvatureDialog();
                 }
             });
 
@@ -2810,6 +2811,48 @@ public class EarthShape extends MyJFrame {
     public void updatePhysics(float elapsedSeconds)
     {
         this.nextAnimatedRotationFrame(elapsedSeconds);
+    }
+
+    /** Get list of stars for which both squares have observations. */
+    private List<String> getCommonStars(SurfaceSquare s1, SurfaceSquare s2)
+    {
+        ArrayList<String> ret = new ArrayList<String>();
+        for (Map.Entry<String, StarObservation> entry : s1.starObs.entrySet()) {
+            if (s2.findObservation(entry.getKey()) != null) {
+                ret.add(entry.getKey());
+            }
+        }
+        return ret;
+    }
+
+    private void showCurvatureDialog()
+    {
+        // Default initial values.
+        CurvatureCalculator c = CurvatureCalculator.getDubheSirius();
+
+        // Try to populate 'c' with values from the current square.
+        if (this.activeSquare != null && this.activeSquare.baseSquare != null) {
+            SurfaceSquare start = this.activeSquare.baseSquare;
+            SurfaceSquare end = this.activeSquare;
+            List<String> common = getCommonStars(start, end);
+            if (common.size() >= 2) {
+                String A = common.get(0);
+                String B = common.get(1);
+                log("initializing curvature dialog with "+A+" and "+B);
+                c.start_A_az = start.findObservation(A).azimuth;
+                c.start_A_el = start.findObservation(A).elevation;
+                c.start_B_az = start.findObservation(B).azimuth;
+                c.start_B_el = start.findObservation(B).elevation;
+                c.end_A_az = end.findObservation(A).azimuth;
+                c.end_A_el = end.findObservation(A).elevation;
+                c.end_B_az = end.findObservation(B).azimuth;
+                c.end_B_el = end.findObservation(B).elevation;
+                c.setTravelByLatLong(start.latitude, start.longitude, end.latitude, end.longitude);
+            }
+        }
+
+        // Run the dialog.
+        (new CurvatureCalculatorDialog(EarthShape.this, c)).exec();
     }
 }
 

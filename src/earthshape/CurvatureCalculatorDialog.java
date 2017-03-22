@@ -16,7 +16,6 @@ import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 
-import util.FloatUtil;
 import util.swing.HBox;
 import util.swing.ModalDialog;
 import util.swing.VBox;
@@ -48,50 +47,40 @@ public class CurvatureCalculatorDialog extends ModalDialog {
     /** Scroller for the text. */
     private JScrollPane scrollPane;
 
-    public CurvatureCalculatorDialog(JFrame parent)
+    public CurvatureCalculatorDialog(JFrame parent, CurvatureCalculator initValues)
     {
         super(parent, "Curvature Calculator");
+
+        if (initValues == null) {
+            initValues = CurvatureCalculator.getDubheSirius();
+        }
 
         VBox vb = new VBox();
         vb.add(Box.createHorizontalStrut(600));
         vb.strut();
 
-        // The initial values are for observations of Dubhe and Sirius
-        // from 38N,122W and 38N,113W at 2017-03-05 20:00 -08:00.  The
-        // data is accurate to about 0.2 degrees.
         this.start_A_az_tf = this.makeTextField(vb, "Start square star A azimuth (degrees East of North)",
-            "36.9");
+            ""+initValues.start_A_az);
         this.start_A_el_tf = this.makeTextField(vb, "Start square star A elevation (degrees above horizon)",
-            "44.8");
+            ""+initValues.start_A_el);
         this.start_B_az_tf = this.makeTextField(vb, "Start square star B azimuth (degrees East of North)",
-            "181.1");
+            ""+initValues.start_B_az);
         this.start_B_el_tf = this.makeTextField(vb, "Start square star B elevation (degrees above horizon)",
-            "35.2");
+            ""+initValues.start_B_el);
         this.end_A_az_tf = this.makeTextField(vb, "End square star A azimuth (degrees East of North)",
-            "36.4");
+            ""+initValues.end_A_az);
         this.end_A_el_tf = this.makeTextField(vb, "End square star A elevation (degrees above horizon)",
-            "49.1");
+            ""+initValues.end_A_el);
         this.end_B_az_tf = this.makeTextField(vb, "End square star B azimuth (degrees East of North)",
-            "191.5");
+            ""+initValues.end_B_az);
         this.end_B_el_tf = this.makeTextField(vb, "End square star B elevation (degrees above horizon)",
-            "34.4");
+            ""+initValues.end_B_el);
 
-        float startLatitude = 38;
-        float startLongitude = -122;
-        float endLatitude = 38;
-        float endLongitude = -113;
-        double startToEndHeading = FloatUtil.getLatLongPairHeading(
-            startLatitude, startLongitude, endLatitude, endLongitude);
         this.heading_tf = this.makeTextField(vb, "Start to end travel heading (degrees East of North)",
-            String.format("%.3g", startToEndHeading));
+            ""+initValues.heading);
 
-        double arcAngleDegrees = FloatUtil.sphericalSeparationAngle(
-            startLongitude, startLatitude,
-            endLongitude, endLatitude);
-        float distanceKm =
-            (float)(arcAngleDegrees / 180.0 * Math.PI * RealWorldObservations.EARTH_RADIUS_KM);
         this.distance_tf = this.makeTextField(vb, "Start to end distance (km)",
-            String.format("%.3g", distanceKm));
+            ""+initValues.distanceKm);
 
         this.showStepsCB = this.makeCheckBox(vb, "Show calculation steps", false);
         this.showStepsCB.addActionListener(new ActionListener() {
@@ -213,7 +202,7 @@ public class CurvatureCalculatorDialog extends ModalDialog {
     {
         SwingUtilities.invokeLater(new Runnable() {
             public void run() {
-                (new CurvatureCalculatorDialog(null /*parent*/)).exec();
+                (new CurvatureCalculatorDialog(null /*parent*/, null /*initValues*/)).exec();
             }
         });
     }

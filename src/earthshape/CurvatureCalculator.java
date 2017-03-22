@@ -203,6 +203,10 @@ public class CurvatureCalculator {
 
         // Twist per distance.
         this.twistRate = twistAngle / this.distanceKm;
+
+        if (Math.abs(this.twistRate) > 0.001) {
+            this.warnings.add("Warning: Twist rate magnitude exceeds one degree per 1000 km.  That never happens on the real Earth.  Check the travel heading.");
+        }
     }
 
     /** Set the heading and distanceKm using latitude and longitude
@@ -221,6 +225,26 @@ public class CurvatureCalculator {
             endLongitude, endLatitude);
         this.distanceKm =
             (float)(arcAngleDegrees / 180.0 * Math.PI * RealWorldObservations.EARTH_RADIUS_KM);
+    }
+
+    /** Get initial values for observations of Dubhe and Sirius
+      * from 38N,122W and 38N,113W at 2017-03-05 20:00 -08:00.  The
+      * data is accurate to about 0.2 degrees. */
+    public static CurvatureCalculator getDubheSirius()
+    {
+        CurvatureCalculator c = new CurvatureCalculator();
+        c.setTravelByLatLong(38, -122, 38, -113);
+
+        c.start_A_az = 36.9f;
+        c.start_A_el = 44.8f;
+        c.start_B_az = 181.1f;
+        c.start_B_el = 35.2f;
+        c.end_A_az = 36.4f;
+        c.end_A_el = 49.1f;
+        c.end_B_az = 191.5f;
+        c.end_B_el = 34.4f;
+
+        return c;
     }
 
     /** Test a single call to calculate. */
@@ -252,6 +276,16 @@ public class CurvatureCalculator {
         c.heading = heading;
         c.distanceKm = distanceKm;
 
+        testOneC(c, deviationBDegrees, curvature, twistRate, numWarnings);
+    }
+
+    /** Test using the inputs in 'c'. */
+    private static void testOneC(CurvatureCalculator c,
+        double deviationBDegrees,
+        double curvature,
+        double twistRate,
+        int numWarnings)
+    {
         c.calculate();
 
         if (Math.abs(deviationBDegrees - c.deviationBDegrees) < 0.2 &&
@@ -262,16 +296,16 @@ public class CurvatureCalculator {
             // Ok.
         }
         else {
-            System.err.println("start_A_az: "+start_A_az);
-            System.err.println("start_A_el: "+start_A_el);
-            System.err.println("start_B_az: "+start_B_az);
-            System.err.println("start_B_el: "+start_B_el);
-            System.err.println("end_A_az: "+end_A_az);
-            System.err.println("end_A_el: "+end_A_el);
-            System.err.println("end_B_az: "+end_B_az);
-            System.err.println("end_B_el: "+end_B_el);
-            System.err.println("heading: "+heading);
-            System.err.println("distanceKm: "+distanceKm);
+            System.err.println("start_A_az: "+c.start_A_az);
+            System.err.println("start_A_el: "+c.start_A_el);
+            System.err.println("start_B_az: "+c.start_B_az);
+            System.err.println("start_B_el: "+c.start_B_el);
+            System.err.println("end_A_az: "+c.end_A_az);
+            System.err.println("end_A_el: "+c.end_A_el);
+            System.err.println("end_B_az: "+c.end_B_az);
+            System.err.println("end_B_el: "+c.end_B_el);
+            System.err.println("heading: "+c.heading);
+            System.err.println("distanceKm: "+c.distanceKm);
             System.err.println("deviationBDegrees expect: "+deviationBDegrees);
             System.err.println("deviationBDegrees actual: "+c.deviationBDegrees);
             System.err.println("curvature expect: "+curvature);
@@ -309,17 +343,10 @@ public class CurvatureCalculator {
             0,       // devB
             0,       // curvature
             -.009,       // twist
-            1);      // warnings
+            2);      // warnings
 
-        CurvatureCalculator c = new CurvatureCalculator();
-        c.setTravelByLatLong(38, -122, 38, -113);
-
-        testOne(
-            36.9f,  44.8f,
-            181.1f, 35.2f,
-            36.4f,  49.1f,
-            191.5f, 34.4f,
-            c.heading, c.distanceKm,
+        testOneC(
+            CurvatureCalculator.getDubheSirius(),
             0.06391,
             1/6382.0,
             -1.0329799e-4,
