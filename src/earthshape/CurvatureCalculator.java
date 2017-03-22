@@ -110,6 +110,14 @@ public class CurvatureCalculator {
         Vector3f start_north = new Vector3f(0,0,-1);
         Vector3f travel_forward = start_north.rotateDeg(-this.heading, normal);
 
+        this.computeFromNormals(normal, normal_rot12, travel_forward);
+    }
+
+    /** Jump in to the middle of the curvature calculation with known
+      * original and rotated normals, plus the forward travel unit
+      * vector.  'distanceKm' must be set first to use this. */
+    public void computeFromNormals(Vector3f normal, Vector3f normal_rot12, Vector3f travel_forward)
+    {
         // Perpendicular to travel direction.  If the normal rotation
         // cross product is aligned with this, curvature is positive.
         Vector3f travel_left = normal.cross(travel_forward);

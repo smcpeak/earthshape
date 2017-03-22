@@ -652,35 +652,46 @@ public class EarthShape extends MyJFrame {
 
     private JMenu buildNavigateMenu()
     {
-        JMenu navigateMenu = new JMenu("Navigate");
-        addMenuItem(navigateMenu, "Control camera like a first-person shooter",
+        JMenu menu = new JMenu("Navigate");
+        addMenuItem(menu, "Control camera like a first-person shooter",
             KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0),
             new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
                     EarthShape.this.emCanvas.enterFPSMode();
                 }
             });
-        addMenuItem(navigateMenu, "Leave first-person shooter mode",
+        addMenuItem(menu, "Leave first-person shooter mode",
             KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
             new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
                     EarthShape.this.emCanvas.exitFPSMode();
                 }
             });
-        addMenuItem(navigateMenu, "Go to active square's center",
+        addMenuItem(menu, "Go to active square's center",
             KeyStroke.getKeyStroke('g'),
             new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
                     EarthShape.this.goToActiveSquareCenter();
                 }
             });
-        addMenuItem(navigateMenu, "Go to origin", null,
+        addMenuItem(menu, "Go to origin", null,
             new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
                     EarthShape.this.moveCamera(new Vector3f(0,0,0));
                 }
             });
-        return navigateMenu;
+
+        menu.addSeparator();
+
+        addMenuItem(menu, "Curvature calculator...", null,
+            new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    (new CurvatureCalculatorDialog(EarthShape.this)).exec();
+                }
+            });
+
+
+        return menu;
     }
 
     private JMenu buildAnimateMenu()
@@ -2481,14 +2492,21 @@ public class EarthShape extends MyJFrame {
             sb.append("Base at: ("+this.activeSquare.baseSquare.latitude+
                       ","+this.activeSquare.baseSquare.longitude+")\n");
 
-            double curvature = this.computeAverageCurvature(this.activeSquare);
-            sb.append("Curvature: "+(float)curvature+" km^-1\n");
-
-            if (curvature != 0) {
-                sb.append("Radius: "+(float)(1/curvature)+" km\n");
+            CurvatureCalculator cc = this.computeAverageCurvature(this.activeSquare);
+            if (cc == null) {
+                sb.append("No curvature or twist.\n");
             }
             else {
-                sb.append("Radius: Infinite\n");
+                sb.append("Curvature: "+(float)cc.curvature+" km^-1\n");
+
+                if (cc.curvature != 0) {
+                    sb.append("Radius: "+(float)(1/cc.curvature)+" km\n");
+                }
+                else {
+                    sb.append("Radius: Infinite\n");
+                }
+
+                sb.append("Twist: "+(float)(cc.twistRate*1000.0)+" deg/1000 km\n");
             }
         }
 
@@ -2510,13 +2528,13 @@ public class EarthShape extends MyJFrame {
 
     /** Compute the average curvature on a path from the base square
       * of 's' to 's'. */
-    private double computeAverageCurvature(SurfaceSquare s)
+    private CurvatureCalculator computeAverageCurvature(SurfaceSquare s)
     {
         // Angle separating normals.
         double angle = FloatUtil.acosDeg(
             s.up.normalizeAsVector3d().dot(s.baseSquare.up.normalizeAsVector3d()));
         if (angle == 0) {
-            return 0;
+            return null;
         }
 
         // Travel distance and heading.
@@ -2524,26 +2542,15 @@ public class EarthShape extends MyJFrame {
             s.baseSquare.latitude, s.baseSquare.longitude,
             s.latitude, s.longitude);
 
-        // Circumference of curvature.
-        double circumference = tobs.distanceKm * 360.0 / angle;
-
-        // Radius of curvature.
-        double radius = circumference / (2 * Math.PI);
-
-        // Curvature absolute value.
-        double curvature = 1 / radius;
-
         // Unit travel vector in base square coordinate system.
         Vector3f t = (new Vector3f(0,0,-1)).rotateDeg(-tobs.startToEndHeading, new Vector3f(0,1,0));
         t = t.rotateAADeg(s.baseSquare.rotationFromNominal);
 
-        // If the new surface normal is in the same direction as the
-        // travel vector, curvature is positive.  Otherwise negative.
-        if (t.dot(s.up) < 0) {
-            curvature = -curvature;
-        }
-
-        return curvature;
+        // Calculate curvature and twist.
+        CurvatureCalculator c = new CurvatureCalculator();
+        c.distanceKm = tobs.distanceKm;
+        c.computeFromNormals(s.baseSquare.up, s.up, t);
+        return c;
     }
 
     /** Result of call to 'getVarianceAfterRotations'. */

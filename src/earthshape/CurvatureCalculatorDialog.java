@@ -126,6 +126,8 @@ public class CurvatureCalculatorDialog extends ModalDialog {
         }
         vb.strut();
 
+        this.calculate();
+
         this.finishDialogWithVBox(vb);
     }
 
