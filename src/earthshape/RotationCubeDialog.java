@@ -141,14 +141,7 @@ public class RotationCubeDialog extends ModalDialog implements ItemListener {
         vb.add(hb3);
         vb.strut();
 
-        HBox outer = new HBox();
-        outer.strut();
-        outer.add(vb);
-        outer.strut();
-
-        this.getContentPane().add(outer);
-
-        this.finishBuildingDialog();
+        this.finishDialogWithVBox(vb);
     }
 
     /** Construct widgets to show 1D 'plotData'. */

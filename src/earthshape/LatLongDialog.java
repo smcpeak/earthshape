@@ -6,6 +6,7 @@ package earthshape;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
 
 import util.swing.HBox;
 import util.swing.ModalDialog;
@@ -26,7 +27,7 @@ public class LatLongDialog extends ModalDialog {
 
     public LatLongDialog(JFrame parent, float initLatitude, float initLongitude)
     {
-        super(parent, "Start new surface");
+        super(parent, "Create new square");
 
         VBox vb = new VBox();
         vb.strut();
@@ -34,23 +35,11 @@ public class LatLongDialog extends ModalDialog {
         vb.add(new JLabel("Choose latitude and longitude for start square"));
         vb.strut();
 
-        HBox hb1 = new HBox();
-        {
-            hb1.add(new JLabel("Latitude (degrees North)"));
-            hb1.strut();
-            hb1.add(this.latitudeTextField = new JTextField(""+initLatitude));
-        }
-        vb.add(hb1);
-        vb.strut();
+        this.latitudeTextField =
+            this.makeTextField(vb, "Latitude (degrees North)", ""+initLatitude);
 
-        HBox hb2 = new HBox();
-        {
-            hb2.add(new JLabel("Longitude (degrees East)"));
-            hb2.strut();
-            hb2.add(this.longitudeTextField = new JTextField(""+initLongitude));
-        }
-        vb.add(hb2);
-        vb.strut();
+        this.longitudeTextField =
+            this.makeTextField(vb, "Longitude (degrees East)", ""+initLongitude);
 
         HBox hb3 = new HBox();
         {
@@ -63,14 +52,7 @@ public class LatLongDialog extends ModalDialog {
         vb.add(hb3);
         vb.strut();
 
-        HBox outer = new HBox();
-        outer.strut();
-        outer.add(vb);
-        outer.strut();
-
-        this.getContentPane().add(outer);
-
-        this.finishBuildingDialog();
+        this.finishDialogWithVBox(vb);
     }
 
     public void okPressed()
@@ -92,6 +74,22 @@ public class LatLongDialog extends ModalDialog {
         }
 
         super.okPressed();
+    }
+
+    /** Test this one dialog. */
+    public static void main(String[] args)
+    {
+        SwingUtilities.invokeLater(new Runnable() {
+            public void run() {
+                LatLongDialog d = new LatLongDialog(null /*parent*/, 3, -4);
+                if (d.exec()) {
+                    System.out.println("Ok: "+d.finalLatitude+", "+d.finalLongitude);
+                }
+                else {
+                    System.out.println("Canceled.");
+                }
+            }
+        });
     }
 }
 

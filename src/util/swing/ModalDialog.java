@@ -14,8 +14,10 @@ import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JRootPane;
+import javax.swing.JTextField;
 import javax.swing.KeyStroke;
 
 /** Base class for modal dialogs. */
@@ -58,23 +60,35 @@ public class ModalDialog extends JDialog {
         return this.okWasPressed;
     }
 
+    /** Make a new JButton and attach a listener. */
+    public JButton makeButton(String label, ActionListener listener)
+    {
+        JButton b = new JButton(label);
+        b.addActionListener(listener);
+        return b;
+    }
+
     /** Create a Cancel button and set its action to close the dialog. */
     public JButton makeCancelButton()
     {
-        JButton cancelButton = new JButton("Cancel");
-        cancelButton.addActionListener(new ActionListener() {
+        return this.makeButton("Cancel", new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 ModalDialog.this.dispose();
             }
         });
-        return cancelButton;
     }
 
     /** Create an OK button and set its action to close the dialog,
       * indicating that changes should be preserved. */
     public JButton makeOKButton()
     {
-        JButton okButton = new JButton("OK");
+        return this.makeOKButtonCalled("OK");
+    }
+
+    /** Create an OK button and specify its label. */
+    public JButton makeOKButtonCalled(String label)
+    {
+        JButton okButton = new JButton(label);
         okButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 ModalDialog.this.okPressed();
@@ -98,6 +112,28 @@ public class ModalDialog extends JDialog {
         this.dispose();
     }
 
+    /** Add a labeled text field to 'vb'.  Also add a strut at the end. */
+    public JTextField makeTextField(VBox vb, String labelText, String initValue)
+    {
+        HBox hb = new HBox();
+
+        JLabel label = new JLabel(labelText);
+        hb.add(label);
+
+        hb.strut();
+
+        JTextField textField = new JTextField(initValue);
+        hb.add(textField);
+
+        // This won't do anything since I haven't set the mnemonic...
+        label.setLabelFor(textField);
+
+        vb.add(hb);
+        vb.strut();
+
+        return textField;
+    }
+
     /** Arrange to close a dialog when Escape is pressed.
       *
       * Based on code from:
@@ -114,6 +150,21 @@ public class ModalDialog extends JDialog {
             },
             KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
             JComponent.WHEN_IN_FOCUSED_WINDOW);
+    }
+
+    /** Given a vbox containing the controls, finish building the
+      * dialog by wrapping it in an hbox with horizontal margins,
+      * then pack and center the dialog. */
+    public void finishDialogWithVBox(VBox vb)
+    {
+        HBox outer = new HBox();
+        outer.strut();
+        outer.add(vb);
+        outer.strut();
+
+        this.getContentPane().add(outer);
+
+        this.finishBuildingDialog();
     }
 
     /** Pack the controls and center the dialog w.r.t. parent. */

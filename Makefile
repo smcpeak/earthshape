@@ -58,5 +58,6 @@ check:
 	java -cp bin -ea util.Matrix3f
 	java -cp bin -ea util.Matrix3d
 	java -cp bin -ea earthshape.StarCatalog
+	java -cp bin -ea earthshape.CurvatureCalculator
 
 # EOF

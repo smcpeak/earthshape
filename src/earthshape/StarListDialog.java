@@ -58,14 +58,7 @@ public class StarListDialog extends ModalDialog {
         vb.add(hb3);
         vb.strut();
 
-        HBox outer = new HBox();
-        outer.strut();
-        outer.add(vb);
-        outer.strut();
-
-        this.getContentPane().add(outer);
-
-        this.finishBuildingDialog();
+        this.finishDialogWithVBox(vb);
     }
 
     public void okPressed()
