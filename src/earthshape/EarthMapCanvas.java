@@ -166,6 +166,9 @@ public class EarthMapCanvas
     public boolean invertVerticalCameraMovement = true;
 
     // ---- Draw options ----
+    /** If true, draw the X, Y, and Z coordinate axes. */
+    public boolean drawAxes = true;
+
     /** If true, draw surfaces as simple wireframes.  This takes
       * precedence over 'drawCompasses'. */
     public boolean drawWireframeSquares = false;
@@ -443,7 +446,9 @@ public class EarthMapCanvas
         // Throw away labels from the prior frame.
         this.worldLabels.clear();
 
-        this.drawAxes(gl);
+        if (this.drawAxes) {
+            this.doDrawAxes(gl);
+        }
 
         // Save matrix in case we translate to the active square.
         gl.glPushMatrix();
@@ -563,7 +568,7 @@ public class EarthMapCanvas
         this.textRenderer.draw(text, screenX+5, screenY+5);
     }
 
-    private void drawAxes(GL2 gl)
+    private void doDrawAxes(GL2 gl)
     {
         // Use thicker lines so they will show up better if/when I
         // make a screenshot recording.

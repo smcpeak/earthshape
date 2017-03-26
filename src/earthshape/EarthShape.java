@@ -125,6 +125,7 @@ public class EarthShape extends MyJFrame {
     private InfoPanel infoPanel;
 
     // Menu items to toggle various options.
+    private JCheckBoxMenuItem drawCoordinateAxesCBItem;
     private JCheckBoxMenuItem drawWireframeSquaresCBItem;
     private JCheckBoxMenuItem drawCompassesCBItem;
     private JCheckBoxMenuItem drawSurfaceNormalsCBItem;
@@ -377,6 +378,14 @@ public class EarthShape extends MyJFrame {
     private JMenu buildDrawMenu()
     {
         JMenu drawMenu = new JMenu("Draw");
+        this.drawCoordinateAxesCBItem =
+            addCBMenuItem(drawMenu, "Draw X/Y/Z coordinate axes", null,
+                this.emCanvas.drawAxes,
+                new ActionListener() {
+                    public void actionPerformed(ActionEvent e) {
+                        EarthShape.this.toggleDrawAxes();
+                    }
+                });
         this.drawWireframeSquaresCBItem =
             addCBMenuItem(drawMenu, "Draw squares as wireframes with translucent squares", null,
                 this.emCanvas.drawWireframeSquares,
@@ -2275,6 +2284,12 @@ public class EarthShape extends MyJFrame {
         });
     }
 
+    public void toggleDrawAxes()
+    {
+        this.emCanvas.drawAxes = !this.emCanvas.drawAxes;
+        this.updateAndRedraw();
+    }
+
     /** Toggle the 'drawWireframeSquares' flag. */
     public void toggleDrawWireframeSquares()
     {
@@ -2402,6 +2417,7 @@ public class EarthShape extends MyJFrame {
     /** Set the state of stateful menu items. */
     private void setMenuState()
     {
+        this.drawCoordinateAxesCBItem.setSelected(this.emCanvas.drawAxes);
         this.drawWireframeSquaresCBItem.setSelected(this.emCanvas.drawWireframeSquares);
         this.drawCompassesCBItem.setSelected(this.emCanvas.drawCompasses);
         this.drawSurfaceNormalsCBItem.setSelected(this.emCanvas.drawSurfaceNormals);
