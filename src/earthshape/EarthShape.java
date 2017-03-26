@@ -126,6 +126,7 @@ public class EarthShape extends MyJFrame {
 
     // Menu items to toggle various options.
     private JCheckBoxMenuItem drawCoordinateAxesCBItem;
+    private JCheckBoxMenuItem drawCrosshairCBItem;
     private JCheckBoxMenuItem drawWireframeSquaresCBItem;
     private JCheckBoxMenuItem drawCompassesCBItem;
     private JCheckBoxMenuItem drawSurfaceNormalsCBItem;
@@ -384,6 +385,14 @@ public class EarthShape extends MyJFrame {
                 new ActionListener() {
                     public void actionPerformed(ActionEvent e) {
                         EarthShape.this.toggleDrawAxes();
+                    }
+                });
+        this.drawCrosshairCBItem =
+            addCBMenuItem(drawMenu, "Draw crosshair when in FPS camera mode", null,
+                this.emCanvas.drawCrosshair,
+                new ActionListener() {
+                    public void actionPerformed(ActionEvent e) {
+                        EarthShape.this.toggleDrawCrosshair();
                     }
                 });
         this.drawWireframeSquaresCBItem =
@@ -2290,6 +2299,12 @@ public class EarthShape extends MyJFrame {
         this.updateAndRedraw();
     }
 
+    public void toggleDrawCrosshair()
+    {
+        this.emCanvas.drawCrosshair = !this.emCanvas.drawCrosshair;
+        this.updateAndRedraw();
+    }
+
     /** Toggle the 'drawWireframeSquares' flag. */
     public void toggleDrawWireframeSquares()
     {
@@ -2418,6 +2433,7 @@ public class EarthShape extends MyJFrame {
     private void setMenuState()
     {
         this.drawCoordinateAxesCBItem.setSelected(this.emCanvas.drawAxes);
+        this.drawCrosshairCBItem.setSelected(this.emCanvas.drawCrosshair);
         this.drawWireframeSquaresCBItem.setSelected(this.emCanvas.drawWireframeSquares);
         this.drawCompassesCBItem.setSelected(this.emCanvas.drawCompasses);
         this.drawSurfaceNormalsCBItem.setSelected(this.emCanvas.drawSurfaceNormals);

@@ -169,6 +169,10 @@ public class EarthMapCanvas
     /** If true, draw the X, Y, and Z coordinate axes. */
     public boolean drawAxes = true;
 
+    /** If true, draw a crosshair in the center of the 3D view
+      * when in FPS camera mode. */
+    public boolean drawCrosshair = true;
+
     /** If true, draw surfaces as simple wireframes.  This takes
       * precedence over 'drawCompasses'. */
     public boolean drawWireframeSquares = false;
@@ -472,8 +476,8 @@ public class EarthMapCanvas
 
         gl.glPopMatrix();
 
-        if (this.fpsCameraMode) {
-            this.drawCrosshair(gl);
+        if (this.fpsCameraMode && this.drawCrosshair) {
+            this.doDrawCrosshair(gl);
         }
 
         gl.glFlush();
@@ -482,7 +486,7 @@ public class EarthMapCanvas
     }
 
     /** Draw a crosshair in the middle of the canvas. */
-    private void drawCrosshair(GL2 gl)
+    private void doDrawCrosshair(GL2 gl)
     {
         gl.glPushAttrib(GL2.GL_ALL_ATTRIB_BITS);
         gl.glMatrixMode(GL2.GL_PROJECTION);
