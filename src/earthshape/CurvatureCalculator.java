@@ -147,65 +147,36 @@ public class CurvatureCalculator {
       * vector.  'distanceKm' must be set first to use this. */
     public void computeFromNormals(Vector3f normal, Vector3f normal_rot12, Vector3f travel_forward)
     {
+        // Background:
+        // https://en.wikipedia.org/wiki/Curvature#Curvature_of_curves_on_surfaces
+
         // Perpendicular to travel direction.  If the normal rotation
         // cross product is aligned with this, curvature is positive.
         Vector3f travel_left = normal.cross(travel_forward);
 
         this.steps.add("travel_left: "+travel_left);
 
-        // Express the normal rotation as an angle/axis vector.
-        Vector3f normal_rot_axis = normal.cross(normal_rot12).normalize();
-        double normal_rot_angle = FloatUtil.acosDeg(normal.dot(normal_rot12));
-        Vector3f normal_rot_AA = normal_rot_axis.timesd(normal_rot_angle);
+        // Cross the old normal with the new normal to get a
+        // vector along the axis with magnitude sin(angle).
+        Vector3f normal_cp = normal.cross(normal_rot12);
 
-        this.steps.add("normal_rot_axis: "+normal_rot_axis);
-        this.steps.add("normal_rot_angle: "+normal_rot_angle);
-        this.steps.add("normal_rot_AA: "+normal_rot_AA);
+        // Get the curvature of normal rotation in the plane
+        // containing both 'normal' and 'forward'.
+        double normal_rot_angle_radians =
+            Math.asin(normal_cp.dot(travel_left));
+        this.curvature = normal_rot_angle_radians / this.distanceKm;
 
-        // Component of normal rotation that is not twisted.
-        Vector3f normal_rot_AA_straight =
-            normal_rot_AA.projectOntoUnitVector(travel_left);
+        this.steps.add("normal_rot_angle_radians: "+normal_rot_angle_radians);
+        this.steps.add("normal curvature: "+this.curvature);
 
-        this.steps.add("normal_rot_AA_straight: "+normal_rot_AA_straight);
+        // Geodesic torsion curvature.
+        this.twistRate =
+            FloatUtil.asinDeg(normal_cp.dot(travel_forward)) / this.distanceKm;
 
-        // Calculate the angle through which the normal was rotated
-        // forward without twisting.
-        //
-        // I don't think this is really right.  I'm just projecting
-        // the AA and assuming the resulting length is the angle of
-        // a rotation component.  What I want is a proper rotation
-        // decomposition.  But this should suffice so long as the
-        // twist rate is small.
-        double curvatureAngle = normal_rot_AA_straight.length();
-        if (normal_rot_AA_straight.dot(travel_left) < 0) {
-            curvatureAngle = -curvatureAngle;
-        }
-
-        this.steps.add("curvatureAngle: "+curvatureAngle);
-
-        // Calculate resulting curvature in km^-1.
-        this.curvature = (2 * Math.PI * curvatureAngle) / (this.distanceKm * 360.0);
-
-        // Normal rotation that is twist.
-        Vector3f normal_rot_AA_twist =
-            normal_rot_AA.projectOntoUnitVector(travel_forward);
-
-        this.steps.add("normal_rot_AA_twist: "+normal_rot_AA_twist);
-
-        // Calculate twist angle to the right, so it follows the
-        // right hand rule w.r.t. the forward travel direction.
-        double twistAngle = normal_rot_AA_twist.length();
-        if (normal_rot_AA_twist.dot(travel_forward) < 0) {
-            twistAngle = -twistAngle;
-        }
-
-        this.steps.add("twistAngle: "+twistAngle);
-
-        // Twist per distance.
-        this.twistRate = twistAngle / this.distanceKm;
+        this.steps.add("torsion_curvature: "+this.twistRate);
 
         if (Math.abs(this.twistRate) > 0.001) {
-            this.warnings.add("Warning: Twist rate magnitude exceeds one degree per 1000 km.  That never happens on the real Earth.  Check the travel heading.");
+            this.warnings.add("Warning: Torsion magnitude exceeds one degree per 1000 km.  That never happens on the real Earth.  Check the travel heading.");
         }
     }
 
@@ -288,33 +259,36 @@ public class CurvatureCalculator {
     {
         c.calculate();
 
-        if (Math.abs(deviationBDegrees - c.deviationBDegrees) < 0.2 &&
-            Math.abs(curvature - c.curvature) < 1e-7 &&
-            Math.abs(twistRate - c.twistRate) < 1e-7 &&
-            numWarnings == c.warnings.size())
-        {
-            // Ok.
+        System.out.println("start_A_az: "+c.start_A_az);
+        System.out.println("start_A_el: "+c.start_A_el);
+        System.out.println("start_B_az: "+c.start_B_az);
+        System.out.println("start_B_el: "+c.start_B_el);
+        System.out.println("end_A_az: "+c.end_A_az);
+        System.out.println("end_A_el: "+c.end_A_el);
+        System.out.println("end_B_az: "+c.end_B_az);
+        System.out.println("end_B_el: "+c.end_B_el);
+        System.out.println("heading: "+c.heading);
+        System.out.println("distanceKm: "+c.distanceKm);
+        System.out.println("deviationBDegrees expect: "+deviationBDegrees);
+        System.out.println("deviationBDegrees actual: "+c.deviationBDegrees);
+        System.out.println("curvature expect: "+curvature);
+        System.out.println("curvature actual: "+c.curvature);
+        System.out.println("twistRate expect: "+twistRate);
+        System.out.println("twistRate actual: "+c.twistRate);
+        System.out.println("numWarnings expect: "+numWarnings);
+        System.out.println("numWarnings actual: "+c.warnings.size());
+
+        if (Math.abs(deviationBDegrees - c.deviationBDegrees) > 0.2) {
+            throw new RuntimeException("deviation is wrong");
         }
-        else {
-            System.err.println("start_A_az: "+c.start_A_az);
-            System.err.println("start_A_el: "+c.start_A_el);
-            System.err.println("start_B_az: "+c.start_B_az);
-            System.err.println("start_B_el: "+c.start_B_el);
-            System.err.println("end_A_az: "+c.end_A_az);
-            System.err.println("end_A_el: "+c.end_A_el);
-            System.err.println("end_B_az: "+c.end_B_az);
-            System.err.println("end_B_el: "+c.end_B_el);
-            System.err.println("heading: "+c.heading);
-            System.err.println("distanceKm: "+c.distanceKm);
-            System.err.println("deviationBDegrees expect: "+deviationBDegrees);
-            System.err.println("deviationBDegrees actual: "+c.deviationBDegrees);
-            System.err.println("curvature expect: "+curvature);
-            System.err.println("curvature actual: "+c.curvature);
-            System.err.println("twistRate expect: "+twistRate);
-            System.err.println("twistRate actual: "+c.twistRate);
-            System.err.println("numWarnings expect: "+numWarnings);
-            System.err.println("numWarnings actual: "+c.warnings.size());
-            throw new RuntimeException("testOne failed");
+        if (Math.abs(curvature - c.curvature) > 1e-7) {
+            throw new RuntimeException("curvature is wrong");
+        }
+        if (Math.abs(twistRate - c.twistRate) > 1e-7) {
+            throw new RuntimeException("twistRate is wrong");
+        }
+        if (numWarnings != c.warnings.size()) {
+            throw new RuntimeException("number of warnings is wrong");
         }
     }
 
@@ -349,7 +323,7 @@ public class CurvatureCalculator {
             CurvatureCalculator.getDubheSirius(),
             0.06391,
             1/6382.0,
-            -1.0329799e-4,
+            -1.0303577e-4,
             0);
 
         System.out.println("CurvatureCalculator tests passed.");
