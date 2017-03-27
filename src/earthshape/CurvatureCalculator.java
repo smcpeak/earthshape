@@ -80,23 +80,23 @@ public class CurvatureCalculator {
         this.steps.add("end_B: "+end_B);
 
         // Calculate rotation that aligns A.
-        Vector3f u = end_A.cross(start_A);
-        this.steps.add("end_A cross start_A: "+u);
-        double theta1 = FloatUtil.asinDeg(u.length());
-        u = u.normalize();
-        Matrix3f rot1 = Matrix3f.rotateDeg(theta1, u);
+        Vector3f cp1 = end_A.cross(start_A);
+        this.steps.add("cp1: "+cp1);
+        double angle1 = FloatUtil.asinDeg(cp1.length());
+        Vector3f axis1 = cp1.normalize();
+        Matrix3f rot1 = Matrix3f.rotateDeg(angle1, axis1);
 
-        this.steps.add("u: "+u);
-        this.steps.add("theta1: "+theta1);
+        this.steps.add("axis1: "+axis1);
+        this.steps.add("angle1 (deg): "+angle1);
         this.steps.add("rot1: "+rot1);
 
         // Apply that rotation to end B and starting surface normal.
         Vector3f end_B_rot1 = rot1.times(end_B);
-        Vector3f normal = new Vector3f(0,1,0);
-        Vector3f normal_rot1 = rot1.times(normal);
+        Vector3f up = new Vector3f(0,1,0);
+        Vector3f up_rot1 = rot1.times(up);
 
         this.steps.add("end_B_rot1: "+end_B_rot1);
-        this.steps.add("normal_rot1: "+normal_rot1);
+        this.steps.add("up_rot1: "+up_rot1);
 
         // Project the B observations into the plane perpendicular
         // to the now-aligned A observations, then normalize those
@@ -109,23 +109,23 @@ public class CurvatureCalculator {
 
         // Calculate rotation about start A axis that aligns the
         // projected B observations.
-        Vector3f v = end_B_rot1_proj.cross(start_B_proj);
-        this.steps.add("end_B_rot1_proj cross start_B_proj: "+v);
-        double theta2 = FloatUtil.asinDeg(v.length());
-        v = v.normalize();
-        Matrix3f rot2 = Matrix3f.rotateDeg(theta2, v);
+        Vector3f cp2 = end_B_rot1_proj.cross(start_B_proj);
+        this.steps.add("cp2: "+cp2);
+        double angle2 = FloatUtil.asinDeg(cp2.length());
+        cp2 = cp2.normalize();
+        Matrix3f rot2 = Matrix3f.rotateDeg(angle2, cp2);
 
-        this.steps.add("v: "+v);
-        this.steps.add("theta2: "+theta2);
+        this.steps.add("cp2: "+cp2);
+        this.steps.add("angle2 (deg): "+angle2);
         this.steps.add("rot2: "+rot2);
 
         // Apply that rotation to rotated end B and start up
         // (surface normal).
         Vector3f end_B_rot12 = rot2.times(end_B_rot1);
-        Vector3f normal_rot12 = rot2.times(normal_rot1);
+        Vector3f up_rot12 = rot2.times(up_rot1);
 
         this.steps.add("end_B_rot12: "+end_B_rot12);
-        this.steps.add("normal_rot12: "+normal_rot12);
+        this.steps.add("up_rot12: "+up_rot12);
 
         // Check alignment of B.
         this.deviationBDegrees = FloatUtil.acosDeg(end_B_rot12.dot(start_B));
@@ -134,31 +134,31 @@ public class CurvatureCalculator {
         }
 
         // Unit travel vector in start coordinate system.
-        Vector3f start_north = new Vector3f(0,0,-1);
-        Vector3f travel_forward = start_north.rotateDeg(-this.heading, normal);
+        Vector3f north = new Vector3f(0,0,-1);
+        Vector3f travel_forward = north.rotateDeg(-this.heading, up);
 
         this.steps.add("travel_forward: "+travel_forward);
 
-        this.computeFromNormals(normal, normal_rot12, travel_forward);
+        this.computeFromNormals(up, up_rot12, travel_forward);
     }
 
     /** Jump in to the middle of the curvature calculation with known
       * original and rotated normals, plus the forward travel unit
       * vector.  'distanceKm' must be set first to use this. */
-    public void computeFromNormals(Vector3f normal, Vector3f normal_rot12, Vector3f travel_forward)
+    public void computeFromNormals(Vector3f up, Vector3f up_rot12, Vector3f travel_forward)
     {
         // Background:
         // https://en.wikipedia.org/wiki/Curvature#Curvature_of_curves_on_surfaces
 
         // Perpendicular to travel direction.  If the normal rotation
         // cross product is aligned with this, curvature is positive.
-        Vector3f travel_left = normal.cross(travel_forward);
+        Vector3f travel_left = up.cross(travel_forward);
 
         this.steps.add("travel_left: "+travel_left);
 
         // Cross the old normal with the new normal to get a
         // vector along the axis with magnitude sin(angle).
-        Vector3f normal_cp = normal.cross(normal_rot12);
+        Vector3f normal_cp = up.cross(up_rot12);
 
         // Get the curvature of normal rotation in the plane
         // containing both 'normal' and 'forward'.
