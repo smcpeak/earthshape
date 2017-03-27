@@ -185,14 +185,14 @@ public class CurvatureCalculatorDialog extends ModalDialog {
             sb.append(w+"\n");
         }
         sb.append("Deviation of rotated B (deg): "+c.deviationBDegrees+"\n");
-        sb.append("Curvature: "+c.curvature+" km^-1\n");
-        if (c.curvature == 0) {
-            sb.append("Radius: Infinite\n");
+        sb.append("Normal curvature: "+c.normalCurvature+" km^-1\n");
+        if (c.normalCurvature == 0) {
+            sb.append("Radius of normal curvature: Infinite\n");
         }
         else {
-            sb.append("Radius of curvature: "+(1/c.curvature)+" km\n");
+            sb.append("Radius of normal curvature: "+(1/c.normalCurvature)+" km\n");
         }
-        sb.append("Twist rate: "+(c.twistRate*1000)+" deg per 1000 km\n");
+        sb.append("Geodesic torsion: "+(c.geodesicTorsion*1000)+" deg per 1000 km\n");
 
         return sb;
     }

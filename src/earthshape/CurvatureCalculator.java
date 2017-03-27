@@ -40,11 +40,11 @@ public class CurvatureCalculator {
     public double deviationBDegrees;
 
     /** Surface curvature in direction of travel, in 1/km. */
-    public double curvature;
+    public double normalCurvature;
 
     /** Twist rate to the right in the direction of travel,
       * in degrees per km. */
-    public double twistRate;
+    public double geodesicTorsion;
 
     /** A list of explanations of each step of the calculations. */
     public ArrayList<String> steps = new ArrayList<String>();
@@ -164,18 +164,18 @@ public class CurvatureCalculator {
         // containing both 'normal' and 'forward'.
         double normal_rot_angle_radians =
             Math.asin(normal_cp.dot(travel_left));
-        this.curvature = normal_rot_angle_radians / this.distanceKm;
+        this.normalCurvature = normal_rot_angle_radians / this.distanceKm;
 
         this.steps.add("normal_rot_angle_radians: "+normal_rot_angle_radians);
-        this.steps.add("normal curvature: "+this.curvature);
+        this.steps.add("normal curvature: "+this.normalCurvature);
 
         // Geodesic torsion curvature.
-        this.twistRate =
+        this.geodesicTorsion =
             FloatUtil.asinDeg(normal_cp.dot(travel_forward)) / this.distanceKm;
 
-        this.steps.add("torsion_curvature: "+this.twistRate);
+        this.steps.add("geodesic torsion: "+this.geodesicTorsion);
 
-        if (Math.abs(this.twistRate) > 0.001) {
+        if (Math.abs(this.geodesicTorsion) > 0.001) {
             this.warnings.add("Warning: Torsion magnitude exceeds one degree per 1000 km.  That never happens on the real Earth.  Check the travel heading.");
         }
     }
@@ -231,8 +231,8 @@ public class CurvatureCalculator {
         float heading,
         float distanceKm,
         double deviationBDegrees,
-        double curvature,
-        double twistRate,
+        double normalCurvature,
+        double geodesicTorsion,
         int numWarnings)
     {
         CurvatureCalculator c = new CurvatureCalculator();
@@ -247,14 +247,14 @@ public class CurvatureCalculator {
         c.heading = heading;
         c.distanceKm = distanceKm;
 
-        testOneC(c, deviationBDegrees, curvature, twistRate, numWarnings);
+        testOneC(c, deviationBDegrees, normalCurvature, geodesicTorsion, numWarnings);
     }
 
     /** Test using the inputs in 'c'. */
     private static void testOneC(CurvatureCalculator c,
         double deviationBDegrees,
-        double curvature,
-        double twistRate,
+        double normalCurvature,
+        double geodesicTorsion,
         int numWarnings)
     {
         c.calculate();
@@ -271,20 +271,20 @@ public class CurvatureCalculator {
         System.out.println("distanceKm: "+c.distanceKm);
         System.out.println("deviationBDegrees expect: "+deviationBDegrees);
         System.out.println("deviationBDegrees actual: "+c.deviationBDegrees);
-        System.out.println("curvature expect: "+curvature);
-        System.out.println("curvature actual: "+c.curvature);
-        System.out.println("twistRate expect: "+twistRate);
-        System.out.println("twistRate actual: "+c.twistRate);
+        System.out.println("normal curvature expect: "+normalCurvature);
+        System.out.println("normal curvature actual: "+c.normalCurvature);
+        System.out.println("geodesic torsion expect: "+geodesicTorsion);
+        System.out.println("geodesic torsion actual: "+c.geodesicTorsion);
         System.out.println("numWarnings expect: "+numWarnings);
         System.out.println("numWarnings actual: "+c.warnings.size());
 
         if (Math.abs(deviationBDegrees - c.deviationBDegrees) > 0.2) {
             throw new RuntimeException("deviation is wrong");
         }
-        if (Math.abs(curvature - c.curvature) > 1e-7) {
+        if (Math.abs(normalCurvature - c.normalCurvature) > 1e-7) {
             throw new RuntimeException("curvature is wrong");
         }
-        if (Math.abs(twistRate - c.twistRate) > 1e-7) {
+        if (Math.abs(geodesicTorsion - c.geodesicTorsion) > 1e-7) {
             throw new RuntimeException("twistRate is wrong");
         }
         if (numWarnings != c.warnings.size()) {

@@ -2527,19 +2527,19 @@ public class EarthShape extends MyJFrame {
 
             CurvatureCalculator cc = this.computeAverageCurvature(this.activeSquare);
             if (cc == null) {
-                sb.append("No curvature or twist.\n");
+                sb.append("No curvature or torsion.\n");
             }
             else {
-                sb.append("Curvature: "+(float)cc.curvature+" km^-1\n");
+                sb.append("Normal curvature: "+(float)cc.normalCurvature+" km^-1\n");
 
-                if (cc.curvature != 0) {
-                    sb.append("Radius: "+(float)(1/cc.curvature)+" km\n");
+                if (cc.normalCurvature != 0) {
+                    sb.append("Radius: "+(float)(1/cc.normalCurvature)+" km\n");
                 }
                 else {
                     sb.append("Radius: Infinite\n");
                 }
 
-                sb.append("Twist: "+(float)(cc.twistRate*1000.0)+" deg/1000 km\n");
+                sb.append("Geodesic torsion: "+(float)(cc.geodesicTorsion*1000.0)+" deg/1000 km\n");
             }
         }
 
