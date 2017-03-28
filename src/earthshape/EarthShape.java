@@ -2526,7 +2526,9 @@ public class EarthShape extends MyJFrame {
                       ","+this.activeSquare.baseSquare.longitude+")\n");
 
             CurvatureCalculator cc = this.computeAverageCurvature(this.activeSquare);
-            sb.append("Normal curvature: "+(float)cc.normalCurvature+" km^-1\n");
+            double normalCurvatureDegPer1000km =
+                FloatUtil.radiansToDegrees(cc.normalCurvature*1000);
+            sb.append("Normal curvature: "+(float)normalCurvatureDegPer1000km+" deg per 1000 km\n");
 
             if (cc.normalCurvature != 0) {
                 sb.append("Radius: "+(float)(1/cc.normalCurvature)+" km\n");
@@ -2535,8 +2537,8 @@ public class EarthShape extends MyJFrame {
                 sb.append("Radius: Infinite\n");
             }
 
-            sb.append("Geodesic curvature: "+(float)(cc.geodesicCurvature*1000.0)+" deg/1000 km\n");
-            sb.append("Geodesic torsion: "+(float)(cc.geodesicTorsion*1000.0)+" deg/1000 km\n");
+            sb.append("Geodesic curvature: "+(float)(cc.geodesicCurvature*1000.0)+" deg per 1000 km\n");
+            sb.append("Geodesic torsion: "+(float)(cc.geodesicTorsion*1000.0)+" deg per 1000 km\n");
         }
 
         // Also show star observation data.

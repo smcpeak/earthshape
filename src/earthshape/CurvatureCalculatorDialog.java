@@ -16,6 +16,7 @@ import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 
+import util.FloatUtil;
 import util.swing.HBox;
 import util.swing.ModalDialog;
 import util.swing.VBox;
@@ -189,7 +190,8 @@ public class CurvatureCalculatorDialog extends ModalDialog {
             sb.append(w+"\n");
         }
         sb.append("Deviation of rotated B (deg): "+c.deviationBDegrees+"\n");
-        sb.append("Normal curvature: "+c.normalCurvature+" km^-1\n");
+        double normalCurvatureDegPer1000km = FloatUtil.radiansToDegrees(c.normalCurvature*1000);
+        sb.append("Normal curvature: "+normalCurvatureDegPer1000km+" deg per 1000 km\n");
         if (c.normalCurvature == 0) {
             sb.append("Radius of normal curvature: Infinite\n");
         }
