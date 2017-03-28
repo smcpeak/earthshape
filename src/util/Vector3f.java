@@ -218,6 +218,13 @@ public class Vector3f {
         return v;
     }
 
+    /** Convert a heading, as degrees East of North, into a unit vector
+      * that points in the same direction. */
+    public static Vector3f headingToVector(float heading)
+    {
+        return azimuthElevationToVector(heading, 0);
+    }
+
     /** Return the component of 'this' orthogonal to unit vector 'u'. */
     public Vector3f orthogonalComponentToUnitVector(Vector3f u)
     {

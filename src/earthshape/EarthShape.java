@@ -2526,21 +2526,17 @@ public class EarthShape extends MyJFrame {
                       ","+this.activeSquare.baseSquare.longitude+")\n");
 
             CurvatureCalculator cc = this.computeAverageCurvature(this.activeSquare);
-            if (cc == null) {
-                sb.append("No curvature or torsion.\n");
+            sb.append("Normal curvature: "+(float)cc.normalCurvature+" km^-1\n");
+
+            if (cc.normalCurvature != 0) {
+                sb.append("Radius: "+(float)(1/cc.normalCurvature)+" km\n");
             }
             else {
-                sb.append("Normal curvature: "+(float)cc.normalCurvature+" km^-1\n");
-
-                if (cc.normalCurvature != 0) {
-                    sb.append("Radius: "+(float)(1/cc.normalCurvature)+" km\n");
-                }
-                else {
-                    sb.append("Radius: Infinite\n");
-                }
-
-                sb.append("Geodesic torsion: "+(float)(cc.geodesicTorsion*1000.0)+" deg/1000 km\n");
+                sb.append("Radius: Infinite\n");
             }
+
+            sb.append("Geodesic curvature: "+(float)(cc.geodesicCurvature*1000.0)+" deg/1000 km\n");
+            sb.append("Geodesic torsion: "+(float)(cc.geodesicTorsion*1000.0)+" deg/1000 km\n");
         }
 
         // Also show star observation data.
@@ -2563,26 +2559,23 @@ public class EarthShape extends MyJFrame {
       * of 's' to 's'. */
     private CurvatureCalculator computeAverageCurvature(SurfaceSquare s)
     {
-        // Angle separating normals.
-        double angle = FloatUtil.acosDeg(
-            s.up.normalizeAsVector3d().dot(s.baseSquare.up.normalizeAsVector3d()));
-        if (angle == 0) {
-            return null;
-        }
-
         // Travel distance and heading.
         TravelObservation tobs = this.worldObservations.getTravelObservation(
             s.baseSquare.latitude, s.baseSquare.longitude,
             s.latitude, s.longitude);
 
         // Unit travel vector in base square coordinate system.
-        Vector3f t = (new Vector3f(0,0,-1)).rotateDeg(-tobs.startToEndHeading, new Vector3f(0,1,0));
-        t = t.rotateAADeg(s.baseSquare.rotationFromNominal);
+        Vector3f startTravel = Vector3f.headingToVector((float)tobs.startToEndHeading);
+        startTravel = startTravel.rotateAADeg(s.baseSquare.rotationFromNominal);
+
+        // And at derived square.
+        Vector3f endTravel = Vector3f.headingToVector((float)tobs.endToStartHeading + 180);
+        endTravel = endTravel.rotateAADeg(s.rotationFromNominal);
 
         // Calculate curvature and twist.
         CurvatureCalculator c = new CurvatureCalculator();
         c.distanceKm = tobs.distanceKm;
-        c.computeFromNormals(s.baseSquare.up, s.up, t);
+        c.computeFromNormals(s.baseSquare.up, s.up, startTravel, endTravel);
         return c;
     }
 

@@ -27,8 +27,12 @@ public class CurvatureCalculator {
     public float end_B_el;
 
     /** Degrees East of North of the shortest travel direction
-      * from start to end. */
-    public float heading;
+      * from start to end, as recorded at the start location. */
+    public float startTravelHeading;
+
+    /** Degrees East of North of the shortest travel direction
+      * from start to end, as recorded at the end location. */
+    public float endTravelHeading;
 
     /** Distance of shortest path from start to end, in km. */
     public float distanceKm;
@@ -39,8 +43,13 @@ public class CurvatureCalculator {
       * have the same angular separation. */
     public double deviationBDegrees;
 
-    /** Surface curvature in direction of travel, in 1/km. */
+    /** Surface curvature in direction of travel, in radians
+      * per km. */
     public double normalCurvature;
+
+    /** Change in direction of travel within the tangent plane,
+      * in degrees per km. */
+    public double geodesicCurvature;
 
     /** Twist rate to the right in the direction of travel,
       * in degrees per km. */
@@ -134,25 +143,29 @@ public class CurvatureCalculator {
         }
 
         // Unit travel vector in start coordinate system.
-        Vector3f north = new Vector3f(0,0,-1);
-        Vector3f travel_forward = north.rotateDeg(-this.heading, up);
+        Vector3f start_forward = Vector3f.headingToVector(this.startTravelHeading);
+        this.steps.add("start_forward: "+start_forward);
 
-        this.steps.add("travel_forward: "+travel_forward);
+        // Travel vector at end square.
+        Vector3f end_forward =
+            rot2.times(rot1.times(Vector3f.headingToVector(this.endTravelHeading)));
+        this.steps.add("end_forward: "+end_forward);
 
-        this.computeFromNormals(up, up_rot12, travel_forward);
+        this.computeFromNormals(up, up_rot12, start_forward, end_forward);
     }
 
     /** Jump in to the middle of the curvature calculation with known
-      * original and rotated normals, plus the forward travel unit
-      * vector.  'distanceKm' must be set first to use this. */
-    public void computeFromNormals(Vector3f up, Vector3f up_rot12, Vector3f travel_forward)
+      * original and rotated normals, plus the start and end travel unit
+      * vectors.  'distanceKm' must be set first to use this. */
+    public void computeFromNormals(
+        Vector3f up, Vector3f up_rot12, Vector3f start_forward, Vector3f end_forward)
     {
         // Background:
         // https://en.wikipedia.org/wiki/Curvature#Curvature_of_curves_on_surfaces
 
         // Perpendicular to travel direction.  If the normal rotation
         // cross product is aligned with this, curvature is positive.
-        Vector3f travel_left = up.cross(travel_forward);
+        Vector3f travel_left = up.cross(start_forward);
 
         this.steps.add("travel_left: "+travel_left);
 
@@ -169,14 +182,23 @@ public class CurvatureCalculator {
         this.steps.add("normal_rot_angle_radians: "+normal_rot_angle_radians);
         this.steps.add("normal curvature: "+this.normalCurvature);
 
+        // Geodesic curvature: how the travel direction changes
+        // in the tangent plane.
+        this.geodesicCurvature =
+            FloatUtil.asinDeg(start_forward.cross(end_forward).dot(up)) / this.distanceKm;
+        this.steps.add("geodesic curvature: "+this.geodesicCurvature);
+
+        if (Math.abs(this.geodesicCurvature) > 0.001) {
+            this.warnings.add("Warning: Geodesic curvature magnitude exceeds one degree per 1000 km.  That never happens on the real Earth.  Check the travel headings.");
+        }
+
         // Geodesic torsion curvature.
         this.geodesicTorsion =
-            FloatUtil.asinDeg(normal_cp.dot(travel_forward)) / this.distanceKm;
-
+            FloatUtil.asinDeg(normal_cp.dot(start_forward)) / this.distanceKm;
         this.steps.add("geodesic torsion: "+this.geodesicTorsion);
 
         if (Math.abs(this.geodesicTorsion) > 0.001) {
-            this.warnings.add("Warning: Torsion magnitude exceeds one degree per 1000 km.  That never happens on the real Earth.  Check the travel heading.");
+            this.warnings.add("Warning: Geodesic torsion magnitude exceeds one degree per 1000 km.  That never happens on the real Earth.  Check the start travel heading.");
         }
     }
 
@@ -188,8 +210,13 @@ public class CurvatureCalculator {
         float endLatitude,
         float endLongitude)
     {
-        this.heading = (float)FloatUtil.getLatLongPairHeading(
+        this.startTravelHeading = (float)FloatUtil.getLatLongPairHeading(
             startLatitude, startLongitude, endLatitude, endLongitude);
+        float endToStartHeading = (float)FloatUtil.getLatLongPairHeading(
+            endLatitude, endLongitude, startLatitude, startLongitude);
+
+        // This is the start->end heading at the end location.
+        this.endTravelHeading = FloatUtil.modulus2f(endToStartHeading + 180, 0, 360);
 
         double arcAngleDegrees = FloatUtil.sphericalSeparationAngle(
             startLongitude, startLatitude,
@@ -228,10 +255,12 @@ public class CurvatureCalculator {
         float end_A_el,
         float end_B_az,
         float end_B_el,
-        float heading,
+        float startTravelHeading,
+        float endTravelHeading,
         float distanceKm,
         double deviationBDegrees,
         double normalCurvature,
+        double geodesicCurvature,
         double geodesicTorsion,
         int numWarnings)
     {
@@ -244,16 +273,19 @@ public class CurvatureCalculator {
         c.end_A_el = end_A_el;
         c.end_B_az = end_B_az;
         c.end_B_el = end_B_el;
-        c.heading = heading;
+        c.startTravelHeading = startTravelHeading;
+        c.endTravelHeading = endTravelHeading;
         c.distanceKm = distanceKm;
 
-        testOneC(c, deviationBDegrees, normalCurvature, geodesicTorsion, numWarnings);
+        testOneC(c, deviationBDegrees, normalCurvature, geodesicCurvature,
+                 geodesicTorsion, numWarnings);
     }
 
     /** Test using the inputs in 'c'. */
     private static void testOneC(CurvatureCalculator c,
         double deviationBDegrees,
         double normalCurvature,
+        double geodesicCurvature,
         double geodesicTorsion,
         int numWarnings)
     {
@@ -267,12 +299,15 @@ public class CurvatureCalculator {
         System.out.println("end_A_el: "+c.end_A_el);
         System.out.println("end_B_az: "+c.end_B_az);
         System.out.println("end_B_el: "+c.end_B_el);
-        System.out.println("heading: "+c.heading);
+        System.out.println("startTravelHeading: "+c.startTravelHeading);
+        System.out.println("endTravelHeading: "+c.endTravelHeading);
         System.out.println("distanceKm: "+c.distanceKm);
         System.out.println("deviationBDegrees expect: "+deviationBDegrees);
         System.out.println("deviationBDegrees actual: "+c.deviationBDegrees);
         System.out.println("normal curvature expect: "+normalCurvature);
         System.out.println("normal curvature actual: "+c.normalCurvature);
+        System.out.println("geodesic curvature expect: "+geodesicCurvature);
+        System.out.println("geodesic curvature actual: "+c.geodesicCurvature);
         System.out.println("geodesic torsion expect: "+geodesicTorsion);
         System.out.println("geodesic torsion actual: "+c.geodesicTorsion);
         System.out.println("numWarnings expect: "+numWarnings);
@@ -282,10 +317,13 @@ public class CurvatureCalculator {
             throw new RuntimeException("deviation is wrong");
         }
         if (Math.abs(normalCurvature - c.normalCurvature) > 1e-7) {
-            throw new RuntimeException("curvature is wrong");
+            throw new RuntimeException("normal curvature is wrong");
+        }
+        if (Math.abs(geodesicCurvature - c.geodesicCurvature) > 1e-7) {
+            throw new RuntimeException("geodesic curvature is wrong");
         }
         if (Math.abs(geodesicTorsion - c.geodesicTorsion) > 1e-7) {
-            throw new RuntimeException("twistRate is wrong");
+            throw new RuntimeException("geodesic torsion is wrong");
         }
         if (numWarnings != c.warnings.size()) {
             throw new RuntimeException("number of warnings is wrong");
@@ -295,36 +333,58 @@ public class CurvatureCalculator {
     /** Unit tests. */
     public static void main(String[] args)
     {
+        // Travel North across 90 degrees.
         testOne(
             0, 90,   // A: zenith
             0, 0,    // B: fwd
             180, 0,  // A: backwd
             0, 90,   // B: zenith
-            0,       // hdg
+            0,       // start heading
+            0,       // end heading
             10000,   // dist
             0,       // devB
-            2 * Math.PI / 40000,    // curvature
-            0,       // twist
+            2 * Math.PI / 40000,    // normal curvature
+            0,       // geodesic curvature
+            0,       // geodesic torsion
             1);      // warnings
 
+        // Travel East along torsion helix for 90 degrees.
         testOne(
             0, 90,   // A: zenith
             0, 0,    // B: fwd
             180, 0,  // A: backwd
             0, 90,   // B: zenith
-            90,      // hdg
+            90,      // start heading
+            90,      // end heading
             10000,   // dist
             0,       // devB
-            0,       // curvature
-            -.009,       // twist
+            0,       // normal curvature
+            0,       // geodesic curvature
+            -.009,   // geodesic torsion
+            2);      // warnings
+
+        // Travel East along canyon bottom turning left.
+        testOne(
+            0, 90,   // A: zenith
+            0, 0,    // B: fwd
+            0, 90,   // A: zenith
+            90, 0,   // B: right
+            90,      // start heading
+            90,      // end heading
+            10000,   // dist
+            0,       // devB
+            0,       // normal curvature
+            0.009,   // geodesic curvature
+            0,       // geodesic torsion
             2);      // warnings
 
         testOneC(
             CurvatureCalculator.getDubheSirius(),
-            0.06391,
-            1/6382.0,
-            -1.0303577e-4,
-            0);
+            0.06391,          // deviation
+            1/6382.0,         // normal curvature
+            -2.108664e-5,     // geodesic curvature
+            -1.0303577e-4,    // geodesic torsion
+            0);               // warnings
 
         System.out.println("CurvatureCalculator tests passed.");
     }

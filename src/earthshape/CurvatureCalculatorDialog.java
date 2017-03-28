@@ -36,7 +36,8 @@ public class CurvatureCalculatorDialog extends ModalDialog {
     private JTextField end_A_el_tf;
     private JTextField end_B_az_tf;
     private JTextField end_B_el_tf;
-    private JTextField heading_tf;
+    private JTextField start_travel_heading_tf;
+    private JTextField end_travel_heading_tf;
     private JTextField distance_tf;
 
     private JCheckBox showStepsCB;
@@ -76,8 +77,10 @@ public class CurvatureCalculatorDialog extends ModalDialog {
         this.end_B_el_tf = this.makeTextField(vb, "End square star B elevation (degrees above horizon)",
             ""+initValues.end_B_el);
 
-        this.heading_tf = this.makeTextField(vb, "Start to end travel heading (degrees East of North)",
-            ""+initValues.heading);
+        this.start_travel_heading_tf = this.makeTextField(vb, "Travel heading at start (degrees East of North)",
+            ""+initValues.startTravelHeading);
+        this.end_travel_heading_tf = this.makeTextField(vb, "Travel heading at end (degrees East of North)",
+            ""+initValues.endTravelHeading);
 
         this.distance_tf = this.makeTextField(vb, "Start to end distance (km)",
             ""+initValues.distanceKm);
@@ -170,7 +173,8 @@ public class CurvatureCalculatorDialog extends ModalDialog {
         c.end_A_el = parseFloat(this.end_A_el_tf.getText());
         c.end_B_az = parseFloat(this.end_B_az_tf.getText());
         c.end_B_el = parseFloat(this.end_B_el_tf.getText());
-        c.heading = parseFloat(this.heading_tf.getText());
+        c.startTravelHeading = parseFloat(this.start_travel_heading_tf.getText());
+        c.endTravelHeading = parseFloat(this.end_travel_heading_tf.getText());
         c.distanceKm = parseFloat(this.distance_tf.getText());
 
         c.calculate();
@@ -192,6 +196,7 @@ public class CurvatureCalculatorDialog extends ModalDialog {
         else {
             sb.append("Radius of normal curvature: "+(1/c.normalCurvature)+" km\n");
         }
+        sb.append("Geodesic curvature: "+(c.geodesicCurvature*1000)+" deg per 1000 km\n");
         sb.append("Geodesic torsion: "+(c.geodesicTorsion*1000)+" deg per 1000 km\n");
 
         return sb;
