@@ -68,12 +68,6 @@ public class EarthShape extends MyJFrame {
       * not high enough to discriminate among the choices. */
     private static final float MINIMUM_ADJUST_ORIENTATION_DEGREES = 1e-7f;
 
-    // ---------- Class variables ----------
-    /** When true, star observations are only compared by their
-      * direction.  When false, we also consider the location of the
-      * observer, which allows us to handle nearby objects. */
-    public boolean assumeInfiniteStarDistance = false;
-
     // ---------- Instance variables ----------
     // ---- Observation Information ----
     /** The observations that will drive surface reconstruction.
@@ -94,6 +88,18 @@ public class EarthShape extends MyJFrame {
     private float adjustOrientationDegrees = DEFAULT_ADJUST_ORIENTATION_DEGREES;
 
     // ---- Options ----
+    /** When true, star observations are only compared by their
+      * direction.  When false, we also consider the location of the
+      * observer, which allows us to handle nearby objects. */
+    public boolean assumeInfiniteStarDistance = false;
+
+    /** When true, star observations are only compared by their
+      * direction, and furthermore, only the elevation, ignoring
+      * azimuth.  This is potentially interesting because, in
+      * practice, it is difficult to accurately measure azimuth
+      * with just a hand-held sextant. */
+    public boolean onlyCompareElevations = false;
+
     /** When analyzing the solution space, use this many points of
       * rotation on each side of 0, for each axis.  Note that the
       * algorithm is cubic in this parameter. */
@@ -141,6 +147,7 @@ public class EarthShape extends MyJFrame {
     private JCheckBoxMenuItem invertVerticalCameraMovementCBItem;
     private JCheckBoxMenuItem newAutomaticOrientationAlgorithmCBItem;
     private JCheckBoxMenuItem assumeInfiniteStarDistanceCBItem;
+    private JCheckBoxMenuItem onlyCompareElevationsCBItem;
     private JCheckBoxMenuItem drawWorldWireframeCBItem;
     private JCheckBoxMenuItem drawWorldStarsCBItem;
 
@@ -811,8 +818,17 @@ public class EarthShape extends MyJFrame {
                     public void actionPerformed(ActionEvent e) {
                         EarthShape.this.assumeInfiniteStarDistance =
                             !EarthShape.this.assumeInfiniteStarDistance;
-                        EarthShape.this.emCanvas.redrawCanvas();
-                        EarthShape.this.updateUIState();
+                        EarthShape.this.updateAndRedraw();
+                    }
+                });
+        this.onlyCompareElevationsCBItem =
+            addCBMenuItem(menu, "Only compare star elevations", null,
+                this.onlyCompareElevations,
+                new ActionListener() {
+                    public void actionPerformed(ActionEvent e) {
+                        EarthShape.this.onlyCompareElevations =
+                            !EarthShape.this.onlyCompareElevations;
+                        EarthShape.this.updateAndRedraw();
                     }
                 });
 
@@ -1563,7 +1579,8 @@ public class EarthShape extends MyJFrame {
                 // Visual separation angle between these rays.
                 double sep;
                 if (this.assumeInfiniteStarDistance) {
-                    sep = starRay.separationAngleDegrees(baseStarRay);
+                    sep = this.getStarRayDifference(
+                        square.up, starRay, baseStarRay);
                 }
                 else {
                     sep = EarthShape.getModifiedClosestApproach(
@@ -1651,6 +1668,52 @@ public class EarthShape extends MyJFrame {
         }
 
         return ca;
+    }
+
+    /** Get the difference between the two star rays, for a location
+      * with given unit 'up' vector, in degrees.  This depends on the
+      * option setting 'onlyCompareElevations'. */
+    public double getStarRayDifference(
+        Vector3f up,
+        Vector3f ray1,
+        Vector3f ray2)
+    {
+        if (this.onlyCompareElevations) {
+            return EarthShape.getElevationDifference(up, ray1, ray2);
+        }
+        else {
+            return ray1.separationAngleDegrees(ray2);
+        }
+    }
+
+    /** Given two star observation rays at a location with the given
+      * 'up' unit vector, return the difference in elevation between
+      * them, ignoring azimuth, in degrees. */
+    private static double getElevationDifference(
+        Vector3f up,
+        Vector3f ray1,
+        Vector3f ray2)
+    {
+        double e1 = getElevation(up, ray1);
+        double e2 = getElevation(up, ray2);
+        return Math.abs(e1-e2);
+    }
+
+    /** Return the elevation of 'ray' at a location with unit 'up'
+      * vector, in degrees. */
+    private static double getElevation(Vector3f up, Vector3f ray)
+    {
+        // Decompose into vertical and horizontal components.
+        Vector3f v = ray.projectOntoUnitVector(up);
+        Vector3f h = ray.minus(v);
+
+        // Get lengths, with vertical possibly negative if below
+        // horizon.
+        double vLen = ray.dot(up);
+        double hLen = h.length();
+
+        // Calculate corresponding angle.
+        return FloatUtil.atan2Deg(vLen, hLen);
     }
 
     /** Begin constructing a new surface using star data.  This just
@@ -2456,6 +2519,8 @@ public class EarthShape extends MyJFrame {
             this.newAutomaticOrientationAlgorithm);
         this.assumeInfiniteStarDistanceCBItem.setSelected(
             this.assumeInfiniteStarDistance);
+        this.onlyCompareElevationsCBItem.setSelected(
+            this.onlyCompareElevations);
     }
 
     /** Update the contents of the info panel. */

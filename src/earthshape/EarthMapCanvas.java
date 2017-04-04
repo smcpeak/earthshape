@@ -1355,7 +1355,8 @@ public class EarthMapCanvas
                     float sep;
                     if (this.earthShapeFrame.assumeInfiniteStarDistance) {
                         // Angle between *rays*.
-                        sep = (float)starRay.separationAngleDegrees(baseStarRay);
+                        sep = (float)this.earthShapeFrame.
+                            getStarRayDifference(s.up, starRay, baseStarRay);
                     }
                     else {
                         // Get info about visual separation of *lines*.
