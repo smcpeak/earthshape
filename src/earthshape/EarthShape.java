@@ -499,6 +499,12 @@ public class EarthShape extends MyJFrame {
                         EarthShape.this.toggleDrawSkybox();
                     }
                 });
+        addMenuItem(drawMenu, "Set skybox distance...", null,
+            new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    EarthShape.this.setSkyboxDistance();
+                }
+            });
         addMenuItem(drawMenu, "Turn off all star rays", null,
             new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
@@ -2327,19 +2333,53 @@ public class EarthShape extends MyJFrame {
         }
     }
 
-    /** Let the user specify a new maximum Sun elevation. */
-    private void setMaximumSunElevation()
+    /** Prompt the user for a floating-point value.  Returns null if the
+      * user cancels or enters an invalid value.  In the latter case, an
+      * error box has already been shown. */
+    private Float floatInputDialog(String label, float curValue)
     {
-        String choice = JOptionPane.showInputDialog(this,
-            "Specify maximum elevation of the Sun in degrees "+
-                "above the horizon (otherwise, stars are not visible)",
-            (Float)this.maximumSunElevation);
+        String choice = JOptionPane.showInputDialog(this, label, (Float)curValue);
         if (choice != null) {
             try {
-                this.maximumSunElevation = Float.valueOf(choice);
+                return Float.valueOf(choice);
             }
             catch (NumberFormatException e) {
                 this.errorBox("Invalid float syntax: "+e.getMessage());
+                return null;
+            }
+        }
+        else {
+            return null;
+        }
+    }
+
+    /** Let the user specify a new maximum Sun elevation. */
+    private void setMaximumSunElevation()
+    {
+        Float newValue = this.floatInputDialog(
+            "Specify maximum elevation of the Sun in degrees "+
+                "above the horizon (otherwise, stars are not visible)",
+            this.maximumSunElevation);
+        if (newValue != null) {
+            this.maximumSunElevation = newValue;
+        }
+    }
+
+    /** Let the user specify the distance to the skybox. */
+    private void setSkyboxDistance()
+    {
+        Float newValue = this.floatInputDialog(
+            "Specify distance in 3D space units (each of which usually "+
+                "represents 1000km of surface) to the skybox.\n"+
+                "A value of 0 means the skybox is infinitely far away.",
+            this.emCanvas.skyboxDistance);
+        if (newValue != null) {
+            if (newValue < 0) {
+                this.errorBox("The skybox distance must be non-negative.");
+            }
+            else {
+                this.emCanvas.skyboxDistance = newValue;
+                this.updateAndRedraw();
             }
         }
     }

@@ -230,6 +230,10 @@ public class EarthMapCanvas
     /** If true, draw a skybox behind everything. */
     public boolean drawSkybox = false;
 
+    /** If this is 0, the skybox is drawn as infinitely far away.
+      * Otherwise, it is this distance from the origin. */
+    public float skyboxDistance = 0;
+
     // ---- GL canvas support ----
     /** The underlying GL canvas. */
     private GLCanvas glCanvas;
@@ -1836,6 +1840,16 @@ public class EarthMapCanvas
         gl.glDisable(GL2.GL_LIGHTING);
         gl.glColor3f(1, 1, 1);
 
+        // Translate camera a small fraction of the camera distance to
+        // simulate it being a finite but far distance away, while also
+        // avoiding getting it cut off by the far clipping plane.
+        gl.glPushMatrix();
+        if (this.skyboxDistance != 0) {
+            Vector3f c = this.cameraPosition.times(1.0f / this.skyboxDistance);
+            gl.glTranslatef(-c.x(), -c.y(), -c.z());
+        }
+
+
         // Currently, I make no attempt to align the skybox
         // image with the star observations.  It is just "mood"
         // background, essentially.
@@ -1880,6 +1894,8 @@ public class EarthMapCanvas
             new Vector3f(-1,1,1),  // sw
             new Vector3f(1,-1,1),  // ne
             new Vector3f(1,1,1)); // se
+
+        gl.glPopMatrix();
 
         // Threat the skybox pixels as behind everything.  (There
         // is a more efficient way to do this that avoids drawing
