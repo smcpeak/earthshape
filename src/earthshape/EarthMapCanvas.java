@@ -115,6 +115,10 @@ public class EarthMapCanvas
       * is 90S, left is 180W, right is 180E. */
     private Texture earthMapTexture;
 
+    /** Skybox textures.  Entries 1 through 6 are used; 0 is not.
+      * See 'doDrawSkybox()' for how they are laid out. */
+    private Texture[] skyboxPlate = new Texture[7];
+
     /** Blank cursor, used to hide the mouse cursor. */
     private Cursor blankCursor;
 
@@ -223,6 +227,9 @@ public class EarthMapCanvas
     /** If true, draw the active world stars if we are using them. */
     public boolean drawWorldStars = true;
 
+    /** If true, draw a skybox behind everything. */
+    public boolean drawSkybox = false;
+
     // ---- GL canvas support ----
     /** The underlying GL canvas. */
     private GLCanvas glCanvas;
@@ -320,6 +327,9 @@ public class EarthMapCanvas
         log("loading textures");
         this.compassTexture = loadTexture(gl, "textures/compass-rose.png", TextureIO.PNG);
         this.earthMapTexture = loadTexture(gl, "textures/EarthMap.jpg", TextureIO.JPG);
+        for (int i=1; i <= 6; i++) {
+            this.skyboxPlate[i] = loadTexture(gl, "textures/sky/cs"+i+".png", TextureIO.PNG);
+        }
 
         // Set up an animator to keep redrawing.  This is not started
         // until we enter "FPS" mode.
@@ -389,6 +399,13 @@ public class EarthMapCanvas
         this.earthMapTexture.destroy(gl);
         this.earthMapTexture = null;
 
+        for (int i=0; i < this.skyboxPlate.length; i++) {
+            if (this.skyboxPlate[i] != null) {
+                this.skyboxPlate[i].destroy(gl);
+                this.skyboxPlate[i] = null;
+            }
+        }
+
         this.animator.remove(drawable);
         this.animator.stop();
         this.animator = null;
@@ -424,12 +441,22 @@ public class EarthMapCanvas
                      FRONT_CLIP_DISTANCE,                         // front clip
                      BACK_CLIP_DISTANCE);                         // back clip
 
-        // Rotate and position camera.  Effectively, these
+        // Rotate the camera.  Effectively, these
         // transformations happen in the reverse order they are
         // written here; first we translate, then yaw, then
-        // finally pitch.
+        // finally pitch.  In code, the translate step happens
+        // after skybox rendering, but once applied, it's like
+        // it happened first from the camera's point of view.
         gl.glRotatef(-this.cameraPitchDegrees, +1, 0, 0);
         gl.glRotatef(-this.cameraAzimuthDegrees, 0, +1, 0);
+
+        // The skybox is drawn without regard to camera position
+        // so it appears infinitely far away.
+        if (this.drawSkybox) {
+            this.doDrawSkybox(gl);
+        }
+
+        // Translate camera.
         {
             Vector3f c = this.cameraPosition;
             gl.glTranslatef(-c.x(), -c.y(), -c.z());
@@ -982,8 +1009,20 @@ public class EarthMapCanvas
         Vector3f ne,
         Vector3f se)
     {
+        this.drawTextureRect(gl, this.compassTexture, nw, sw, ne, se);
+    }
+
+    /** Draw a rectangle with the specified texture. */
+    private void drawTextureRect(
+        GL2 gl,
+        Texture texture,
+        Vector3f nw,
+        Vector3f sw,
+        Vector3f ne,
+        Vector3f se)
+    {
         gl.glEnable(GL.GL_TEXTURE_2D);
-        this.compassTexture.bind(gl);
+        texture.bind(gl);
 
         gl.glBegin(GL.GL_TRIANGLE_STRIP);
 
@@ -1786,6 +1825,70 @@ public class EarthMapCanvas
         gl.glVertex2f(0f, 0f);
         gl.glVertex2f(1f, 0f);
         gl.glEnd();
+    }
+
+    /** Draw a skybox behind everything. */
+    private void doDrawSkybox(GL2 gl)
+    {
+        // Disable lighting for the skybox since it does not make sense
+        // for its appearance to depend on local lights, and if it does,
+        // the seams become much more visible.
+        gl.glDisable(GL2.GL_LIGHTING);
+        gl.glColor3f(1, 1, 1);
+
+        // Currently, I make no attempt to align the skybox
+        // image with the star observations.  It is just "mood"
+        // background, essentially.
+
+        // The skybox plates are arranged like:
+        //    [1]
+        // [2][3][4][5]
+        //    [6]
+
+        this.drawTextureRect(gl, this.skyboxPlate[1],
+            new Vector3f(-1,1,-1),  // nw
+            new Vector3f(-1,-1,-1),  // sw
+            new Vector3f(1,1,-1),  // ne
+            new Vector3f(1,-1,-1)); // se
+
+        this.drawTextureRect(gl, this.skyboxPlate[2],
+            new Vector3f(-1,1,-1),  // nw
+            new Vector3f(-1,1,1),  // sw
+            new Vector3f(-1,-1,-1),  // ne
+            new Vector3f(-1,-1,1)); // se
+
+        this.drawTextureRect(gl, this.skyboxPlate[3],
+            new Vector3f(-1,-1,-1),  // nw
+            new Vector3f(-1,-1,1),  // sw
+            new Vector3f(1,-1,-1),  // ne
+            new Vector3f(1,-1,1)); // se
+
+        this.drawTextureRect(gl, this.skyboxPlate[4],
+            new Vector3f(1,-1,-1),  // nw
+            new Vector3f(1,-1,1),  // sw
+            new Vector3f(1,1,-1),  // ne
+            new Vector3f(1,1,1)); // se
+
+        this.drawTextureRect(gl, this.skyboxPlate[5],
+            new Vector3f(1,1,-1),  // nw
+            new Vector3f(1,1,1),  // sw
+            new Vector3f(-1,1,-1),  // ne
+            new Vector3f(-1,1,1)); // se
+
+        this.drawTextureRect(gl, this.skyboxPlate[6],
+            new Vector3f(-1,-1,1),  // nw
+            new Vector3f(-1,1,1),  // sw
+            new Vector3f(1,-1,1),  // ne
+            new Vector3f(1,1,1)); // se
+
+        // Threat the skybox pixels as behind everything.  (There
+        // is a more efficient way to do this that avoids drawing
+        // skybox pixels we don't need, by using a custom shader to
+        // force the skybox to be drawn at max Z value, but this is
+        // adequate.)
+        gl.glClear(GL.GL_DEPTH_BUFFER_BIT);
+
+        gl.glEnable(GL2.GL_LIGHTING);
     }
 
     /** Called when the window is resized.  The superclass does

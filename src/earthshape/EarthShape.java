@@ -150,6 +150,7 @@ public class EarthShape extends MyJFrame {
     private JCheckBoxMenuItem onlyCompareElevationsCBItem;
     private JCheckBoxMenuItem drawWorldWireframeCBItem;
     private JCheckBoxMenuItem drawWorldStarsCBItem;
+    private JCheckBoxMenuItem drawSkyboxCBItem;
 
     // ---------- Methods ----------
     public EarthShape()
@@ -488,6 +489,14 @@ public class EarthShape extends MyJFrame {
                 new ActionListener() {
                     public void actionPerformed(ActionEvent e) {
                         EarthShape.this.toggleDrawWorldStars();
+                    }
+                });
+        this.drawSkyboxCBItem =
+            addCBMenuItem(drawMenu, "Draw skybox", null,
+                this.emCanvas.drawSkybox,
+                new ActionListener() {
+                    public void actionPerformed(ActionEvent e) {
+                        EarthShape.this.toggleDrawSkybox();
                     }
                 });
         addMenuItem(drawMenu, "Turn off all star rays", null,
@@ -2450,6 +2459,12 @@ public class EarthShape extends MyJFrame {
         this.updateAndRedraw();
     }
 
+    private void toggleDrawSkybox()
+    {
+        this.emCanvas.drawSkybox = !this.emCanvas.drawSkybox;
+        this.updateAndRedraw();
+    }
+
     private void turnOffAllStarRays()
     {
         this.emCanvas.turnOffAllStarRays();
@@ -2508,6 +2523,7 @@ public class EarthShape extends MyJFrame {
         this.drawActiveSquareAtOriginCBItem.setSelected(this.emCanvas.drawActiveSquareAtOrigin);
         this.drawWorldWireframeCBItem.setSelected(this.emCanvas.drawWorldWireframe);
         this.drawWorldStarsCBItem.setSelected(this.emCanvas.drawWorldStars);
+        this.drawSkyboxCBItem.setSelected(this.emCanvas.drawSkybox);
 
         this.useSunElevationCBItem.setSelected(this.useSunElevation);
         this.invertHorizontalCameraMovementCBItem.setSelected(
