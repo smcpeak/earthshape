@@ -41,10 +41,12 @@ JOGAMP_NATIVE_JAR_PATHS := $(foreach name,$(JOGAMP_NATIVE_JARS),$(JOGAMP)/$(name
 
 all: check-jogamp
 	rm -rf bin
-	mkdir -p bin/earthshape/textures
+	mkdir -p bin/earthshape/textures/sky
 	$(MAKE) compile
 	cp res/earthshape/*.png bin/earthshape/
-	cp res/earthshape/textures/* bin/earthshape/textures/
+	cp res/earthshape/textures/*.png bin/earthshape/textures/
+	cp res/earthshape/textures/*.jpg bin/earthshape/textures/
+	cp res/earthshape/textures/sky/* bin/earthshape/textures/sky/
 	mkdir -p dist
 	cd bin && jar cfm ../dist/earthshape.jar ../src/MANIFEST.MF *
 	cp $(JOGAMP_JAR_PATHS) dist/
