@@ -27,15 +27,37 @@ try to find a surface consistent with that data.
 This program crunches the observational data to find that
 surface, if one exists.
 
-Compiling and running
-=====================
+Running a Pre-compiled Release
+==============================
 
-This section explains how to compile and run EarthShape.
+On the [Github Releases page](https://github.com/smcpeak/earthshape/releases)
+there are some release zip files.  Download and unpack one of them,
+then run either earthshape.bat (from a Windows command shell)
+or earthshape.sh (from a Cygwin shell).  You will need to
+have Java already installed (the "java" command), with minimum
+version 1.8.
+
+If you are running on a platform other than Windows, you will
+have to edit earthshape.sh to change the semicolons to colons,
+and change "gluegen-rt-natives-windows-amd64.jar" to one of
+the other "gluegen-rt-natives-*.jar" files depending on your
+platform.  Note: Although I am sure the above two steps are
+necessary, I do not know if they are sufficient, since I have
+not tested this program on any platform besides Windows.
+
+Compiling and Running from Source
+=================================
+
+This section explains how to compile and run EarthShape from
+its source code.
 
 Dependencies
 ------------
 
-Currently, EarthShape is only known to run on 64-bit Windows.
+Currently, EarthShape is only known to compile and run on
+64-bit Windows.  In principle, it should be able to run on any
+platform that has a Java compiler and is supported by the
+JOGL 3D graphics library.
 
 EarthShape requires a Java compiler.  It probably requires
 Java 8 (I have not tested older versions).  A Java compiler
