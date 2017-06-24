@@ -24,6 +24,16 @@ public class SwingUtil {
                                ": "+msg);
         }
     }
+
+    /** Split 'msg' into separate lines and log each of them with 'prefix'
+      * in front. */
+    public static void logMultiline(String prefix, String msg)
+    {
+        String[] lines = msg.split("\n");
+        for (String s : lines) {
+            log(prefix+s);
+        }
+    }
 }
 
 // EOF
